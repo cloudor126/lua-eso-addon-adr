@@ -1,0 +1,57 @@
+05/21/19, 08:19 PM
+Zharyl
+Forum posts: 0
+File comments: 3
+Uploads: 0
+Exclamation Necromancer Bugs
+I am currently experiencing bugs with Necromancer abilities. For example I have Blockade of Elements on slot 1 of back bar and Stalking Blastbones on slot 1 of 
+front bar, and when I use Blockade of Elements then bar swap, it shows my Blockade of Elements above slot 1 while on my front bar, but as soon as I use Stalking 
+Blastbones, Stalking Blastbones overrides Elemental Blockade and takes its place, even while still on the front bar. I will attach an image when I get home to clarify.
+(待网友确认)
+
+============================
+ 07/04/19, 03:58 AM	 
+zidder
+
+Forum posts: 0
+File comments: 8
+Uploads: 0
+Skeletal Archer count down cancelling very often during fights since latest update
+(待网友确认)
+
+================================
+07/04/19, 08:36 AM	 
+Nudel
+
+Forum posts: 0
+File comments: 115
+Uploads: 0
+Overflowing Altar is not tracking reliably with this addon, specifically in vBRP. It's making it really hard to know whether it's down or not without scanning constantly for the altar. I had to setup a tracker in S'rendarr because Action Duration Reminder wasn't always recognizing it.
+
+I would even test it b/t rounds in the hallway and the timer would appear. Then thinking it was working, I'd proceed into the arena, where my altar would not create a timer on the ability bar.
+Last edited by Nudel : 07/04/19 at 08:37 AM.
+(待网友确认)
+
+=================================
+07/15/19, 07:13 PM   
+Baertram
+ 
+Baertram's Avatar
+AddOn Author - Click to view AddOns
+
+Forum posts: 2267
+File comments: 2500
+Uploads: 57
+Hi there,
+
+your changelog says:
+Code:
+Optimized for stackable abilities i.e. Flame Skull.
+If I cast any non-stackable ability more than once after another, like applying with a restoration staff the shield on several players, the icon sometimes shows a small 2 in the top right corner.
+But these abilities are not able to stack afaik. They just overwrite if they were applied on the same target.
+This happens on my Necromancer (healer) e.g.
+
+This also happens for other non-stackable attacks like necromancer's "Death Scythe" (https://elderscrollsonline.wiki.fext...m/Death+Scythe) or it's magicka morph "Hungry Scythe" (https://elderscrollsonline.wiki.fext.../Hungry+Scythe)
+
+Is this only a visual bug? Somehow it distracts me as I always think there is some stack on someone and then I recognize the skill cannot stack at all.
+(待网友确认)

@@ -1,0 +1,256 @@
+v3.1.17a
+- Shared in esoui git repo.
+
+v3.1.17
+- Added a new action/effect matching policy i.e. Consuming Trap is now supported.
+
+v3.1.16
+- Optimized action/effect matching and processing to prevent showing an empty duration action in slot until it gain another effect that has a duration i.e. prevent Fetcher Infection showing a zero timer until cast swarm hit an enemy.
+( The situation in previous changelog is not in random. It is to do with the distance between player and enemy.)
+
+v3.1.15
+- Optimized a compatibility with in-game fading effects i.e. Fetcher Infection was randomly reset and now will come back.
+
+v3.1.14
+- Fixed an effect matching bug for non-english environments i.e. Flaming Skull is now displayed in its slot for french/german versions.
+
+v3.1.13
+- Optimized for stackable abilities i.e. Flame Skull.
+
+v3.1.12
+- Optimized action matching for abilities that change id in action bar i.e. Flame Skull.
+
+v3.1.11
+- Added options of white/black list patterns.
+- Added an option to trigger clearing when combat ends.
+
+v3.1.10
+- Added rules to detect stage info like Rearming Trap.
+- Optimized effect matching by comparing the action which is matched by other effect at the same time. i.e. Minor Force trigged several seconds after Rearming Trap action is now recognized.
+
+v3.1.9
+- Added a rule to detect multi-staged abilities like Haunting Curse and show a small 1/2 and 2/2.
+
+v3.1.8
+- Added support for Seething Fury from Molten Whip
+
+v3.1.7
+- Update new API version
+- Alert at the end of a Haunting Curse.
+(Some feedbacks to be processed when possible)
+
+v3.1.6
+- Added an option to remove alert when cast the ability again.
+
+v3.1.5
+- Added an option to switch auto-move-attribute-bar feature.
+
+v3.1.4
+- Added an editbox option to configure popup alert key words.
+
+v3.1.3
+- Fixed a bug that the option of "Account Wide Configuration" doesn't work.
+
+v3.1.2
+- Improved the effect matching using icon i.e. action Dark Conversion will emit a Dark Deal effect which should be linked.
+
+v3.1.1
+- Optimized the effect matching for actions with cast time property such as Channeled Acceleration.
+
+v3.1.0
+- Update for murkmire.
+
+v3.0.22
+- Fixed a bug that track is lost on repeated actions.
+
+v3.0.21
+- Ignored a buggy and redundant effect event emit from Liquid Lightning which is 11 seconds long and fades when it has 1 seconds left.
+- Ignored long term effect events that is more than 100 seconds. i.e. Guard has a 21600 seconds effect and will be ignored in this version.
+
+v3.0.20
+- Fixed a bug that action failed to use strict policy(introduced in v3.0.13) to match a new effect if this action just lost all effects i.e. Minor Protection timer after Dark Cloak should be ignored after this fix.
+
+v3.0.19a
+- Updated german localization translated by Scootworks.
+
+v3.0.19
+- Added some localizations that is translated by google. Hope you can help me correct them.
+- Ignored buggy event time info from a special Major Expedtion effect(ID:37915) triggered by Crippling Grasp and Refreshing Path that is being updated to 8s every second until any of them finished.
+
+v3.0.18
+- Added 2 options to switch and adjust timer to ignore decimal part.
+
+v3.0.17
+- Allowed actions just ended by removing all effect to get an opptunity to match another immediatly coming effect event i.e. Haunting Curse has two periods of effect.
+
+v3.0.16
+- Fixed the search order for effect fading event which caused new action timer end suddenly.
+
+v3.0.15
+- Improved Crystal Fragment slot search that all levels can be found now.
+
+v3.0.14
+- Fixed a bug that updating effect event cannot match repeatedly casted actions. i.e. A bug that Maneuver counter is not reset by another cast before the old one fades is fixed.
+- Improved ability attribute process to avoid self abilities from being disturbed by reticle target. i.e. A bug that Twisting Path counter is removed when target changed is fixed.
+
+v3.0.13
+- Stricted effect action matching if effect didn't started at action begining i.e. Beast Trap effect caused by Beast Trap action will be counted but Off Banlance effect caused by Wall Of Storm will not be counted(known as a bug that Unstable Wall Of Element randomly reset to 4s).
+- Matched taunt effect to tank role actions again after v3.x.x.
+
+v3.0.12
+- Ignored buff event that follows action main duration end i.e. Dark Cloak has a minor protections effects after it runs out.
+
+v3.0.11
+- Impoved the stacking effect process policy introduced in v3.0.10. Then Relentless Focus counter will not be reset again after a spectral bow.
+
+v3.0.10
+- Ignored game buggy stacking effect time info to update time counter i.e. Relentless Focus counter was reset every time when stack count updated, but the time info of the event is actually wrong.
+
+v3.0.9
+- Fixed a bug that action counters don't show up if "Seconds to keep timer after time out" set to 0.
+- Fixed a minor bug that produces error logs.
+
+v3.0.8
+- Fixed a bug that slot ability given by quest will match all new effect e.g. Hist Dart in Ruin Of Mazzatun matched all your restored long buffs when you destroyed the real one.
+
+v3.0.7
+- Improved effect event matching by expand casted action searching scope, maybe some effect event comes later than player's next action
+- Ignored templar Purifying Light Tick's heal over time effect that follows Purifying Light's damage over time effect which is still kept
+
+v3.0.6
+- Improved timer hiding for Crystal Fragment which should be wiped after cast.
+
+v3.0.5
+- Fixed a bug that new timer didn't show up if weapon swapped immediately.
+
+v3.0.4
+- Fixed a bug that some timer disappear when player in a group.
+- Fixed Crystal Fragment Proc detection.
+
+v3.0.3
+- Fixed bugs that mismatched effects with actions.
+
+v3.0.2
+- Stricted stack effect matching to avoid unnecessary countings e.g. Hawk Eye
+
+v3.0.1
+- Improved label format for time longer than 10 seconds.
+
+v3.0.0
+- Refactored code structure again and got many known bugs fixed automatically.
+
+v2.0.3
+- Linked taunt effects with concurrent tank-role actions such as "Inner Fire".
+
+v2.0.2
+- Fixed an eso effect change bug that reset Crippling Grasp's duration to end immediately after cast.
+
+v2.0.1
+- Added an option to switch account/character settings.
+
+v2.0.0
+- Refactored code structure and fixed some bugs.
+- Supported "Rendering Slash" for French/German language.
+- Supported ultimate action duration such as "War Horn".
+
+v1.31
+- Fixed a precedence issue, e.g. the dragonknight volatile armor should show 20s buff time, not 10s DOT time.
+
+v1.30
+- Marked new api version.
+
+v1.29
+- Readjust default auto reposition margins for "Wykkyds Enhanced HUD".
+- Improved effect recognition of bold escape fatigue for its morphs.
+- Fixed a weapon pair recognition bug.
+
+v1.28
+- Fixed a format bug of alert name.
+
+v1.27
+- Fixed a bleeding DOT effect recognition bug.
+- Added a 'Multiple Target Tracking' option, default is on.
+
+v1.26
+- Added player effect tracking e.g. the 4s 'Bolt Escape' fatigue time. If both player and target effects take place by same action, it will show player effect over target effect, e.g. the 20s Brutality buff from dual wield skill 'Hidden Blade' will override the 6s target movement debuff.
+
+v1.25
+- Added an option button to place the alert frame.
+
+v1.24
+- Fixed the gender specific screen string for french and german clients.
+- Added an alert sound select option.
+
+v1.23
+- Added an option to exclude short duration.
+
+v1.22
+- Avoided alerts when debuffs fade because target die.
+
+v1.21
+- Fixed an issue that action bar flip animation is gone after applying time out lines.
+
+v1.20
+- Fixed an issue that resource bars are mis-repositioned when they are below the action bar.
+
+v1.19
+- Impoved options of alert including text and sound.
+
+v1.18
+- Impoved the DOT effect recognition such as Twin Slashes Bleeding effect.
+
+v1.17
+- Added options to play sound before timeout.
+
+v1.16
+- Added an option to show timeout announce, off by default.
+- Added support for actions with both duration attribute and target debuff effect, e.g. change Beast Trap's 60s timeout to 6s timeout after triggered.
+
+v1.15
+- Added support for showing third ability bar such as overload bar action timer hints.
+
+v1.14
+- Added support for stackable effect counting such as light/heavy attacks with nightblade's Grim Focus and its morphs.
+
+v1.13
+- Added a button in settings menu to show the shift bar that can be moved around.
+
+v1.12
+- Added an option to disable shift action bar and an option to adjust cooldown line thickness.
+
+v1.11
+- Added support for target and target effect change.
+
+v1.10
+- Added conflict detection of all player resource bars and move them upward automatically.
+
+v1.09
+- Changed health bar patch that auto move it vertically according to option "Position Gap".
+
+v1.08
+- Fixed an issue that action icon stays lit while character is out of mag/stam.
+
+v1.07
+- Added some line options and a font name option.
+
+v1.06
+- Fixed a bug of starting to count down a ground ability that just canceled by invoking another ability before placement.
+
+v1.05 
+- Added a position patch for addon "Wykkyds Enhanced HUD" to avoid overlap, options added.
+
+v1.04
+- Added option setting "Cooldown Color".
+- Removed tracking of "Crystal Fragment Proc“.
+
+v1.03
+- Added option settings "Label Font Size" and "Label Vertical Offset".
+
+v1.02
+- Added tracking of effects over time as action duration.
+
+v1.01
+- Fixed some ui error bugs.
+
+v1.0 
+- Initial implementation.
