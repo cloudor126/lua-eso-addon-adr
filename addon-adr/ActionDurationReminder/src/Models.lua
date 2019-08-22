@@ -68,6 +68,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = GetAbilityDuration(action.ability.id) --#number
+  action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
   action.overrideAction = nil --#Action

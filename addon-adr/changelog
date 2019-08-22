@@ -1,3 +1,6 @@
+v3.1.20
+- Improved action and slot matching i.e. Merciless Resolve timer can be displayed on Assissin Will.
+
 v3.1.19
 - Fixed a duration fading bug i.e. Beast Trap can fade normally now.
 

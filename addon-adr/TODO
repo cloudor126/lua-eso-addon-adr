@@ -74,3 +74,16 @@ v3.1.9
 
 Because if you use it where there is no enemies the countdown starts. If you use it near enough to apply the debuff, even to one single enemy, and even not in combat, it detects the debuff and the countdown on the altar goes to 0.0 instantly.
 (待网友确认)
+====================
+07/20/19, 08:11 AM   
+robahtwo
+
+Forum posts: 0
+File comments: 3
+Uploads: 0
+Skills needed to be casted twice in order for it to be removed in the pop up bar.
+
+Merciless resolve timer is removed from action bar everytime assassin will is procced.
+
+Any help on this? Tested with no other add on and reinstall + deleted saved variables.
+(待网友确认)
