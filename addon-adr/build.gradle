@@ -4,7 +4,7 @@ plugins{
 
 ext.addonName = "ActionDurationReminder"
 ext.addonId = 1536
-ext.addonVersion = "3.1.17b"
+ext.addonVersion = "3.1.18"
 ext.addonCompatible = '5.1.5,5.0.5'
 
 distTar.enabled = false
