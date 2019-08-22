@@ -291,14 +291,16 @@ end
 
 mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->()
 = function(self, effect)
+  local oldEffect = effect -- #Effect
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
       table.remove(self.effectList,i)
+      oldEffect = e -- we need duration info to end action 
       break
     end
   end
   local now = GetGameTimeMilliseconds()
-  if not self:hasEffect() and effect.duration > 0 then self.endTime =now end -- only end this action when it had a duration more than 1 second
+  if not self:hasEffect() and oldEffect.duration > 0 then self.endTime =now end
 end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
@@ -331,4 +333,6 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+
 

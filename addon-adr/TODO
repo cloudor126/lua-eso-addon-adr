@@ -55,3 +55,22 @@ This also happens for other non-stackable attacks like necromancer's "Death Scyt
 
 Is this only a visual bug? Somehow it distracts me as I always think there is some stack on someone and then I recognize the skill cannot stack at all.
 (待网友确认)
+
+======================
+07/16/19, 01:46 AM   
+Medivh82
+
+Forum posts: 0
+File comments: 1
+Uploads: 0
+I think this is the problem with overflowing altar:
+
+"v3.1.10
+- Added rules to detect stage info like Rearming Trap.
+- Optimized effect matching by comparing the action which is matched by other effect at the same time. i.e. Minor Force trigged several seconds after Rearming Trap action is now recognized.
+
+v3.1.9
+- Added a rule to detect multi-staged abilities like Haunting Curse and show a small 1/2 and 2/2."
+
+Because if you use it where there is no enemies the countdown starts. If you use it near enough to apply the debuff, even to one single enemy, and even not in combat, it detects the debuff and the countdown on the altar goes to 0.0 instantly.
+(待网友确认)
