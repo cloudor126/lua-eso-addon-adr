@@ -1,3 +1,6 @@
+v3.1.24
+- Fixed a bug of effects matching repeated actions in short time.
+
 v3.1.23
 - Adjusted the layer of shift bar to make it possible to display behind action bar.
 - Added an option to set label verticle offset in shift bar.

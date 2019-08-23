@@ -124,7 +124,7 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
 = function(self, other, strict)
   local matches = function(s1,s2) -- #(#string:s1,#string:s2)->(#boolean)
     if s1 == s2 then return true end
-    return string.find(s1, s2, 1,true) or string.find(s2, s1, 1,true)
+    return s1:find(s2, 1,true) or s2:find(s1, 1,true)
   end
   if self.id==other.id then return true end
   if fMatchIconPath(self.icon, other.icon) then return true end
@@ -249,7 +249,8 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   for i, var in ipairs(self.effectList) do
     local e = var --#Effect
     if effect.ability.id == e.ability.id then return true end
-    if effect.startTime > e.startTime then strict = true end
+    -- already some recent and dalayed effect counted
+    if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end 
   end
   -- 3. check ability match
   return self.ability:matches(effect.ability, strict)
