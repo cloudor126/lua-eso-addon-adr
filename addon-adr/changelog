@@ -1,3 +1,6 @@
+v3.1.21
+- Fixed a nil value bug.
+
 v3.1.20
 - Improved action and slot matching i.e. Merciless Resolve timer can be displayed on Assissin Will.
 

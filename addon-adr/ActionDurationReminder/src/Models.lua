@@ -13,8 +13,10 @@ local SPECIAL_ABILITY_IDS = {
 
 local fRefinePath -- #(#string:path)->(#string)
 = function(path)
+  if not path then return path end
+  path = path:lower()
   local index = path:find(".dds",1,true)
-  if index>1 then
+  if index and index>1 then
     path = path:sub(1,index-1)
   end
   return path
