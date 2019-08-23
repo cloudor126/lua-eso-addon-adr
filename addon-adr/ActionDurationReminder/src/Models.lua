@@ -199,7 +199,10 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '2/2'
   end
   -- 2/2 by normal effect with firstStagedId and without long duration effect present
-  if self.flags.forArea and self.data.firstStageId and not longDurationEffect then
+  if self.flags.forArea and self.data.firstStageId
+    and self.data.firstStageId ~= optEffect.ability.id
+    and not longDurationEffect
+  then
     return '2/2'
   end
   return nil
@@ -298,7 +301,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->()
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
       table.remove(self.effectList,i)
-      oldEffect = e -- we need duration info to end action 
+      oldEffect = e -- we need duration info to end action
       break
     end
   end
@@ -336,6 +339,4 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
-
-
 

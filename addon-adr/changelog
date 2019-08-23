@@ -1,3 +1,6 @@
+v3.1.22
+- Optimized multi-staged action recognition.
+
 v3.1.21
 - Fixed a nil value bug.
 
