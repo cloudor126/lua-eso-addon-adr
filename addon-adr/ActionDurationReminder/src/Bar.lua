@@ -18,12 +18,9 @@ local barSavedVarsDefaults
     barLabelFontName = "BOLD_FONT",
     barLabelFontSize = 18,
     barLabelYOffset = 0,
+    barLabelYOffsetInShift = 0,
     barLabelIgnoreDecimal = true,
     barLabelIgnoreDeciamlThreshold = 10,
-    barCooldownVisible = true,
-    barCooldownColor = {1,1,0},
-    barCooldownOpacity = 100,
-    barCooldownThickness = 2,
   }
 
 --========================================
@@ -87,7 +84,6 @@ l.onCoreUpdate -- #()->()
   -- 3.$ sort later actions show first
   table.sort(toShowIdList, function(id1,id2)return toShowActionMap[id1]:getStartTime() > toShowActionMap[id2]:getStartTime() end)
   local appendIndex = 0
-  local cooldownThickness = l.getSavedVars().barCooldownThickness
   for i=1,#toShowIdList do
     local id = toShowIdList[i]
     local action = toShowActionMap[id]
@@ -106,11 +102,7 @@ l.onCoreUpdate -- #()->()
       l.shiftedBarWidgetMap[slotNum] = widget
     end
     widget:updateWithAction(action, now)
-    if now > action:getEndTime() then
-      widget.backdrop:SetDimensions(50,50)
-    else
-      widget.backdrop:SetDimensions(50-math.max(0,cooldownThickness-2),50-math.max(0,cooldownThickness-2))
-    end
+    widget.backdrop:SetDimensions(50,50)
   end
 end
 
@@ -152,7 +144,7 @@ l.openShiftBarFrame -- #()->()
     labelClose:SetColor(1,1,1)
     labelClose:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     labelClose:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
-    labelClose:SetAnchor(BOTTOMRIGHT, nil, BOTTOMRIGHT, -5, -2)
+    labelClose:SetAnchor(TOPRIGHT, nil, TOPRIGHT, -5, 2)
     labelClose:SetDrawLayer(DL_COUNT)
     labelClose:SetDrawLevel(1)
     labelClose:SetText('[X]')
@@ -209,6 +201,11 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       width = "full",
       default = barSavedVarsDefaults.barShowShift,
     },{
+      type = "description",
+      text = "",
+      title = text("Shift Bar Location"),
+      width = "half",
+    },{
       type = "button",
       name = text("Move Shift Bar"),
       func = function()
@@ -218,7 +215,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           SetGameCameraUIMode(true)
         end, 10)
       end,
-      width = "full",
+      width = "half",
       disabled = function() return not l.getSavedVars().barShowShift end,
     },{
       type = "dropdown",
@@ -240,11 +237,20 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     },{
       type = "slider",
       name = text("Label Vertical Offset"),
-      min = -50, max = 50, step = 5,
+      min = -50, max = 50, step = 1,
       getFunc = function() return l.getSavedVars().barLabelYOffset end,
       setFunc = function(value) l.getSavedVars().barLabelYOffset = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
       width = "full",
       default = barSavedVarsDefaults.barLabelYOffset,
+    },{
+      type = "slider",
+      name = text("Label Vertical Offset In Shift Bar"),
+      min = -50, max = 50, step = 1,
+      getFunc = function() return l.getSavedVars().barLabelYOffsetInShift end,
+      setFunc = function(value) l.getSavedVars().barLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
+      width = "full",
+      disabled = function() return not l.getSavedVars().barShowShift end,
+      default = barSavedVarsDefaults.barLabelYOffsetInShift,
     },{
       type = "checkbox",
       name = text("Label Ignore Decimal Part"),
@@ -261,43 +267,5 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       width = "full",
       disabled = function() return not l.getSavedVars().barLabelIgnoreDecimal end,
       default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
-    },{
-      type = "checkbox",
-      name = text("Line Enabled"),
-      getFunc = function() return l.getSavedVars().barCooldownVisible end,
-      setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownVisible,
-    },{
-      type = "slider",
-      name = text("Line Thickness"),
-      min = 1, max = 5, step = 1,
-      getFunc = function() return l.getSavedVars().barCooldownThickness end,
-      setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownThickness,
-    },{
-      type = "slider",
-      name = text("Line Opacity %"),
-      min = 10, max = 100, step = 10,
-      getFunc = function() return l.getSavedVars().barCooldownOpacity end,
-      setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownOpacity,
-
-    },{
-      type = "colorpicker",
-      name = text("Line Color"),
-      getFunc = function() return unpack(l.getSavedVars().barCooldownColor) end,
-      setFunc = function(r,g,b,a) l.getSavedVars().barCooldownColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
-      width = "full",
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      default = {
-        r = barSavedVarsDefaults.barCooldownColor[1],
-        g = barSavedVarsDefaults.barCooldownColor[2],
-        b = barSavedVarsDefaults.barCooldownColor[3],
-      },
     })
 end)
