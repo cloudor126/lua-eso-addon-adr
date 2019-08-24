@@ -393,9 +393,9 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
 = function(eventCode)
   if not l.getSavedVars().coreMultipleTargetTracking then return end
   if not DoesUnitExist('reticleover') then return end
-  -- 1. remove all others-effect actions from self.idActionMap
+  -- 1. remove all non player and non playerpet effect actions from self.idActionMap
   for key,action in pairs(l.idActionMap) do
-    if not action.flags.forGround and not action.flags.forArea and not action:isOnPlayer() then
+    if not action.flags.forGround and not action.flags.forArea and not action:isOnPlayer() and not action:isOnPlayerpet() then
       l.idActionMap[key] = nil
       l.debug(DS_TARGET,1)('[CT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())

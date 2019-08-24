@@ -1,3 +1,6 @@
+v3.1.25
+- Fixed a bug that effects of player pet wrongly reset when switching reticle target i.e. timer of Dark Shade is now kept when target changes.
+
 v3.1.24
 - Fixed a bug of effects matching repeated actions in short time.
 

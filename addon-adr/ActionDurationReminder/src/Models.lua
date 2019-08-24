@@ -108,7 +108,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
 =  function(ability, unitTag, unitId, startTime, endTime)
   local effect = {} -- #Effect
   effect.ability = ability --#Ability
-  effect.unitTag = unitTag=='player' and unitTag or 'others' -- #string player or not
+  effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others' -- #string player or playerpet or others
   effect.unitId = unitId -- #number
   effect.startTime = startTime -- #number
   effect.endTime = endTime -- #number
@@ -228,6 +228,15 @@ mAction.isOnPlayer -- #(#Action:self)->(#boolean)
   return false
 end
 
+mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
+= function(self)
+  if self.flags.forSelf then return true end
+  for i, effect in ipairs(self.effectList) do
+    if effect:isOnPlayerpet() then return true end
+  end
+  return false
+end
+
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
@@ -330,6 +339,11 @@ end
 mEffect.isOnPlayer -- #(#Effect:self)->(#boolean)
 = function(self)
   return self.unitTag == 'player'
+end
+
+mEffect.isOnPlayerpet -- #(#Effect:self)->(#boolean)
+= function(self)
+  return not not self.unitTag:find('playerpet', 1, true)
 end
 
 mEffect.isLongDuration  -- #(#Effect:self)->(#boolean)
