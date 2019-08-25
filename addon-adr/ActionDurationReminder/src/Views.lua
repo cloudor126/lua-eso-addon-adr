@@ -20,6 +20,11 @@ l.getLabelFont -- #()->(#string)
   return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|thick-outline"
 end
 
+l.getStackLabelFont -- #()->(#string)
+= function()
+  return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|thick-outline"
+end
+
 --========================================
 --        m
 --========================================
@@ -67,23 +72,22 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
   label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   label:SetAnchor(BOTTOM, backdrop or slotIcon, BOTTOM, 0, shifted and (-savedVars.barLabelYOffsetInShift+1) or (-savedVars.barLabelYOffset + 3))
-  local countLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
-  inst.countLabel = countLabel --LabelControl#LabelControl
-  countLabel:SetFont(l.getLabelFont())
-  countLabel:SetColor(1,1,1)
-  countLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-  countLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
-  countLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  countLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
+  local stackLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
+  inst.stackLabel = stackLabel --LabelControl#LabelControl
+  stackLabel:SetFont(l.getStackLabelFont())
+  stackLabel:SetColor(1,1,1)
+  stackLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+  stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
+  stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
   inst.cdMark = 0
   return setmetatable(inst, {__index=mWidget})
 end
 
 m.updateWidgetFont -- #(#Widget:widget)->()
 = function(widget)
-  local font = l.getLabelFont()
-  if widget.label then widget.label:SetFont(font) end
-  if widget.countLabel then widget.countLabel:SetFont(font) end
+  if widget.label then widget.label:SetFont(l.getLabelFont()) end
+  if widget.stackLabel then widget.stackLabel:SetFont(l.getStackLabelFont()) end
 end
 
 m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
@@ -93,9 +97,9 @@ m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
     widget.label:SetAnchor(BOTTOM, widget.label:GetParent(), BOTTOM, 0,
       widget.shifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3))
   end
-  if widget.countLabel then
-    widget.countLabel:ClearAnchors()
-    widget.countLabel:SetAnchor(TOPRIGHT, widget.countLabel:GetParent(), TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
+  if widget.stackLabel then
+    widget.stackLabel:ClearAnchors()
+    widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
   end
 end
 
@@ -115,8 +119,6 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
   end
 end
 
-
-
 --========================================
 --        mWidget
 --========================================
@@ -125,7 +127,7 @@ mWidget.hide  -- #(#Widget:self)->()
   if self.backdrop then self.backdrop:SetHidden(true) end
   if self.background then self.background:SetHidden(true) end
   self.label:SetHidden(true)
-  self.countLabel:SetHidden(true)
+  self.stackLabel:SetHidden(true)
   self.visible = false
   local _,_,_,_,flipOffset =  self.flipCard:GetAnchor(0)
   if flipOffset > 0 then
@@ -160,13 +162,13 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   self.label:SetHidden(false)
   local stageInfo = action:getStageInfo()
   if action.stackCount and action.stackCount > 0 then
-    self.countLabel:SetText(action.stackCount)
-    self.countLabel:SetHidden(false)
+    self.stackLabel:SetText(action.stackCount)
+    self.stackLabel:SetHidden(false)
   elseif stageInfo then
-    self.countLabel:SetText(stageInfo)
-    self.countLabel:SetHidden(false)
+    self.stackLabel:SetText(stageInfo)
+    self.stackLabel:SetHidden(false)
   else
-    self.countLabel:SetHidden(true)
+    self.stackLabel:SetHidden(true)
   end
   local cdMark = endTime
   if action:isUnlimited() then

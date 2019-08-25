@@ -38,9 +38,7 @@ task upload {
     description = "upload addon zip file to esoui.com"
     dependsOn distZip
     doLast{
-        def changelog = file('changelog').text
-        changelog = groovy.json.StringEscapeUtils.escapeJava(changelog).replaceAll('\\\\r\\\\n',"\r\n")
-        println changelog
+        def changelog = file('changelog').text.replaceAll('"',/\\"/)
         def proc = ['curl',
             '-H', "\"x-api-token: ${project.property('com.esoui.apiToken')}\"",
             '-F', "id=${addonId}",

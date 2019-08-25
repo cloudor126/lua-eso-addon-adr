@@ -21,6 +21,8 @@ local barSavedVarsDefaults
     barLabelYOffsetInShift = 0,
     barLabelIgnoreDecimal = true,
     barLabelIgnoreDeciamlThreshold = 10,
+    barStackLabelFontName = "BOLD_FONT",
+    barStackLabelFontSize = 18,
   }
 
 --========================================
@@ -267,5 +269,22 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       width = "full",
       disabled = function() return not l.getSavedVars().barLabelIgnoreDecimal end,
       default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
+    },{
+      type = "dropdown",
+      name = text("Stack Label Font Name"),
+      choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
+      getFunc = function() return l.getSavedVars().barStackLabelFontName end,
+      setFunc = function(value) l.getSavedVars().barStackLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
+      width = "full",
+      default = barSavedVarsDefaults.barStackLabelFontName,
+    },{
+      type = "slider",
+      name = text("Stack Label Font Size"),
+      --tooltip = "",
+      min = 12, max = 24, step = 1,
+      getFunc = function() return l.getSavedVars().barStackLabelFontSize end,
+      setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
+      width = "full",
+      default = barSavedVarsDefaults.barStackLabelFontSize,
     })
 end)
