@@ -182,7 +182,7 @@ l.getActionByAbilityName -- #(#string:abilityName)->(Models#Action)
 = function(abilityName)
   for id, action in pairs(l.idActionMap) do
     if abilityName:match(action.ability.name,1)
-      or action.description:find(abilityName,1,true) -- i.e. Assassin Will in origin description
+      or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true)) -- i.e. Assassin Will in origin description
     then
       return action
     end

@@ -88,5 +88,15 @@ Merciless resolve timer is removed from action bar everytime assassin will is pr
 Any help on this? Tested with no other add on and reinstall + deleted saved variables.
 (待网友确认)
 ====================
-bring back cooldown lines
-. no full right when switch to long duration from a short duration
+08/10/19, 11:42 PM   
+init3
+AddOn Author - Click to view AddOns
+
+Forum posts: 1
+File comments: 28
+Uploads: 9
+Timers
+I've been experiencing a bug where if you recast a placed dot (blockade of elements, 
+twisting path, etc) before it reaches 0, then the timers for those dots will show 0s whenever you are holding block
+(待网友确认)
+=====================

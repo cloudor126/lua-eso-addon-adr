@@ -1,3 +1,6 @@
+v3.1.28
+- Optimized actions matching i.e. Blocade timer is avoided matching with Balance by 'Off Balance'.
+
 v3.1.27
 - Re-implemented cooldown lines.
 
