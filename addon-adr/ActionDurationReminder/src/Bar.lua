@@ -23,6 +23,10 @@ local barSavedVarsDefaults
     barLabelIgnoreDeciamlThreshold = 10,
     barStackLabelFontName = "BOLD_FONT",
     barStackLabelFontSize = 18,
+    barCooldownVisible = true,
+    barCooldownColor = {1,1,0},
+    barCooldownOpacity = 100,
+    barCooldownThickness = 2,
   }
 
 --========================================
@@ -286,5 +290,43 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
       width = "full",
       default = barSavedVarsDefaults.barStackLabelFontSize,
+    },{
+      type = "checkbox",
+      name = text("Line Enabled"),
+      getFunc = function() return l.getSavedVars().barCooldownVisible end,
+      setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
+      width = "full",
+      default = barSavedVarsDefaults.barCooldownVisible,
+    },{
+      type = "slider",
+      name = text("Line Thickness"),
+      min = 1, max = 5, step = 1,
+      getFunc = function() return l.getSavedVars().barCooldownThickness end,
+      setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
+      disabled = function() return not l.getSavedVars().barCooldownVisible end,
+      width = "full",
+      default = barSavedVarsDefaults.barCooldownThickness,
+    },{
+      type = "slider",
+      name = text("Line Opacity %"),
+      min = 10, max = 100, step = 10,
+      getFunc = function() return l.getSavedVars().barCooldownOpacity end,
+      setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
+      disabled = function() return not l.getSavedVars().barCooldownVisible end,
+      width = "full",
+      default = barSavedVarsDefaults.barCooldownOpacity,
+
+    },{
+      type = "colorpicker",
+      name = text("Line Color"),
+      getFunc = function() return unpack(l.getSavedVars().barCooldownColor) end,
+      setFunc = function(r,g,b,a) l.getSavedVars().barCooldownColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+      width = "full",
+      disabled = function() return not l.getSavedVars().barCooldownVisible end,
+      default = {
+        r = barSavedVarsDefaults.barCooldownColor[1],
+        g = barSavedVarsDefaults.barCooldownColor[2],
+        b = barSavedVarsDefaults.barCooldownColor[3],
+      }
     })
 end)

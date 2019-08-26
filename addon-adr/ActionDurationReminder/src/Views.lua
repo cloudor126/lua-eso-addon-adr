@@ -6,6 +6,7 @@ local settings = addon.load("Settings#M")
 local l = {} -- #L
 local m = {l=l} -- #M
 local mWidget = {} -- #Widget
+local mCooldown = {} -- #Cooldown
 
 --========================================
 --        l
@@ -25,9 +26,28 @@ l.getStackLabelFont -- #()->(#string)
   return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|thick-outline"
 end
 
+l.debugIdList = {} -- #list<#number>TODO
 --========================================
 --        m
 --========================================
+m.newCooldown -- #(Control#Control:background, #number:drawLayer)->(#Cooldown)
+= function(background, drawLayer)
+  local inst = {} -- #Cooldown
+  inst.id = GetGameTimeMilliseconds()
+  table.insert(l.debugIdList,inst.id)
+  inst.background = background -- Control#Control
+  inst.drawLayer = drawLayer -- #number
+  inst.hidden = false
+  inst.duration = 0 -- #number
+  inst.endTime = 0 -- #number
+  inst.topRight = nil -- TextureControl#TextureControl
+  inst.right = nil -- TextureControl#TextureControl
+  inst.bottom = nil -- TextureControl#TextureControl
+  inst.left = nil -- TextureControl#TextureControl
+  inst.topLeft = nil -- TextureControl#TextureControl
+  return setmetatable(inst, {__index=mCooldown})
+end
+
 m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widget)
 = function(slotNum, shifted, appendIndex)
   local savedVars = l.getSavedVars() -- Bar#BarSavedVars
@@ -39,9 +59,9 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   inst.visible = true
   local slot = ZO_ActionBar_GetButton(slotNum).slot --Control#Control
   local slotIcon = slot:GetNamedChild("Icon")
-  local flipCard = slot:GetNamedChild("FlipCard")
+  --  local flipCard = slot:GetNamedChild("FlipCard")
   inst.slotIcon = slotIcon --Control#Control
-  inst.flipCard = flipCard --Control#Control
+  --  inst.flipCard = flipCard --Control#Control
   --========================================
   local backdrop = nil
   local background = nil
@@ -80,8 +100,24 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
+  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and DL_CONTROLS or DL_TEXT) --#Cooldown
   inst.cdMark = 0
+  --
   return setmetatable(inst, {__index=mWidget})
+end
+
+m.updateWidgetCooldown -- #(#Widget:widget)->()
+= function(widget)
+  local savedVars = l.getSavedVars()
+  if widget.cooldown then
+    widget.cooldown:setHidden(not savedVars.barCooldownVisible)
+    widget.cooldown:setColor(unpack(savedVars.barCooldownColor))
+    if savedVars.barCooldownOpacity < 100 then
+      widget.cooldown:setAlpha(savedVars.barCooldownOpacity/100)
+    else
+      widget.cooldown:setAlpha(1)
+    end
+  end
 end
 
 m.updateWidgetFont -- #(#Widget:widget)->()
@@ -120,6 +156,143 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
 end
 
 --========================================
+--        mCooldown
+--========================================
+mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
+= function(self)
+  local part = WINDOW_MANAGER:CreateControl(nil, self.background, CT_TEXTURE)
+  part:SetDrawLayer(self.drawLayer)
+  part:SetColor(unpack(l.getSavedVars().barCooldownColor))
+  local opacity = l.getSavedVars().barCooldownOpacity -- #number
+  if opacity<100 then part:SetAlpha(opacity/100) end
+  return part
+end
+
+mCooldown.draw -- #(#Cooldown:self, #number:duration, #number:endTime)->()
+= function(self, duration, endTime)
+  if self.duration~=duration or self.endTime ~= endTime then return end -- another start happened
+  local remain = endTime - GetGameTimeMilliseconds()
+  self:drawRemain(remain)
+  if not self.hidden then
+    zo_callLater(function()
+      self:draw(duration, endTime)
+    end,40) -- 25fps
+  end
+end
+
+mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
+= function(self, remain)
+  -- 0. check hidden
+  if not l.getSavedVars().barCooldownVisible or self.duration == 0 or self.hidden or remain<=0 then
+    local controlList = {self.topLeft,self.left,self.bottom,self.right, self.topRight} --#list<TextureControl#TextureControl>
+    for key, var in pairs(controlList) do
+      if var then var:SetHidden(true) end
+    end
+    return
+  end
+  local duration = self.duration
+  local savedVars = l.getSavedVars()
+  local width,height = self.background:GetDimensions()
+  width = width - l.getSavedVars().barCooldownThickness
+  height = height - l.getSavedVars().barCooldownThickness
+  -- 1. topRight
+  if remain > duration * 7 / 8 then
+    if not self.topRight then
+      self.topRight = self:createPart()
+    end
+    local length = width /2 * math.min(1, remain*8/duration - 7)
+    self.topRight:SetAnchor(TOPRIGHT,self.background,TOPRIGHT,0,0)
+    self.topRight:SetDimensions(length,savedVars.barCooldownThickness)
+    self.topRight:SetHidden(false)
+  else
+    if self.topRight and not self.topRight:IsHidden() then self.topRight:SetHidden(true) end
+  end
+  -- 2. right
+  if remain > duration * 5 / 8 then
+    if not self.right then
+      self.right = self:createPart()
+    end
+    local length = height * math.min(1, (remain*8/duration - 5)/2)
+    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT,0,0)
+    self.right:SetDimensions(savedVars.barCooldownThickness,length)
+    self.right:SetHidden(false)
+  else
+    if self.right and not self.right:IsHidden() then self.right:SetHidden(true) end
+  end
+  -- 3. bottom
+  if remain > duration * 3 / 8 then
+    if not self.bottom then
+      self.bottom = self:createPart()
+    end
+    local length = width * math.min(1, (remain*8/duration - 3)/2)
+    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT,0,0)
+    self.bottom:SetDimensions(length,savedVars.barCooldownThickness)
+    self.bottom:SetHidden(false)
+  else
+    if self.bottom and not self.bottom:IsHidden() then self.bottom:SetHidden(true) end
+  end
+  -- 4. left
+  if remain > duration /8 then
+    if not self.left then
+      self.left = self:createPart()
+    end
+    local length = height * math.min(1,(remain * 8/duration-1)/2)
+    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT,0,0)
+    self.left:SetDimensions(savedVars.barCooldownThickness,length)
+    self.left:SetHidden(false)
+  else
+    if self.left and not self.left:IsHidden() then self.left:SetHidden(true) end
+  end
+  -- 5. topLeft
+  if remain >0 then
+    if not self.topLeft then
+      self.topLeft = self:createPart()
+    end
+    local length = width/2 * math.min(1, remain*8/duration)
+    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP,0,0)
+    self.topLeft:SetDimensions(length,savedVars.barCooldownThickness)
+    self.topLeft:SetHidden(false)
+  else
+    if self.topLeft and not self.topLeft:IsHidden() then self.topLeft:SetHidden(true) end
+  end
+end
+
+mCooldown.setAlpha -- #(#Cooldown:self, #number:alpha)->()
+= function(self, alpha)
+  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
+  for key, var in ipairs(list) do
+    if var then var:SetAlpha(alpha) end
+  end
+end
+
+mCooldown.setColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
+= function(self, r,g,b,a)
+  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
+  for key, var in ipairs(list) do
+    if var then var:SetColor(r,g,b,a) end
+  end
+end
+
+mCooldown.setHidden -- #(#Cooldown:self, #boolean:hidden)->()
+= function(self, hidden)
+  if hidden == self.hidden then return end
+  self.hidden = hidden
+  self:draw(self.duration, self.endTime)
+end
+
+mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration)->()
+= function(self, remain, duration)
+  local endTime = GetGameTimeMilliseconds() + remain
+  if not self.hidden and self.duration == duration and self.endTime == endTime then
+    return
+  end
+  self.endTime = endTime
+  self.duration = duration
+  self.hidden = false
+  self:draw(duration, self.endTime)
+end
+
+--========================================
 --        mWidget
 --========================================
 mWidget.hide  -- #(#Widget:self)->()
@@ -128,15 +301,11 @@ mWidget.hide  -- #(#Widget:self)->()
   if self.background then self.background:SetHidden(true) end
   self.label:SetHidden(true)
   self.stackLabel:SetHidden(true)
+  self.cooldown:setHidden(true)
   self.visible = false
-  local _,_,_,_,flipOffset =  self.flipCard:GetAnchor(0)
-  if flipOffset > 0 then
-    local flipParent = self.flipCard:GetParent()
-    self.flipCard:ClearAnchors()
-    self.flipCard:SetAnchor(TOPLEFT, flipParent, TOPLEFT, 0, 0)
-    self.flipCard:SetAnchor(BOTTOMRIGHT, flipParent, BOTTOMRIGHT, 0, 0)
-  end
 end
+
+mWidget.updateCooldown = m.updateWidgetCooldown -- #(#Widget:self)->()
 
 mWidget.updateFont = m.updateWidgetFont -- #(#Widget:self)->()
 
@@ -173,19 +342,23 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local cdMark = endTime
   if action:isUnlimited() then
     self.label:SetHidden(true)
+    self.cooldown:setHidden(true)
     return
   end
-  if remain > 7000 and action:getDuration() > 8000 then
+  local duration = action:getDuration()
+  if remain > 7000 and duration > 8000 then
     cdMark = action.endTime - 7000
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      local scale = action.duration/1000 - 7
-      local scaledTotal = action.duration * scale
-      local scaledRemain = remain * scale
+      local scale = duration/1000 - 7
+      local scaledTotal = duration * scale
+      local scaledRemain = scaledTotal - (duration - remain)
+      self.cooldown:start(scaledRemain, scaledTotal)
     end
   elseif remain > 0 then
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
+      self.cooldown:start(remain, 8000)
     end
   else
     self.cdMark = 0
@@ -194,6 +367,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       self.label:SetHidden(true)
     end
   end
+  local cdHidden = self.cdMark==0 or not l.getSavedVars().barCooldownVisible
+  self.cooldown:setHidden(cdHidden)
 end
 
 
