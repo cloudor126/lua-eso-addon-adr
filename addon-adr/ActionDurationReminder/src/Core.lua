@@ -26,8 +26,6 @@ local SPECIAL_ABILITY_IDS = {
 
     PURIFYING_LIGHT_TICK = 68581, -- ignore purifying light healing after main duration
 
-    ASSASINS_WILL = 61907, -- ignore this action to avoid mismatching the following stack count to it
-
     LIGHTINING_SPLASH = 23195, -- ignore this (n+1)s redundant effect
 
     HAUNTING_CURSE_1 = 24330, -- haunting curse first phase
@@ -115,6 +113,8 @@ l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
     if action:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
+    else
+      l.debug(DS_ACTION,1)('[Fn]not found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
   l.debug(DS_ACTION,1)('[?]not found in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
@@ -182,9 +182,14 @@ l.getActionByAbilityName -- #(#string:abilityName)->(Models#Action)
 = function(abilityName)
   for id, action in pairs(l.idActionMap) do
     if abilityName:match(action.ability.name,1)
-      or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true)) -- i.e. Assassin Will in origin description
+      -- i.e. Assassin's Will name can match Merciless Resolve action by its description
+      or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true))
     then
       return action
+    end
+    -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
+    for key, var in ipairs(action.relatedAbilityList) do
+      if abilityName:match(var.name,1) then return action end
     end
   end
   return nil
@@ -200,7 +205,6 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
   if action.ability.id == SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT
-    or action.ability.id == SPECIAL_ABILITY_IDS.ASSASINS_WILL
     or action.ability.id == SPECIAL_ABILITY_IDS.MOLTEN_WHIP
   then
     if not l.removeAction(action) then
@@ -231,9 +235,22 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. replace saved
   local sameNameAction = l.getActionByAbilityName(action.ability.name)
   if sameNameAction then
+    l.debug(DS_ACTION,1)('[aF]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
+      sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
     action.effectList = sameNameAction.effectList
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
+    local abilityAccepter -- # (#Ability:relatedAbility)->()
+    = function(relatedAbility)
+      if not action.ability.name:match(relatedAbility.name,1) then
+        l.debug(DS_ACTION,1)('[aFa]%s', relatedAbility:toLogString())
+        table.insert(action.relatedAbilityList, relatedAbility)
+      end
+    end
+    abilityAccepter(sameNameAction.ability)
+    for key, var in ipairs(sameNameAction.relatedAbilityList) do
+      abilityAccepter(var)
+    end
     l.saveAction(action)
   end
 end
@@ -293,7 +310,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     if changeType == EFFECT_RESULT_FADED then
       action = l.findActionByOldEffect(effect)
       if not action then return end
-      action.stackCount = -1 -- differ from zero
+      action.stackCount = 0
       action:purgeEffect(effect)
       l.debug(DS_ACTION,1)('[ps] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
     else

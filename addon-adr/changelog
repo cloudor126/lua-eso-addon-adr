@@ -1,3 +1,6 @@
+v3.1.29
+- Optimized action model to store related abilities for matching i.e. timers can continue to show after performing Assassin's Will.
+
 v3.1.28
 - Optimized actions matching i.e. Blocade timer is avoided matching with Balance by 'Off Balance'.
 

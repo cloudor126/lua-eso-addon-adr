@@ -66,6 +66,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local action = {} -- #Action
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
+  action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
@@ -262,7 +263,13 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end 
   end
   -- 3. check ability match
-  return self.ability:matches(effect.ability, strict)
+  if self.ability:matches(effect.ability, strict) then return true end
+  -- 4. check related
+  for key, var in ipairs(self.relatedAbilityList) do
+  	local ability = var -- #Ability
+  	if ability:matches(effect.ability, strict) then return true end
+  end
+  return false
 end
 
 mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
