@@ -100,7 +100,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
-  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and DL_CONTROLS or DL_TEXT) --#Cooldown
+  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DL_TEXT) --#Cooldown
   inst.cdMark = 0
   --
   return setmetatable(inst, {__index=mWidget})
@@ -161,7 +161,7 @@ end
 mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
 = function(self)
   local part = WINDOW_MANAGER:CreateControl(nil, self.background, CT_TEXTURE)
-  part:SetDrawLayer(self.drawLayer)
+  if self.drawLayer and self.drawLayer>0 then part:SetDrawLayer(self.drawLayer) end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
   local opacity = l.getSavedVars().barCooldownOpacity -- #number
   if opacity<100 then part:SetAlpha(opacity/100) end
