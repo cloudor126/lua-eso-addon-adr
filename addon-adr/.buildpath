@@ -5,6 +5,5 @@
 	<buildpathentry kind="src" path="ActionDurationReminder/libs/LibTextDict-2"/>
 	<buildpathentry kind="src" path="ActionDurationReminder/libs/LibTypeRegistry"/>
 	<buildpathentry kind="src" path="ActionDurationReminder/libs/LibStub"/>
-	<buildpathentry kind="src" path="ActionDurationReminder/libs/LibAddonMenu-2.0"/>
 	<buildpathentry combineaccessrules="false" kind="prj" path="/eso-api"/>
 </buildpath>

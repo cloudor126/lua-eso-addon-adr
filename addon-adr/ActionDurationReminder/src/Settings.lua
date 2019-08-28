@@ -36,7 +36,7 @@ l.onStart -- #()->()
   l.accountSavedVars = ZO_SavedVars:NewAccountWide(SV_NAME, SV_VER, nil, savedVarsDefaults)
   l.characterSavedVars = ZO_SavedVars:New(SV_NAME, SV_VER, nil, savedVarsDefaults)
   -- register addon panel
-  local LAM2 = LibStub("LibAddonMenu-2.0")
+  local LAM2 = LibAddonMenu2
   if LAM2 == nil then return end
   local panelData = {
     type = 'panel',

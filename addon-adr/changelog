@@ -1,3 +1,7 @@
+v3.2.0
+- Depended on LibAddonMenu-2.0 library externally.
+- Planned to remove LibStub.
+
 v3.1.30
 - Fxied a layer bug of cooldown lines in shift bar.
 
