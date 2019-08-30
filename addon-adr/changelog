@@ -1,3 +1,6 @@
+v3.2.1
+- Depended on LibTextDict externally.
+
 v3.2.0
 - Depended on LibAddonMenu-2.0 library externally.
 - Planned to remove LibStub.

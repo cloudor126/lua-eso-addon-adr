@@ -36,7 +36,7 @@ end
 --========================================
 m.name = NAME -- #string
 m.version = VERSION -- #string
-m.text = LibStub("LibTextDict-2")(m.name).text -- #(#string:key)->(#string)
+m.text = LibTextDict(m.name).text -- #(#string:key)->(#string)
 m.addAction -- #(#string:key,#()->():action)->()
 = function(key, action)
   l.actionMap[key] = action
