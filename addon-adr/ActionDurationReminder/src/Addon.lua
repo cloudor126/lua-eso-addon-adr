@@ -11,7 +11,7 @@ local VERSION = '@@ADDON_VERSION@@'
 --========================================
 l.actionMap = {} -- #map<#string,#()->()> store actions for bindings
 l.extensionMap = {} -- #map<#string,#list<#()->()>> store extensions for types
-l.registry = LibStub("LibTypeRegistry")(NAME) -- LibTypeRegistry#Registry
+l.registry = LibTypeRegistry(NAME) -- LibTypeRegistry#Registry
 l.started = false
 l.startListeners = {} -- #list<#()->()> store start listeners for initiation
 

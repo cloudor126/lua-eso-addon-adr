@@ -1,3 +1,7 @@
+v3.2.2
+- Depended on LibTypeRegistry externally.
+- Removed LibStub denpendency.
+
 v3.2.1
 - Depended on LibTextDict externally.
 

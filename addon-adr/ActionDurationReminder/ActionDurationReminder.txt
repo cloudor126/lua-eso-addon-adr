@@ -4,12 +4,9 @@
 ## Description: Remind you time to refresh your actions.
 ## APIVersion: 100027 100028
 ## AddOnVersion: 1
-## DependsOn: LibAddonMenu-2.0 LibTextDict
+## DependsOn: LibAddonMenu-2.0 LibTextDict LibTypeRegistry
 ## OptionalDependsOn: LibStub ScootworksCombat 
 ## SavedVariables: ADRSV
-
-libs\LibStub\LibStub.lua
-libs\LibTypeRegistry\LibTypeRegistry.lua
 
 i18n\en.lua
 i18n\$(language).lua
