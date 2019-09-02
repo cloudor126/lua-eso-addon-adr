@@ -300,7 +300,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     },{
       type = "slider",
       name = text("Line Thickness"),
-      min = 1, max = 5, step = 1,
+      min = 2, max = 8, step = 1,
       getFunc = function() return l.getSavedVars().barCooldownThickness end,
       setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
       disabled = function() return not l.getSavedVars().barCooldownVisible end,

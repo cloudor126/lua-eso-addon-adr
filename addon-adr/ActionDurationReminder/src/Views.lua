@@ -192,16 +192,17 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
   end
   local duration = self.duration
   local savedVars = l.getSavedVars()
+  local shrink = 1
   local width,height = self.background:GetDimensions()
-  width = width - l.getSavedVars().barCooldownThickness
-  height = height - l.getSavedVars().barCooldownThickness
+  width = width - l.getSavedVars().barCooldownThickness - 2*shrink
+  height = height - l.getSavedVars().barCooldownThickness - 2*shrink
   -- 1. topRight
   if remain > duration * 7 / 8 then
     if not self.topRight then
       self.topRight = self:createPart()
     end
     local length = width /2 * math.min(1, remain*8/duration - 7)
-    self.topRight:SetAnchor(TOPRIGHT,self.background,TOPRIGHT,0,0)
+    self.topRight:SetAnchor(TOPRIGHT,self.background,TOPRIGHT,-shrink,shrink)
     self.topRight:SetDimensions(length,savedVars.barCooldownThickness)
     self.topRight:SetHidden(false)
   else
@@ -213,7 +214,7 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
       self.right = self:createPart()
     end
     local length = height * math.min(1, (remain*8/duration - 5)/2)
-    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT,0,0)
+    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT,-shrink,-shrink)
     self.right:SetDimensions(savedVars.barCooldownThickness,length)
     self.right:SetHidden(false)
   else
@@ -225,7 +226,7 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
       self.bottom = self:createPart()
     end
     local length = width * math.min(1, (remain*8/duration - 3)/2)
-    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT,0,0)
+    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT,shrink,-shrink)
     self.bottom:SetDimensions(length,savedVars.barCooldownThickness)
     self.bottom:SetHidden(false)
   else
@@ -237,7 +238,7 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
       self.left = self:createPart()
     end
     local length = height * math.min(1,(remain * 8/duration-1)/2)
-    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT,0,0)
+    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT,shrink,shrink)
     self.left:SetDimensions(savedVars.barCooldownThickness,length)
     self.left:SetHidden(false)
   else
@@ -249,7 +250,7 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
       self.topLeft = self:createPart()
     end
     local length = width/2 * math.min(1, remain*8/duration)
-    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP,0,0)
+    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP,0,shrink)
     self.topLeft:SetDimensions(length,savedVars.barCooldownThickness)
     self.topLeft:SetHidden(false)
   else

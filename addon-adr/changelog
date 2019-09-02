@@ -1,3 +1,6 @@
+v3.2.3
+- Ignored effects that have a much longer duration than the action's i.e. Degeneration now shows its dot timer instead of the long buff timer.
+
 v3.2.2
 - Depended on LibTypeRegistry externally.
 - Removed LibStub denpendency.

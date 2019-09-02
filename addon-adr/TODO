@@ -100,6 +100,18 @@ I've been experiencing a bug where if you recast a placed dot (blockade of eleme
 twisting path, etc) before it reaches 0, then the timers for those dots will show 0s whenever you are holding block
 (待网友确认)
 =====================
-cooldown lines
-library
-addAction for debug
+08/12/19, 12:26 AM   
+Sanenomore
+
+Forum posts: 0
+File comments: 2
+Uploads: 0
+Bug
+Having an issue on my MagSorc with buff like Surge and Boundless.. the timer will often just vanish entirely making 
+it look as if the buff has run out. With Boundless there is a clear visual indicator so its not a huge problem but
+ the visual indicator of Surge is more subtle and the timer vanishing has caused me to over cast the buff wasting my 
+ magicka. Is this something you are aware of? Is there a fix?
+ (待网友确认)
+=====================
+ 
+ addAction for debug
