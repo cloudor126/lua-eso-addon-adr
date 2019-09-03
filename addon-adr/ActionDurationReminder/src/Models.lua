@@ -328,7 +328,7 @@ end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
-  if self.duration and self.duration > 4000 and effect.duration > self.duration * 1.5 then return end -- ignore abnormal long duration effect
+  if self.duration and self.duration >=10000 and effect.duration > self.duration * 1.5 then return end -- ignore abnormal long duration effect
   self.lastEffectTime = effect.startTime
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then

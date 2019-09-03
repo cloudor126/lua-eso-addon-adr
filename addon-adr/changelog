@@ -1,3 +1,6 @@
+v3.2.3a
+- Adjusted last feature valve i.e. Rapid Maneuver shows its Major Gallop now.
+
 v3.2.3
 - Ignored effects that have a much longer duration than the action's i.e. Degeneration now shows its dot timer instead of the long buff timer.
 
