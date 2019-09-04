@@ -20,19 +20,11 @@ local DS_ALL = "all" -- debug switch for all
 
 local SPECIAL_ABILITY_IDS = {
 
-    CRYSTAL_FRAGMENT_PROC_EFFECT = 46327, -- detect this proc triggered randomly
-
-    CRYSTAL_FRAGMENT = 114716, -- stop proc duration when casting ability
-
     PURIFYING_LIGHT_TICK = 68581, -- ignore purifying light healing after main duration
 
     LIGHTINING_SPLASH = 23195, -- ignore this (n+1)s redundant effect
 
     HAUNTING_CURSE_1 = 24330, -- haunting curse first phase
-
-    SEETHING_FURY = 122658, -- seething fury activated by all adent flame abilities
-
-    MOLTEN_WHIP = 0, -- stop seething fury duration when casting ability
 }
 
 ---
@@ -96,27 +88,34 @@ end
 
 l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
 = function(effect)
+  -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
     if l.lastAction:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
       return l.lastAction
     end
   end
+  -- try last effect action
   if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>effect.startTime then
     if l.lastEffectAction.ability:matches(effect.ability,false) then
       l.debug(DS_ACTION,1)('[F]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
       return l.lastEffectAction
     end
   end
+  -- try performed actions
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i]
     if action:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
     else
-      l.debug(DS_ACTION,1)('[Fn]not found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      l.debug(DS_ACTION,1)('[F?]not found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
+  -- try slotted actions
+  local action = l.findBarActionByNewEffect(effect)
+  if action then return action end
+  -- not found
   l.debug(DS_ACTION,1)('[?]not found in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
     l.lastEffectAction and l.lastEffectAction.ability.name or 'nil')
   return nil
@@ -147,19 +146,18 @@ end
 l.findBarActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
 = function(effect)
   local matchSlotNum = nil
-  for slotNum = 3,7 do
+  for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
-    if SPECIAL_ABILITY_IDS.MOLTEN_WHIP== slotBoundId
-      or string.find(effect.ability.name,zo_strformat("<<1>>", GetSlotName(slotNum)),1,true)
-      or string.find(zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)), effect.ability.name,1,true)
+    if effect.ability.name:match(zo_strformat("<<1>>", GetSlotName(slotNum)),1)
+      or zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
     then
       matchSlotNum = slotNum
-      SPECIAL_ABILITY_IDS.MOLTEN_WHIP= slotBoundId -- this ability id depends on level
       break
     end
   end
   if matchSlotNum then
     local action = models.newAction(matchSlotNum,l.weaponPairInfo.activeIndex,l.weaponPairInfo.ultimate)
+    action.fake = true
     l.debug(DS_ACTION,1)('[F]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     return action
   end
@@ -199,19 +197,11 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
 = function(eventCode,slotNum)
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
-  -- 2. create action and add
+  -- 2. create action
   local action = models.newAction(slotNum,l.weaponPairInfo.activeIndex, l.weaponPairInfo.ultimate)
   l.debug(DS_ACTION,1)('[a]%s@%.2f+%i++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
     action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
-  if action.ability.id == SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT
-    or action.ability.id == SPECIAL_ABILITY_IDS.MOLTEN_WHIP
-  then
-    if not l.removeAction(action) then
-      l.debug(DS_ACTION,1)('[a]<ignored>')
-    end
-    return
-  end
   -- 3. filter by keywords
   local keywords = l.getSavedVars().coreKeyWords:lower()
   local checked = false
@@ -235,7 +225,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. replace saved
   local sameNameAction = l.getActionByAbilityName(action.ability.name)
   if sameNameAction then
-    l.debug(DS_ACTION,1)('[aF]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
+    l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
       sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
     action.effectList = sameNameAction.effectList
     action.lastEffectTime = sameNameAction.lastEffectTime
@@ -243,7 +233,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local abilityAccepter -- # (#Ability:relatedAbility)->()
     = function(relatedAbility)
       if not action.ability.name:match(relatedAbility.name,1) then
-        l.debug(DS_ACTION,1)('[aFa]%s', relatedAbility:toLogString())
+        l.debug(DS_ACTION,1)('[aMs]%s', relatedAbility:toLogString())
         table.insert(action.relatedAbilityList, relatedAbility)
       end
     end
@@ -312,10 +302,15 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       if not action then return end
       action.stackCount = 0
       action:purgeEffect(effect)
-      l.debug(DS_ACTION,1)('[ps] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
+      l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
+      if action:getEndTime() <= now+20 then
+        l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
+        if action:getStartTime()>now-500 then -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
+          l.removeAction(action)
+        end
+      end
     else
-      if abilityId == SPECIAL_ABILITY_IDS.SEETHING_FURY then action = l.findBarActionByNewEffect(effect) end
-      action = action or l.findActionByNewEffect(effect)
+      action = l.findActionByNewEffect(effect)
       if not action then return end
       if action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
         effect.startTime = action.startTime
@@ -332,27 +327,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
-    -- 2.x crystal fragment proc show at its own skill, not last action
-    if abilityId == SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT_PROC_EFFECT then -- proc happens
-      local crystalSlotNum = nil
-      for slotNum = 3,7 do
-        local slotBoundId = GetSlotBoundId(slotNum)
-        if SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT== slotBoundId
-          or string.find(effect.ability.name,zo_strformat("<<1>>", GetSlotName(slotNum)),1,true)
-        then
-          crystalSlotNum = slotNum
-          SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT= slotBoundId -- this ability id depends on level
-          break
-        end
-      end
-      if crystalSlotNum then
-        local action = models.newAction(crystalSlotNum,l.weaponPairInfo.activeIndex,l.weaponPairInfo.ultimate)
-        action:saveEffect(effect)
-        l.saveAction(action)
-      end
-      return
-    end
-    -- 2.x normal situation
     local action = l.findActionByNewEffect(effect)
     if action then
       action:saveEffect(effect)
@@ -379,14 +353,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByOldEffect(effect)
     if action then
       action:purgeEffect(effect)
-      if action:getEndTime() <= now then
+      if action:getEndTime() <= now+20 then -- 20ms for latency maybe
         l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
-      end
-      --4.x Crystal fragment doesn't need blink
-      if action.ability.id == SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT
-        or action.ability.id == SPECIAL_ABILITY_IDS.MOLTEN_WHIP
-      then
-        l.idActionMap[action.ability.id] = nil
+        if action:getStartTime()>now-500 then -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
+          l.removeAction(action)
+        end
       end
       return
     end
@@ -400,7 +371,7 @@ l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
   if not inCombat then
     for key,action in pairs(l.idActionMap) do
       l.idActionMap[key] = nil
-      l.debug(DS_TARGET,1)('[EC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+      l.debug(DS_TARGET,1)('[C!]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
     end
   end
@@ -414,7 +385,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for key,action in pairs(l.idActionMap) do
     if not action.flags.forGround and not action.flags.forArea and not action:isOnPlayer() and not action:isOnPlayerpet() then
       l.idActionMap[key] = nil
-      l.debug(DS_TARGET,1)('[CT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+      l.debug(DS_TARGET,1)('[RC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
     end
   end
@@ -467,15 +438,9 @@ l.refineActions -- #()->()
   local now = GetGameTimeMilliseconds()
   local endLimit = now - l.getSavedVars().coreSecondsBeforeFade * 1000
   for key,action in pairs(l.idActionMap) do
-    local endTime = action:isUnlimited() and endLimit+1 or (action.stackCount<0 and endLimit-1 or action:getEndTime())
-    if endTime < endLimit then
+    local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
+    if endTime < (action.fake and now or endLimit) then
       l.removeAction(action)
-    elseif endTime < now then -- remove action that stop duration when activated
-      if action.ability.id== SPECIAL_ABILITY_IDS.CRYSTAL_FRAGMENT
-        or action.ability.id== SPECIAL_ABILITY_IDS.MOLTEN_WHIP
-    then
-      l.removeAction(action)
-    end
     end
   end
   endLimit = endLimit - 3000 -- timeActionMap remains a little longer to be found by further effect

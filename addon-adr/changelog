@@ -1,3 +1,6 @@
+v3.2.5
+- Enabled general effect matching with slotted actions i.e. Crystal Fragment/Molten Whip/Power Slash will be matched without special id hard coding.
+
 v3.2.4
 - Filtered duration of Major Gallop effect if not mounted.
 

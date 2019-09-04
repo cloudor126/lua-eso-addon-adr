@@ -64,6 +64,7 @@ end
 m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUltimate)->(#Action)
 = function(slotNum, weaponPairIndex, weaponPairUltimate)
   local action = {} -- #Action
+  action.fake = false 
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
