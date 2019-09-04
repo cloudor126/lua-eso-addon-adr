@@ -291,7 +291,12 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
 = function(self)
   local optEffect = nil --#Effect
   for i, effect in ipairs(self.effectList) do
-    if not optEffect then
+    -- filter Major Gallop if not mount
+    local ignored = false 
+    if effect.ability.icon:find("major_gallop",1,true) and not IsMounted() then ignored = true end
+    if ignored then
+      -- do nothing
+    elseif not optEffect then
       optEffect = effect
     elseif self.flags.forArea and optEffect:isLongDuration() and not effect:isLongDuration() then -- opt normal duration
       optEffect = effect
