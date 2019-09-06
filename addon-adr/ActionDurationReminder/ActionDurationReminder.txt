@@ -5,7 +5,7 @@
 ## APIVersion: 100027 100028
 ## AddOnVersion: 1
 ## DependsOn: LibAddonMenu-2.0 LibTextDict LibTypeRegistry
-## OptionalDependsOn: LibStub ScootworksCombat 
+## OptionalDependsOn: ScootworksCombat 
 ## SavedVariables: ADRSV
 
 i18n\en.lua

@@ -1,3 +1,6 @@
+v3.2.5a
+- Removed LibStub optional dependency in manifest txt file.
+
 v3.2.5
 - Supported general effect matching with slotted actions i.e. Crystal Fragment/Molten Whip/Power Slash will be matched without special id hard coding.
 
