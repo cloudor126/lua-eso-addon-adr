@@ -1,3 +1,9 @@
+v3.2.7
+- Adjusted combat state event handler to react with a latency. Bugs have been reported that timers are often reset randomly.
+
+v3.2.6
+- Optimized strategies to show alert for triggered actions immediately instead of showing them at their end i.e. Crystal Fragment/Assasin's Will will be alerted instantly.
+
 v3.2.5a
 - Removed LibStub optional dependency in manifest txt file.
 

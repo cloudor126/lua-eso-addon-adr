@@ -67,7 +67,6 @@ l.queueAction -- #(Models#Action:action)->()
   local newQueue = {} --#list<Models#Action>
   newQueue[1] = action
   for key, a in ipairs(l.actionQueue) do
-    if a.ability.id == action.ability.id then a.overrideAction = action end
     if a:getEndTime()+l.getSavedVars().coreSecondsBeforeFade*1000 > action.startTime then
       table.insert(newQueue,a)
     end
@@ -127,7 +126,7 @@ l.findActionByOldEffect --#(Models#Effect:effect)->(Models#Action)
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
-      if not oldFirst and action.overrideAction then action = action.overrideAction end
+      if not oldFirst and action.newAction then action = action.newAction end
       l.debug(DS_ACTION,1)('[F]found one by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
     end
@@ -225,11 +224,13 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. replace saved
   local sameNameAction = l.getActionByAbilityName(action.ability.name)
   if sameNameAction then
+    sameNameAction = sameNameAction:getNewest()
     l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
       sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
     action.effectList = sameNameAction.effectList
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
+    action.oldAction = sameNameAction
     local abilityAccepter -- # (#Ability:relatedAbility)->()
     = function(relatedAbility)
       if not action.ability.name:match(relatedAbility.name,1) then

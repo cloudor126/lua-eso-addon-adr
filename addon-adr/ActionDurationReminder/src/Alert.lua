@@ -11,7 +11,7 @@ local m = {l=l} -- #M
 ---
 --@type AlertSavedVars
 local alertSavedVarsDefaults ={
-  alertEnabled = false,
+  alertEnabled = true,
   alertPlaySound = true,
   alertSoundIndex = 266,
   alertAheadSeconds = 1,
@@ -92,7 +92,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   control.icon:SetTexture(ability.icon)
   control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.alertOffsetX, -150 + savedVars.alertOffsetY)
   control:SetHidden(false)
-  control.abilityId = ability.id
+  control.ability = ability
   control.startTime = startTime
   local showedControls = l.showedControls
   for k,v in pairs(showedControls) do
@@ -111,39 +111,82 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   )
 end
 
+l.checkAction --#(Models#Action:action)->()
+= function(action)
+  -- check action alerted
+  if action.data.alerted then return end
+  -- check action just override without new effects
+  if action:getEndTime()-action.startTime < 3000 then return end 
+
+  --
+  local onlyShowAfterTimeout = false
+  if action.ability.id == core.SPECIAL_ABILITY_IDS.HAUNTING_CURSE_1  then
+    if action:optEffect() and action:optEffect().ability and action:optEffect().ability.id == action.ability.id then
+      return
+    else
+      onlyShowAfterTimeout = true
+    end
+  end
+  local instant = l.isActionInstant(action)
+  local aheadTime = l.getSavedVars().alertAheadSeconds *1000
+  local markTime = action.startTime
+  if onlyShowAfterTimeout then
+    aheadTime = 0
+  elseif l.isActionInstant(action) then
+    aheadTime = action:getDuration()
+  end
+  if onlyShowAfterTimeout then aheadTime = 0 end
+  if action:getEndTime() - aheadTime < GetGameTimeMilliseconds() then
+    action.data.alerted = true
+    local showAbility = action.ability
+    if showAbility.id ~= GetSlotBoundId(action.slotNum) then
+      local slotAbility = models.newAbility(0, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+      if action:matchesAbility(slotAbility) then
+        slotAbility.id = action.ability.id
+        showAbility = slotAbility
+      end
+    end
+    l.alert(showAbility, action.startTime)
+  end
+end
+
 l.getSavedVars -- #()->(#AlertSavedVars)
 = function()
   return settings.getSavedVars()
+end
+
+l.isActionInstant --#(Models#Action:action)->(#boolean)
+= function(action)
+  -- check fakeInstant i.e. Crystal Fragment
+  if action.fake and action.stackCount ==0 then return true end
+  -- check transmuteInstant i.e. Assasin's Will
+  local oldestAction = action:getOldest()
+  if action.startTime + 1000 < GetGameTimeMilliseconds() -- give some time to be stable after switching
+    and oldestAction.ability.id ~= GetSlotBoundId(oldestAction.slotNum)
+    and oldestAction:matchesAbility(models.newAbility(0,GetSlotName(oldestAction.slotNum),''))
+  then
+    return true
+  end
+  --
+  return false
 end
 
 l.onCoreUpdate -- #()->()
 = function()
   local savedVars = l.getSavedVars()
   if not savedVars.alertEnabled then return end
-  local now = GetGameTimeMilliseconds()
+
   local idActionMap = core.getIdActionMap()
   for id,action in pairs(idActionMap) do
-    local ignored = action.data.alerted
-    local aheadTime = savedVars.alertAheadSeconds *1000
-    if not ignored and action.ability.id == core.SPECIAL_ABILITY_IDS.HAUNTING_CURSE_1  then
-      if action:optEffect() and action:optEffect().ability and action:optEffect().ability.id == action.ability.id then
-        ignored = true -- ignore the first case effect which has a same id
-      else
-        aheadTime = 0
-      end
-    end
-    if not ignored then
-      if action:getEndTime() - aheadTime < now and not action.data.alerted then
-        action.data.alerted = true
-        l.alert(action.ability, action.startTime)
-      end
-    end
+    l.checkAction(action)
   end
   if savedVars.alertRemoveWhenCastAgain then
     for k,v in pairs(l.showedControls) do
       if not v:IsHidden() then
-        local action = idActionMap[v.abilityId]
-        if action and action.startTime ~= v.startTime then v:SetHidden(true) end
+        local action = core.getActionByAbilityName(v.ability.name)
+        if action and action.startTime ~= v.startTime then
+          v:SetHidden(true)
+        end
       end
     end
   end

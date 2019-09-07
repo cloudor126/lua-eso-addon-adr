@@ -75,7 +75,8 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
-  action.overrideAction = nil --#Action
+  action.oldAction = nil --#Action
+  action.newAction = nil --#Action
 
   action.weaponPairIndex = weaponPairIndex --#number
   action.weaponPairUltimate = weaponPairUltimate --#boolean
@@ -170,6 +171,24 @@ mAction.getFlagsInfo -- #(#Action:self)->(#string)
     tostring(self.flags.forTank))
 end
 
+mAction.getNewest -- #(#Action:self)->(#Action)
+= function(self)
+  local walker = self
+  while walker.newAction do
+    walker = walker.newAction
+  end
+  return walker
+end
+
+mAction.getOldest -- #(#Action:self)->(#Action)
+= function(self)
+  local walker = self
+  while walker.oldAction do
+  	walker = walker.oldAction
+  end
+  return walker
+end
+
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
   local optEffect = self:optEffect()
@@ -245,11 +264,24 @@ mAction.isUnlimited -- #(#Action:self)->(#boolean)
   return self.duration==0 and optEffect and optEffect.duration==0 and self.stackCount>0
 end
 
+mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#boolean)
+= function(self, ability, strict)
+   if self.ability:matches(ability, strict) then return true end
+  -- check related
+  for key, var in ipairs(self.relatedAbilityList) do
+    local ability = var -- #Ability
+    if ability:matches(ability, strict) then return true end
+  end
+end
+
 mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 0. filter ended action
   if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 300 < effect.startTime then
     return false
+  end
+  if self:matchesAbility(effect.ability) then
+    return true
   end
   -- 1. taunt
   if effect.ability.id == SPECIAL_ABILITY_IDS.TAUNT and self.flags.forTank then
@@ -264,12 +296,8 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end 
   end
   -- 3. check ability match
-  if self.ability:matches(effect.ability, strict) then return true end
-  -- 4. check related
-  for key, var in ipairs(self.relatedAbilityList) do
-  	local ability = var -- #Ability
-  	if ability:matches(effect.ability, strict) then return true end
-  end
+  if self:matchesAbility(effect.ability, strict) then return true end
+  --
   return false
 end
 
