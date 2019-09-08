@@ -1,3 +1,6 @@
+v3.2.8
+- Fixed a bug that effect can show timers on all bar actions by any absence of slot.
+
 v3.2.7
 - Adjusted combat state event handler to react with a latency. Bugs have been reported that timers are often reset randomly.
 

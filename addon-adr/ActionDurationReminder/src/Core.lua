@@ -147,11 +147,13 @@ l.findBarActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
   local matchSlotNum = nil
   for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
-    if effect.ability.name:match(zo_strformat("<<1>>", GetSlotName(slotNum)),1)
-      or zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
-    then
-      matchSlotNum = slotNum
-      break
+    if slotBoundId >0 then
+      if effect.ability.name:match(zo_strformat("<<1>>", GetSlotName(slotNum)),1)
+        or zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
+      then
+        matchSlotNum = slotNum
+        break
+      end
     end
   end
   if matchSlotNum then
@@ -369,13 +371,18 @@ end
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
 = function(eventCode,inCombat)
   if not l.getSavedVars().coreClearWhenCombatEnd then return end
-  if not inCombat then
-    for key,action in pairs(l.idActionMap) do
-      l.idActionMap[key] = nil
-      l.debug(DS_TARGET,1)('[C!]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
-        action:getDuration()/1000, action:getFlagsInfo())
-    end
-  end
+  zo_callLater(
+    function()
+      if not IsUnitInCombat('player') then
+        for key,action in pairs(l.idActionMap) do
+          l.idActionMap[key] = nil
+          l.debug(DS_TARGET,1)('[C!]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+            action:getDuration()/1000, action:getFlagsInfo())
+        end
+      end
+    end,
+    3000
+  )
 end
 
 l.onReticleTargetChanged -- #(#number:eventCode)->()
