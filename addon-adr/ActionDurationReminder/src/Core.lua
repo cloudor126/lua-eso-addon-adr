@@ -43,6 +43,8 @@ local coreSavedVarsDefaults = {
 --@field #number activeIndex
 --@field #boolean ultimate
 
+local GetGameTimeMilliseconds =GetGameTimeMilliseconds
+
 --========================================
 --        l
 --========================================
@@ -50,7 +52,10 @@ l.actionQueue = {} --#list<Models#Action>
 
 l.idActionMap = {}--#map<#number,Models#Action>
 
+l.idSearchingMap = {} -- #map<#number,#map<#number,#boolean>>
+
 l.lastAction = nil -- Models#Action
+
 l.lastEffectAction = nil -- Models#Action
 
 l.timeActionMap = {}--#map<#number,Models#Action>
@@ -177,18 +182,22 @@ l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
   return l.idActionMap[abilityId]
 end
 
-l.getActionByAbilityName -- #(#string:abilityName)->(Models#Action)
-= function(abilityName)
+l.getActionByAbilityName -- #(#string:abilityName,#map<#number,#boolean>:searchedIdMap)->(Models#Action)
+= function(abilityName,searchedIdMap)
+  searchedIdMap = searchedIdMap or {}
   for id, action in pairs(l.idActionMap) do
-    if abilityName:match(action.ability.name,1)
-      -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-      or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true))
+    local flag = searchedIdMap[id]
+    if flag == nil then -- only test those not searched, no matter flag is true or false
+      if abilityName:match(action.ability.name,1)
+        -- i.e. Assassin's Will name can match Merciless Resolve action by its description
+        or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true))
     then
       return action
     end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(action.relatedAbilityList) do
       if abilityName:match(var.name,1) then return action end
+    end
     end
   end
   return nil
@@ -229,6 +238,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     sameNameAction = sameNameAction:getNewest()
     l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
       sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
+    sameNameAction.newAction = action
     action.effectList = sameNameAction.effectList
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
@@ -313,7 +323,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         end
       end
     else
-      action = l.findActionByNewEffect(effect)
+      action = l.searchActionByNewEffect(effect)
       if not action then return end
       if action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
         effect.startTime = action.startTime
@@ -330,7 +340,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
-    local action = l.findActionByNewEffect(effect)
+    local action = l.searchActionByNewEffect(effect)
     if action then
       action:saveEffect(effect)
       local weird = effect.duration == 0
@@ -462,12 +472,25 @@ end
 
 l.removeAction -- #(Models#Action:action)->(#boolean)
 = function(action)
+  local removed = false
+  -- remove from idActionMap
   if l.idActionMap[action.ability.id] then
     l.idActionMap[action.ability.id] = nil
     l.debug(DS_ACTION, 1)('[d]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
-    return true
+    removed = true
   end
-  return false
+  -- remove fake/trigger actions from queue, otherwise next fake action will failed to recognize i.e. Crystal Fragment
+  if action.oldAction and action.oldAction.fake then
+    local newQueue = {} --#list<Models#Action>
+    for key, a in ipairs(l.actionQueue) do
+      if a.ability.id ~= action.ability.id and a.ability.id~= action.oldAction.ability.id then
+        table.insert(newQueue,a)
+      end
+    end
+    l.actionQueue = newQueue
+  end
+  --
+  return removed
 end
 
 l.saveAction -- #(Models#Action:action)->()
@@ -494,6 +517,104 @@ l.saveAction -- #(Models#Action:action)->()
     len(l.idActionMap),len(l.timeActionMap))
 end
 
+l.searchAction --#(#map<#number,#boolean>:searching)->(Models#Action)
+= function(searching)
+  local action = nil -- Models#Action
+  -- try last performed action
+  if l.lastAction and l.lastAction.flags.forGround then
+    if searching[l.lastAction.ability.id] then
+      action = l.lastAction:getNewest()
+      l.debug(DS_ACTION,1)('[^F]found last action by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+    end
+  end
+  -- try last effect action
+  if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>GetGameTimeMilliseconds() then
+    if searching[l.lastEffectAction.ability.id] then
+      action = l.lastEffectAction:getNewest()
+      l.debug(DS_ACTION,1)('[^F]found last effect action by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+    end
+  end
+  -- try performed actions
+  for i = 1,#l.actionQueue do
+    action = l.actionQueue[i]
+    if searching[action.ability.id] then
+      action = action:getNewest()
+      l.debug(DS_ACTION,1)('[^F]found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+    end
+  end
+  -- try slotted actions
+  for slotNum = 3,8 do
+    local slotBoundId = GetSlotBoundId(slotNum)
+    if searching[slotBoundId] then
+      action = models.newAction(slotNum,l.weaponPairInfo.activeIndex,l.weaponPairInfo.ultimate)
+      action.fake = true
+      l.debug(DS_ACTION,1)('[^F]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+    end
+  end
+  -- not found by searching
+  return nil
+end
+
+l.searchActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
+= function(effect)
+  local searching = l.idSearchingMap[effect.ability.id]
+  -- no searching object yet
+  if not searching then
+    searching = {}
+    l.idSearchingMap[effect.ability.id] = searching
+    local action = l.findActionByNewEffect(effect)
+    if action then
+      searching[action.ability.id] = true
+    end
+    return action
+  end
+  -- never had a
+  if next(searching) == nil then return nil end
+  -- searching first
+  local action = l.searchAction(searching)
+  if action then
+    searching[action.ability.id] = true -- patch if the action is new
+    return action
+  end
+  -- expand searching
+  action = l.findActionByNewEffect(effect)
+  if action then
+    searching[action.ability.id] = true
+  end
+  return action
+end
+
+l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
+= function(slotBoundId)
+  local searching = l.idSearchingMap[slotBoundId]
+  -- no searching object yet
+  if not searching then
+    searching = {} -- #map<#number, #boolean>
+    l.idSearchingMap[slotBoundId] = searching
+    searching[slotBoundId] = true
+  end
+  local action = nil --Models#Action
+  for key, var in pairs(searching) do
+    if var then
+      action = l.idActionMap[key]
+      if action then return action end
+    end
+  end
+  local abilityName = zo_strformat("<<1>>", GetAbilityName(slotBoundId))
+  action = l.getActionByAbilityName(abilityName, searching)
+  if action then
+    searching[action.ability.id] = true
+  else
+    for key, var in pairs(l.idActionMap) do
+      searching[key] = false
+    end
+  end
+  return action
+end
 --========================================
 --        m
 --========================================
@@ -506,6 +627,8 @@ m.SPECIAL_ABILITY_IDS = SPECIAL_ABILITY_IDS
 m.getActionByAbilityId = l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
 
 m.getActionByAbilityName = l.getActionByAbilityName-- #(#string:abilityName)->(Models#Action)
+
+m.searchActionBySlotBoundId = l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
 
 m.getIdActionMap -- #()->(#map<#number,Models#Action>)
 = function()

@@ -50,9 +50,7 @@ l.onCoreUpdate -- #()->()
   for slotNum = 3,8 do
     local widget = l.mainBarWidgetMap[slotNum]
     local abilityId = GetSlotBoundId(slotNum)
-    local abilityName = zo_strformat("<<1>>", GetAbilityName(abilityId))
-    local action = core.getActionByAbilityId(abilityId)
-    action = action or core.getActionByAbilityName(abilityName)
+    local action = core.searchActionBySlotBoundId(abilityId)
     if action then
       action.flags.isShifted = false
       showedActionMap[action.ability.id] = action

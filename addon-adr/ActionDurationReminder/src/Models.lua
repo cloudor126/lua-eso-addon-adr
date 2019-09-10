@@ -64,7 +64,7 @@ end
 m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUltimate)->(#Action)
 = function(slotNum, weaponPairIndex, weaponPairUltimate)
   local action = {} -- #Action
-  action.fake = false 
+  action.fake = false
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
@@ -184,7 +184,7 @@ mAction.getOldest -- #(#Action:self)->(#Action)
 = function(self)
   local walker = self
   while walker.oldAction do
-  	walker = walker.oldAction
+    walker = walker.oldAction
   end
   return walker
 end
@@ -213,11 +213,12 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '1/2'
   end
   -- 2/2 by same end and >2/5 duration and <4/5 duration
-  if math.abs(optEffect.endTime-self.startTime-self.duration)<500
-    and optEffect.duration*5 > self.duration *2
-    and optEffect.duration*5 < self.duration *4
-  then
-    return '2/2'
+  if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
+    if optEffect.duration*5 > self.duration *2 then
+      if optEffect.duration*5 < self.duration *4 then
+        return '2/2'
+      end
+    end
   end
   -- 2/2 by normal effect with firstStagedId and without long duration effect present
   if self.flags.forArea and self.data.firstStageId
@@ -266,7 +267,7 @@ end
 
 mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#boolean)
 = function(self, ability, strict)
-   if self.ability:matches(ability, strict) then return true end
+  if self.ability:matches(ability, strict) then return true end
   -- check related
   for key, var in ipairs(self.relatedAbilityList) do
     local ability = var -- #Ability
@@ -293,7 +294,7 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     local e = var --#Effect
     if effect.ability.id == e.ability.id then return true end
     -- already some recent and dalayed effect counted
-    if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end 
+    if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end
   end
   -- 3. check ability match
   if self:matchesAbility(effect.ability, strict) then return true end
@@ -321,10 +322,10 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
   local optEffect = nil --#Effect
   for i, effect in ipairs(self.effectList) do
     -- filter Major Gallop if not mount
-    local ignored = false 
+    local ignored = false
     if effect.ability.icon:find("major_gallop",1,true) and not IsMounted() then ignored = true end
     if ignored then
-      -- do nothing
+    -- do nothing
     elseif not optEffect then
       optEffect = effect
     elseif self.flags.forArea and optEffect:isLongDuration() and not effect:isLongDuration() then -- opt normal duration
@@ -396,4 +397,8 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+
+
+
 

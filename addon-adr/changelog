@@ -1,3 +1,6 @@
+v3.3.0
+- Optimized performance by caching search.
+
 v3.2.8
 - Fixed a bug that effect can show timers on all bar actions by any absence of slot.
 
