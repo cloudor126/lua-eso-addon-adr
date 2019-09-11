@@ -1,0 +1,9 @@
+## APIVersion: 100027 100028
+## Title: Lib Text Dict
+## Author: Cloudor
+## Version: 1.1
+## AddOnVersion: 1
+## IsLibrary: true
+## Description: A library to aid in the implementation of i18n.
+
+src/LibTextDict.lua
