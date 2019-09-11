@@ -24,6 +24,7 @@ end
 
 local fMatchIconPath -- #(#string:path1,#string:path2)->(#boolean)
 = function(path1, path2)
+  if path1=='' or path1=='/' or path2=='' or path2=='/' then return false end
   if path1 == path2 then return true end -- fast check
   path1 = fRefinePath(path1)
   path2 = fRefinePath(path2)
@@ -38,7 +39,7 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   local ability = {} -- #Ability
   local getIconPath -- #(#string:icon)->(#string)
   = function(icon)
-    return icon.sub(icon,1,1)=='/' and icon or ('/'..icon)
+    return icon:sub(1,1)=='/' and icon or ('/'..icon)
   end
   icon = getIconPath(icon)
   ability.id = id -- #number
@@ -126,15 +127,14 @@ end
 mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean)
 = function(self, other, strict)
   local matches = function(s1,s2) -- #(#string:s1,#string:s2)->(#boolean)
+    if s1=='' or s2=='' then return false end
     if s1 == s2 then return true end
     return s1:find(s2, 1,true) or s2:find(s1, 1,true)
   end
   if self.id==other.id then return true end
   if fMatchIconPath(self.icon, other.icon) then return true end
   if other.icon2  then
-    if  fMatchIconPath(self.icon, other.icon2) then
-      return true
-    end
+    if  fMatchIconPath(self.icon, other.icon2) then return true end
   end
   if matches(self.name , other.name) then return true end
   if self.progressionName and matches(self.progressionName, other.name) then return true end
@@ -270,8 +270,8 @@ mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#b
   if self.ability:matches(ability, strict) then return true end
   -- check related
   for key, var in ipairs(self.relatedAbilityList) do
-    local ability = var -- #Ability
-    if ability:matches(ability, strict) then return true end
+    local a = var -- #Ability
+    if a:matches(ability, strict) then return true end
   end
 end
 
