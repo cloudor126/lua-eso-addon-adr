@@ -26,7 +26,7 @@ l.getStackLabelFont -- #()->(#string)
   return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|thick-outline"
 end
 
-l.debugIdList = {} -- #list<#number>TODO
+l.debugIdList = {} -- #list<#number>
 --========================================
 --        m
 --========================================

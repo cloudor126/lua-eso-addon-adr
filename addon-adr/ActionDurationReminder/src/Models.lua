@@ -347,7 +347,7 @@ mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
   return nil
 end
 
-mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->()
+mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
 = function(self, effect)
   local oldEffect = effect -- #Effect
   for i, e in ipairs(self.effectList) do
@@ -359,6 +359,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->()
   end
   local now = GetGameTimeMilliseconds()
   if not self:hasEffect() and oldEffect.duration > 0 then self.endTime =now end
+  return oldEffect
 end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)

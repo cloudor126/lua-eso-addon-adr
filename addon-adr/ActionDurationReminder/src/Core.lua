@@ -72,7 +72,7 @@ l.queueAction -- #(Models#Action:action)->()
   local newQueue = {} --#list<Models#Action>
   newQueue[1] = action
   for key, a in ipairs(l.actionQueue) do
-    if a:getEndTime()+l.getSavedVars().coreSecondsBeforeFade*1000 > action.startTime then
+    if not a.newAction and a:getEndTime()+l.getSavedVars().coreSecondsBeforeFade*1000 > action.startTime then
       table.insert(newQueue,a)
     end
   end
@@ -125,22 +125,24 @@ l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
   return nil
 end
 
-l.findActionByOldEffect --#(Models#Effect:effect)->(Models#Action)
-= function(effect, oldFirst)
+l.findActionByOldEffect --#(Models#Effect:effect,#boolean:updating)->(Models#Action)
+= function(effect, updating)
   -- 1. find that can
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
-      if not oldFirst and action.newAction then action = action.newAction end
+      if action.newAction then action = action:getNewest() end
       l.debug(DS_ACTION,1)('[F]found one by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
     end
   end
-  for i = 1,#l.actionQueue do
-    local action = l.actionQueue[i]
-    if action:matchesNewEffect(effect) then
-      l.debug(DS_ACTION,1)('[F]found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
-      return action
+  if updating then
+    for i = 1,#l.actionQueue do
+      local action = l.actionQueue[i]
+      if action:matchesNewEffect(effect) then
+        l.debug(DS_ACTION,1)('[F]found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+        return action
+      end
     end
   end
   l.debug(DS_ACTION,1)('[?]not found in %i actions, last:%s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil')
@@ -314,7 +316,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       action = l.findActionByOldEffect(effect)
       if not action then return end
       action.stackCount = 0
-      action:purgeEffect(effect)
+      local oldEffect = action:purgeEffect(effect)
+      l.timeActionMap[oldEffect.startTime] = nil
       l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
       if action:getEndTime() <= now+20 then
         l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
@@ -340,6 +343,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
+    if duration == 0 then
+      l.debug(DS_EFFECT,1)('[]New effect without duration ignored')
+      return
+    end
     local action = l.searchActionByNewEffect(effect)
     if action then
       action:saveEffect(effect)
@@ -352,7 +359,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
-    local action = l.findActionByOldEffect(effect)
+    local action = l.findActionByOldEffect(effect, true)
     if action then
       local old = action:saveEffect(effect)
       local weird = not old and effect.duration == 0
@@ -365,7 +372,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if changeType == EFFECT_RESULT_FADED then
     local action = l.findActionByOldEffect(effect)
     if action then
-      action:purgeEffect(effect)
+      local oldEffect = action:purgeEffect(effect)
+      l.timeActionMap[oldEffect.startTime] = nil
       if action:getEndTime() <= now+20 then -- 20ms for latency maybe
         l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
         if action:getStartTime()>now-500 then -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
