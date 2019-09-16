@@ -1,3 +1,6 @@
+v3.3.3
+- Made the white/black pattern list to filter not only skills but also specific effects.
+
 v3.3.2
 - Fixed two bugs that combines to eat a lot of mem. 
 

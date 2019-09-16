@@ -35,7 +35,7 @@ local coreSavedVarsDefaults = {
   coreMinimumDurationSeconds = 3,
   coreKeyWords = '',
   coreBlackKeyWords = '',
-  coreClearWhenCombatEnd = true,
+  coreClearWhenCombatEnd = false,
 }
 
 ---
@@ -51,6 +51,8 @@ local GetGameTimeMilliseconds =GetGameTimeMilliseconds
 l.actionQueue = {} --#list<Models#Action>
 
 l.idActionMap = {}--#map<#number,Models#Action>
+
+l.idFilteringMap = {} --#map<#number,#boolean>
 
 l.idSearchingMap = {} -- #map<#number,#map<#number,#boolean>>
 
@@ -88,6 +90,41 @@ l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
       d(os.date()..'>', string.format(format, ...))
     end
   end
+end
+
+l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
+= function(ability)
+  local savedValue = l.idFilteringMap[ability.id]
+  if savedValue ~= nil then return savedValue end
+
+  -- check white list
+  local keywords = l.getSavedVars().coreKeyWords:lower()
+  local checked = false
+  local checkOk = false
+  for line in keywords:gmatch("[^\r\n]+") do
+    line = line:match "^%s*(.-)%s*$"
+    if line then
+      checked = true
+      checkOk = ability.name:lower():match(line)
+      if checkOk then break end
+    end
+  end
+  if checked and not checkOk then
+    l.idFilteringMap[ability.id] = false
+    return false
+  end
+  -- check black list
+  keywords = l.getSavedVars().coreBlackKeyWords:lower()
+  for line in keywords:gmatch("[^\r\n]+") do
+    line = line:match "^%s*(.-)%s*$"
+    if line and ability.name:lower():match(line) then
+      l.idFilteringMap[ability.id] = false
+      return false
+    end
+  end
+  --
+  l.idFilteringMap[ability.id] = true
+  return true
 end
 
 l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
@@ -215,26 +252,13 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
   -- 3. filter by keywords
-  local keywords = l.getSavedVars().coreKeyWords:lower()
-  local checked = false
-  local checkOk = false
-  for line in keywords:gmatch("[^\r\n]+") do
-    line = line:match "^%s*(.-)%s*$"
-    if line then
-      checked = true
-      checkOk = action.ability.name:lower():match(line)
-      if checkOk then break end
-    end
+  if not l.filterAbilityOk(action.ability) then
+    l.debug(DS_EFFECT,1)('[]filtered')
+    return
   end
-  if checked and not checkOk then return end
-  keywords = l.getSavedVars().coreBlackKeyWords:lower()
-  for line in keywords:gmatch("[^\r\n]+") do
-    line = line:match "^%s*(.-)%s*$"
-    if line and action.ability.name:lower():match(line) then return end
-  end
-  -- 3. queue it
+  -- 4. queue it
   l.queueAction(action)
-  -- 4. replace saved
+  -- 5. replace saved
   local sameNameAction = l.getActionByAbilityName(action.ability.name)
   if sameNameAction then
     sameNameAction = sameNameAction:getNewest()
@@ -326,8 +350,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         end
       end
     else
+      if not l.filterAbilityOk(effect.ability) then return end
       action = l.searchActionByNewEffect(effect)
-      if not action then return end
+      if not l.filterAbilityOk(effect.ability) then
+        l.debug(DS_EFFECT,1)('[]New effect filtered')
+        return
+      end
       if action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
         effect.startTime = action.startTime
         effect.duration = action.duration
@@ -345,6 +373,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if changeType == EFFECT_RESULT_GAINED then
     if duration == 0 then
       l.debug(DS_EFFECT,1)('[]New effect without duration ignored')
+      return
+    end
+    if not l.filterAbilityOk(effect.ability) then
+      l.debug(DS_EFFECT,1)('[]New effect filtered')
       return
     end
     local action = l.searchActionByNewEffect(effect)
@@ -702,7 +734,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       type = "editbox",
       name = addon.text("Patterns of White List in line"), -- or string id or function returning a string
       getFunc = function() return l.getSavedVars().coreKeyWords end,
-      setFunc = function(text) l.getSavedVars().coreKeyWords = text end,
+      setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} end,
       -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
       isMultiline = true, --boolean (optional)
       isExtraWide = true, --boolean (optional)
@@ -716,7 +748,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       type = "editbox",
       name = addon.text("Patterns of Black List in line"), -- or string id or function returning a string
       getFunc = function() return l.getSavedVars().coreBlackKeyWords end,
-      setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text end,
+      setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text l.idFilteringMap={} end,
       -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
       isMultiline = true, --boolean (optional)
       isExtraWide = true, --boolean (optional)

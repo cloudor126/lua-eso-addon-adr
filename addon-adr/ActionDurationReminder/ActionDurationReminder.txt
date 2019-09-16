@@ -2,7 +2,7 @@
 ## Author: Cloudor
 ## Version: @@ADDON_VERSION@@
 ## Description: Remind you time to refresh your actions.
-## APIVersion: 100027 100028
+## APIVersion: 100028 100029
 ## AddOnVersion: 1
 ## DependsOn: LibAddonMenu-2.0 LibTextDict LibTypeRegistry
 ## OptionalDependsOn: ScootworksCombat 
