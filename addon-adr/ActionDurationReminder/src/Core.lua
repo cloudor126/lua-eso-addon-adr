@@ -356,7 +356,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         l.debug(DS_EFFECT,1)('[]New effect filtered')
         return
       end
-      if action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
+      if action.duration and action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
         effect.startTime = action.startTime
         effect.duration = action.duration
         effect.endTime = action.endTime
