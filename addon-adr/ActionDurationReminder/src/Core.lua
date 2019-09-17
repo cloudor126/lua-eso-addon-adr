@@ -350,8 +350,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         end
       end
     else
-      if not l.filterAbilityOk(effect.ability) then return end
       action = l.searchActionByNewEffect(effect)
+      if not action then return end
       if not l.filterAbilityOk(effect.ability) then
         l.debug(DS_EFFECT,1)('[]New effect filtered')
         return

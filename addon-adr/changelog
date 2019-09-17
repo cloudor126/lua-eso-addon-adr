@@ -1,3 +1,6 @@
+v3.3.5
+- Fixed a bug introduced in v3.3.3.
+
 v3.3.4
 - Added a nil value protection.
 
