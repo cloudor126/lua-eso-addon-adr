@@ -1,3 +1,6 @@
+v3.3.6
+- Avoided matching potion effects on action bar.
+
 v3.3.5
 - Fixed a bug introduced in v3.3.3.
 

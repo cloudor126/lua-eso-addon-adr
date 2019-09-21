@@ -60,6 +60,8 @@ l.lastAction = nil -- Models#Action
 
 l.lastEffectAction = nil -- Models#Action
 
+l.lastQuickslotTime = 0 -- #number
+
 l.timeActionMap = {}--#map<#number,Models#Action>
 
 l.weaponPairInfo -- #WeaponPairInfo
@@ -188,6 +190,9 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
 = function(effect)
+  -- check if it's a potion effect
+  if effect.startTime - l.lastQuickslotTime < 100 then return nil end
+  --
   local matchSlotNum = nil
   for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
@@ -294,6 +299,14 @@ l.onActionSlotsAllHotbarsUpdated -- #(#number:eventCode)->()
     l.weaponPairInfo.ultimate = false
   else
     l.weaponPairInfo.ultimate = category ~= HOTBAR_CATEGORY_PRIMARY and category ~= HOTBAR_CATEGORY_BACKUP
+  end
+end
+
+l.onActionUpdateCooldowns -- #(#number:eventCode)->()
+= function(eventCode)
+  local remain,duration = GetSlotCooldownInfo(GetCurrentQuickslot())
+  if remain>1000 and duration>1000 and duration-remain<100 then
+    l.lastQuickslotTime = GetGameTimeMilliseconds()
   end
 end
 
@@ -482,6 +495,8 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
+  
+  EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_ACTION_UPDATE_COOLDOWNS, l.onActionUpdateCooldowns  )
 
 end
 
