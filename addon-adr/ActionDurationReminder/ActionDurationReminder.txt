@@ -8,16 +8,16 @@
 ## OptionalDependsOn: ScootworksCombat 
 ## SavedVariables: ADRSV
 
-i18n\en.lua
-i18n\$(language).lua
+i18n/en.lua
+i18n/$(language).lua
 
-src\Addon.lua
-src\Settings.lua
-src\Models.lua
-src\Core.lua
-src\Views.lua
-src\Bar.lua
-src\Alert.lua
-src\Patch.lua
+src/Addon.lua
+src/Settings.lua
+src/Models.lua
+src/Core.lua
+src/Views.lua
+src/Bar.lua
+src/Alert.lua
+src/Patch.lua
 
 

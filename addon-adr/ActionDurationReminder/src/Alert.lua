@@ -7,6 +7,13 @@ local models = addon.load("Models#M")
 local core = addon.load("Core#M")
 local l = {} -- #L
 local m = {l=l} -- #M
+local zhFlags = {
+  zh = true,
+  ze = true,
+  zf = true,
+  zg = true,
+  jf = true,
+} -- #map<#string,#boolean>
 
 ---
 --@type AlertSavedVars
@@ -87,7 +94,9 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     end)
   end
   local control,key = l.controlPool:AcquireObject()
-  control.label:SetFont("$("..savedVars.alertFontName..")|"..savedVars.alertFontSize.."|thick-outline")
+  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
+  control.label:SetFont(fontstr)
+  
   control.label:SetText(zo_strformat('<<C:1>>',ability.name))
   control.icon:SetTexture(ability.icon)
   control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.alertOffsetX, -150 + savedVars.alertOffsetY)
