@@ -1,3 +1,6 @@
+v3.3.7
+- Added a strategy to adjust effect's redundant duration i.e. Ligntning Splash doesn't display 1 sec longer any more.
+
 v3.3.6c
 - Patched for ESOZH.
 
