@@ -15,6 +15,7 @@ distributions {
     main {
         baseName = addonName
         contents {
+            filteringCharset = 'iso8859-1'
             from addonName
             filter{
                 it.replaceAll('@@ADDON_VERSION@@',addonVersion)
