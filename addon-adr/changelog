@@ -1,3 +1,6 @@
+v3.3.9
+- Marked as updated in DragonHold.
+
 v3.3.8
 - Fixed a fuzzy matching strategy bug e.g. Unstable Wall of Fire won't eat a 4 sec Burning effect duration any more.
 
