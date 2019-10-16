@@ -281,9 +281,6 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 300 < effect.startTime then
     return false
   end
-  if self:matchesAbility(effect.ability) then
-    return true
-  end
   -- 1. taunt
   if effect.ability.id == SPECIAL_ABILITY_IDS.TAUNT and self.flags.forTank then
     return true

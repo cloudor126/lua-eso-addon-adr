@@ -1,8 +1,11 @@
+v3.3.8
+- Fixed a fuzzy matching strategy bug e.g. Unstable Wall of Fire won't eat a 4 sec Burning effect duration any more.
+
 v3.3.7a
 - Fixed a package script bug on filtering contents.
 
 v3.3.7
-- Added a strategy to adjust effect's redundant duration i.e. Ligntning Splash doesn't display 1 sec longer any more.
+- Added a strategy to adjust effect's redundant duration e.g. Ligntning Splash won't display 1 sec longer any more.
 
 v3.3.6c
 - Patched for ESOZH.
@@ -42,22 +45,22 @@ v3.2.7
 - Adjusted combat state event handler to react with a latency. Bugs have been reported that timers are often reset randomly.
 
 v3.2.6
-- Optimized strategies to show alert for triggered actions immediately instead of showing them at their end i.e. Crystal Fragment/Assasin's Will will be alerted instantly.
+- Optimized strategies to show alert for triggered actions immediately instead of showing them at their end e.g. Crystal Fragment/Assasin's Will will be alerted instantly.
 
 v3.2.5a
 - Removed LibStub optional dependency in manifest txt file.
 
 v3.2.5
-- Supported general effect matching with slotted actions i.e. Crystal Fragment/Molten Whip/Power Slash will be matched without special id hard coding.
+- Supported general effect matching with slotted actions e.g. Crystal Fragment/Molten Whip/Power Slash will be matched without special id hard coding.
 
 v3.2.4
 - Filtered duration of Major Gallop effect if not mounted.
 
 v3.2.3a
-- Adjusted last feature valve i.e. Rapid Maneuver shows its Major Gallop now.
+- Adjusted last feature valve e.g. Rapid Maneuver shows its Major Gallop now.
 
 v3.2.3
-- Ignored effects that have a much longer duration than the action's i.e. Degeneration now shows its dot timer instead of the long buff timer.
+- Ignored effects that have a much longer duration than the action's e.g. Degeneration now shows its dot timer instead of the long buff timer.
 
 v3.2.2
 - Depended on LibTypeRegistry externally.
@@ -74,10 +77,10 @@ v3.1.30
 - Fxied a layer bug of cooldown lines in shift bar.
 
 v3.1.29
-- Optimized action model to store related abilities for matching i.e. timers can continue to show after performing Assassin's Will.
+- Optimized action model to store related abilities for matching e.g. timers can continue to show after performing Assassin's Will.
 
 v3.1.28
-- Optimized actions matching i.e. Blocade timer is avoided matching with Balance by 'Off Balance'.
+- Optimized actions matching e.g. Blocade timer is avoided matching with Balance by 'Off Balance'.
 
 v3.1.27
 - Re-implemented cooldown lines.
@@ -86,7 +89,7 @@ v3.1.26
 - Added options for stack label font.
 
 v3.1.25
-- Fixed a bug that effects of player pet wrongly reset when switching reticle target i.e. timer of Dark Shade is now kept when target changes.
+- Fixed a bug that effects of player pet wrongly reset when switching reticle target e.g. timer of Dark Shade is now kept when target changes.
 
 v3.1.24
 - Fixed a bug of effects matching repeated actions in short time.
@@ -103,10 +106,10 @@ v3.1.21
 - Fixed a nil value bug.
 
 v3.1.20
-- Improved action and slot matching i.e. Merciless Resolve timer can be displayed on Assissin Will.
+- Improved action and slot matching e.g. Merciless Resolve timer can be displayed on Assissin Will.
 
 v3.1.19
-- Fixed a duration fading bug i.e. Beast Trap can fade normally now.
+- Fixed a duration fading bug e.g. Beast Trap can fade normally now.
 
 v3.1.18
 - Updated ru translation from GJSmoker.
@@ -118,23 +121,23 @@ v3.1.17a
 - Shared in esoui git repo.
 
 v3.1.17
-- Added a new action/effect matching policy i.e. Consuming Trap is now supported.
+- Added a new action/effect matching policy e.g. Consuming Trap is now supported.
 
 v3.1.16
-- Optimized action/effect matching and processing to prevent showing an empty duration action in slot until it gain another effect that has a duration i.e. prevent Fetcher Infection showing a zero timer until cast swarm hit an enemy.
+- Optimized action/effect matching and processing to prevent showing an empty duration action in slot until it gain another effect that has a duration e.g. prevent Fetcher Infection showing a zero timer until cast swarm hit an enemy.
 ( The situation in previous changelog is not in random. It is to do with the distance between player and enemy.)
 
 v3.1.15
-- Optimized a compatibility with in-game fading effects i.e. Fetcher Infection was randomly reset and now will come back.
+- Optimized a compatibility with in-game fading effects e.g. Fetcher Infection was randomly reset and now will come back.
 
 v3.1.14
-- Fixed an effect matching bug for non-english environments i.e. Flaming Skull is now displayed in its slot for french/german versions.
+- Fixed an effect matching bug for non-english environments e.g. Flaming Skull is now displayed in its slot for french/german versions.
 
 v3.1.13
-- Optimized for stackable abilities i.e. Flame Skull.
+- Optimized for stackable abilities e.g. Flame Skull.
 
 v3.1.12
-- Optimized action matching for abilities that change id in action bar i.e. Flame Skull.
+- Optimized action matching for abilities that change id in action bar e.g. Flame Skull.
 
 v3.1.11
 - Added options of white/black list patterns.
@@ -142,7 +145,7 @@ v3.1.11
 
 v3.1.10
 - Added rules to detect stage info like Rearming Trap.
-- Optimized effect matching by comparing the action which is matched by other effect at the same time. i.e. Minor Force trigged several seconds after Rearming Trap action is now recognized.
+- Optimized effect matching by comparing the action which is matched by other effect at the same time. e.g. Minor Force trigged several seconds after Rearming Trap action is now recognized.
 
 v3.1.9
 - Added a rule to detect multi-staged abilities like Haunting Curse and show a small 1/2 and 2/2.
@@ -168,7 +171,7 @@ v3.1.3
 - Fixed a bug that the option of "Account Wide Configuration" doesn't work.
 
 v3.1.2
-- Improved the effect matching using icon i.e. action Dark Conversion will emit a Dark Deal effect which should be linked.
+- Improved the effect matching using icon e.g. action Dark Conversion will emit a Dark Deal effect which should be linked.
 
 v3.1.1
 - Optimized the effect matching for actions with cast time property such as Channeled Acceleration.
@@ -181,10 +184,10 @@ v3.0.22
 
 v3.0.21
 - Ignored a buggy and redundant effect event emit from Liquid Lightning which is 11 seconds long and fades when it has 1 seconds left.
-- Ignored long term effect events that is more than 100 seconds. i.e. Guard has a 21600 seconds effect and will be ignored in this version.
+- Ignored long term effect events that is more than 100 seconds. e.g. Guard has a 21600 seconds effect and will be ignored in this version.
 
 v3.0.20
-- Fixed a bug that action failed to use strict policy(introduced in v3.0.13) to match a new effect if this action just lost all effects i.e. Minor Protection timer after Dark Cloak should be ignored after this fix.
+- Fixed a bug that action failed to use strict policy(introduced in v3.0.13) to match a new effect if this action just lost all effects e.g. Minor Protection timer after Dark Cloak should be ignored after this fix.
 
 v3.0.19a
 - Updated german localization translated by Scootworks.
@@ -197,7 +200,7 @@ v3.0.18
 - Added 2 options to switch and adjust timer to ignore decimal part.
 
 v3.0.17
-- Allowed actions just ended by removing all effect to get an opptunity to match another immediatly coming effect event i.e. Haunting Curse has two periods of effect.
+- Allowed actions just ended by removing all effect to get an opptunity to match another immediatly coming effect event e.g. Haunting Curse has two periods of effect.
 
 v3.0.16
 - Fixed the search order for effect fading event which caused new action timer end suddenly.
@@ -206,21 +209,21 @@ v3.0.15
 - Improved Crystal Fragment slot search that all levels can be found now.
 
 v3.0.14
-- Fixed a bug that updating effect event cannot match repeatedly casted actions. i.e. A bug that Maneuver counter is not reset by another cast before the old one fades is fixed.
-- Improved ability attribute process to avoid self abilities from being disturbed by reticle target. i.e. A bug that Twisting Path counter is removed when target changed is fixed.
+- Fixed a bug that updating effect event cannot match repeatedly casted actions. e.g. A bug that Maneuver counter is not reset by another cast before the old one fades is fixed.
+- Improved ability attribute process to avoid self abilities from being disturbed by reticle target. e.g. A bug that Twisting Path counter is removed when target changed is fixed.
 
 v3.0.13
-- Stricted effect action matching if effect didn't started at action begining i.e. Beast Trap effect caused by Beast Trap action will be counted but Off Banlance effect caused by Wall Of Storm will not be counted(known as a bug that Unstable Wall Of Element randomly reset to 4s).
+- Stricted effect action matching if effect didn't started at action begining e.g. Beast Trap effect caused by Beast Trap action will be counted but Off Banlance effect caused by Wall Of Storm will not be counted(known as a bug that Unstable Wall Of Element randomly reset to 4s).
 - Matched taunt effect to tank role actions again after v3.x.x.
 
 v3.0.12
-- Ignored buff event that follows action main duration end i.e. Dark Cloak has a minor protections effects after it runs out.
+- Ignored buff event that follows action main duration end e.g. Dark Cloak has a minor protections effects after it runs out.
 
 v3.0.11
 - Impoved the stacking effect process policy introduced in v3.0.10. Then Relentless Focus counter will not be reset again after a spectral bow.
 
 v3.0.10
-- Ignored game buggy stacking effect time info to update time counter i.e. Relentless Focus counter was reset every time when stack count updated, but the time info of the event is actually wrong.
+- Ignored game buggy stacking effect time info to update time counter e.g. Relentless Focus counter was reset every time when stack count updated, but the time info of the event is actually wrong.
 
 v3.0.9
 - Fixed a bug that action counters don't show up if "Seconds to keep timer after time out" set to 0.
