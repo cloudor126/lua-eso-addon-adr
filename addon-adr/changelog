@@ -1,3 +1,6 @@
+v3.3.10
+- Fixed a draw level bug. All cool down lines in shift bar can be fully shown now.
+
 v3.3.9
 - Marked as updated in DragonHold.
 

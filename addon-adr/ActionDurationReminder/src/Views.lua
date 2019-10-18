@@ -160,8 +160,12 @@ end
 --========================================
 mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
 = function(self)
-  local part = WINDOW_MANAGER:CreateControl(nil, self.background, CT_TEXTURE)
-  if self.drawLayer and self.drawLayer>0 then part:SetDrawLayer(self.drawLayer) end
+  local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
+  if self.drawLayer and self.drawLayer>0 then
+    part:SetDrawLayer(self.drawLayer)
+  else
+    part:SetDrawLevel(1)
+  end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
   local opacity = l.getSavedVars().barCooldownOpacity -- #number
   if opacity<100 then part:SetAlpha(opacity/100) end
