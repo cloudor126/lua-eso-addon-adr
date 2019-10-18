@@ -31,6 +31,11 @@ local fMatchIconPath -- #(#string:path1,#string:path2)->(#boolean)
   return path1:find(path2,1,true) or path2:find(path1,1,true)
 end
 
+local fStripBracket -- #(#string:origin)->(#string)
+= function(origin)
+  return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
+end
+
 --========================================
 --        m
 --========================================
@@ -67,7 +72,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local action = {} -- #Action
   action.fake = false
   action.slotNum = slotNum --#number
-  action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
+  action.ability = m.newAbility(GetSlotBoundId(slotNum),fStripBracket(GetSlotName(slotNum)),GetSlotTexture(slotNum)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
@@ -138,7 +143,13 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   end
   if matches(self.name , other.name) then return true end
   if self.progressionName and matches(self.progressionName, other.name) then return true end
-  if not strict and self.description and matches(self.description, other.name) then return true end
+  if not strict
+    and other.name:find(" ",1,true) -- do not match a one word name in description
+    and self.description
+    and matches(self.description, other.name)
+  then
+    return true
+  end
   return false
 end
 
@@ -362,13 +373,13 @@ end
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
   if self.duration and self.duration >=10000 and effect.duration > self.duration * 1.5 then return end -- ignore abnormal long duration effect
-  if self.duration and self.duration > 0 and effect.duration == self.duration + 1000 then 
+  if self.duration and self.duration > 0 and effect.duration == self.duration + 1000 then
     local existedEffect = self:optEffect()
     if existedEffect and existedEffect.duration == self.duration then -- adjust effect for covering i.e. lightning splash
       effect.endTime = effect.endTime - 1000
       effect.duration = effect.duration - 1000
-    end 
-  end 
+    end
+  end
   self.lastEffectTime = effect.startTime
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then

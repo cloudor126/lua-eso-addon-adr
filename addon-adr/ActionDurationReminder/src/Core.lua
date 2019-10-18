@@ -45,6 +45,11 @@ local coreSavedVarsDefaults = {
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
 
+local fStripBracket -- #(#string:origin)->(#string)
+= function(origin)
+  return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
+end
+
 --========================================
 --        l
 --========================================
@@ -192,13 +197,15 @@ l.findBarActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
 = function(effect)
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
+  -- check if it's a one word name effect e.g. burning, chilling, concussion
+  local checkDescription =  effect.ability.name:find(" ",1,true)
   --
   local matchSlotNum = nil
   for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
     if slotBoundId >0 then
-      if effect.ability.name:match(zo_strformat("<<1>>", GetSlotName(slotNum)),1)
-        or zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
+      if effect.ability.name:match(fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum))),1)
+        or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
       then
         matchSlotNum = slotNum
         break
@@ -671,6 +678,8 @@ l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
   end
   return action
 end
+
+
 --========================================
 --        m
 --========================================
