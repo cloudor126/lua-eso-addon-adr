@@ -1,3 +1,6 @@
+v3.4.0
+- Simplified dependencies.
+
 v3.3.10
 - Fixed a draw level bug. All cool down lines in shift bar can be fully shown now.
 

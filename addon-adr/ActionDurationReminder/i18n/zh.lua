@@ -1,4 +1,4 @@
-local put = LibTextDict("ActionDurationReminder").put
+local put = ActionDurationReminder.putText
 put("Account Wide Configuration","账户范围配置")
 put("Multiple Target Tracking", "多目标跟踪")
 put("Seconds to Keep Timers After Timeout","计时器超时持续秒数")
