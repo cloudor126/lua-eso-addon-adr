@@ -503,7 +503,7 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
-  
+
   EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_ACTION_UPDATE_COOLDOWNS, l.onActionUpdateCooldowns  )
 
 end
@@ -719,69 +719,69 @@ end)
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
   settings.addMenuOptions(
     {
-      type = "header",
+      type = "submenu",
       name = addon.text("Core"),
-      width = "full",
-    }, {
-      type = "checkbox",
-      name = addon.text("Multiple Target Tracking"),
-      getFunc = function() return l.getSavedVars().coreMultipleTargetTracking end,
-      setFunc = function(value) l.getSavedVars().coreMultipleTargetTracking = value end,
-      width = "full",
-      default = coreSavedVarsDefaults.coreMultipleTargetTracking,
-    }, {
-      type = "checkbox",
-      name = addon.text("Clear When Combat End"),
-      getFunc = function() return l.getSavedVars().coreClearWhenCombatEnd end,
-      setFunc = function(value) l.getSavedVars().coreClearWhenCombatEnd = value end,
-      width = "full",
-      default = coreSavedVarsDefaults.coreClearWhenCombatEnd,
-    },
-    {
-      type = "slider",
-      name = addon.text("Seconds to Keep Timers After Timeout"),
-      min = 0, max = 10, step = 1,
-      getFunc = function() return l.getSavedVars().coreSecondsBeforeFade end,
-      setFunc = function(value) l.getSavedVars().coreSecondsBeforeFade = value end,
-      width = "full",
-      default = coreSavedVarsDefaults.coreSecondsBeforeFade,
-    },
-    {
-      type = "slider",
-      name = addon.text("Seconds of Ignorable Short Timers"),
-      min = 1, max = 5, step = 0.5,
-      getFunc = function() return l.getSavedVars().coreMinimumDurationSeconds end,
-      setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
-      width = "full",
-      default = coreSavedVarsDefaults.coreMinimumDurationSeconds,
-    },
-    {
-      type = "editbox",
-      name = addon.text("Patterns of White List in line"), -- or string id or function returning a string
-      getFunc = function() return l.getSavedVars().coreKeyWords end,
-      setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} end,
-      -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-      isMultiline = true, --boolean (optional)
-      isExtraWide = true, --boolean (optional)
-      width = "full", --or "half" (optional)
-      -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-      requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-      default = coreSavedVarsDefaults.coreKeyWords, -- default value or function that returns the default value (optional)
-    -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
-    },
-    {
-      type = "editbox",
-      name = addon.text("Patterns of Black List in line"), -- or string id or function returning a string
-      getFunc = function() return l.getSavedVars().coreBlackKeyWords end,
-      setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text l.idFilteringMap={} end,
-      -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-      isMultiline = true, --boolean (optional)
-      isExtraWide = true, --boolean (optional)
-      width = "full", --or "half" (optional)
-      -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-      requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-      default = coreSavedVarsDefaults.coreBlackKeyWords, -- default value or function that returns the default value (optional)
-    -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
-    }
+      controls = {
+        {
+          type = "checkbox",
+          name = addon.text("Multiple Target Tracking"),
+          getFunc = function() return l.getSavedVars().coreMultipleTargetTracking end,
+          setFunc = function(value) l.getSavedVars().coreMultipleTargetTracking = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreMultipleTargetTracking,
+        }, {
+          type = "checkbox",
+          name = addon.text("Clear When Combat End"),
+          getFunc = function() return l.getSavedVars().coreClearWhenCombatEnd end,
+          setFunc = function(value) l.getSavedVars().coreClearWhenCombatEnd = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreClearWhenCombatEnd,
+        },
+        {
+          type = "slider",
+          name = addon.text("Seconds to Keep Timers After Timeout"),
+          min = 0, max = 10, step = 1,
+          getFunc = function() return l.getSavedVars().coreSecondsBeforeFade end,
+          setFunc = function(value) l.getSavedVars().coreSecondsBeforeFade = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreSecondsBeforeFade,
+        },
+        {
+          type = "slider",
+          name = addon.text("Seconds of Ignorable Short Timers"),
+          min = 1, max = 5, step = 0.5,
+          getFunc = function() return l.getSavedVars().coreMinimumDurationSeconds end,
+          setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreMinimumDurationSeconds,
+        },
+        {
+          type = "editbox",
+          name = addon.text("Patterns of White List in line"), -- or string id or function returning a string
+          getFunc = function() return l.getSavedVars().coreKeyWords end,
+          setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} end,
+          -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
+          isMultiline = true, --boolean (optional)
+          isExtraWide = true, --boolean (optional)
+          width = "full", --or "half" (optional)
+          -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
+          requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
+          default = coreSavedVarsDefaults.coreKeyWords, -- default value or function that returns the default value (optional)
+        -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+        },
+        {
+          type = "editbox",
+          name = addon.text("Patterns of Black List in line"), -- or string id or function returning a string
+          getFunc = function() return l.getSavedVars().coreBlackKeyWords end,
+          setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text l.idFilteringMap={} end,
+          -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
+          isMultiline = true, --boolean (optional)
+          isExtraWide = true, --boolean (optional)
+          width = "full", --or "half" (optional)
+          -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
+          requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
+          default = coreSavedVarsDefaults.coreBlackKeyWords, -- default value or function that returns the default value (optional)
+        -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+        }}}
   )
 end)

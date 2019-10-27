@@ -194,10 +194,10 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
   local text = addon.text
   settings.addMenuOptions(
     {
-      type = "header",
+      type = "submenu",
       name = text("Bar"),
-      width = "full",
-    }, {
+      controls = {
+    {
       type = "checkbox",
       name = text("Shift Bar Enabled"),
       getFunc = function() return l.getSavedVars().barShowShift end,
@@ -326,5 +326,5 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         g = barSavedVarsDefaults.barCooldownColor[2],
         b = barSavedVarsDefaults.barCooldownColor[3],
       }
-    })
+    }}})
 end)

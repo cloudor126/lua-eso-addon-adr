@@ -174,16 +174,18 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
   settings.addMenuOptions({
     type = "header",
     name = text("Patch"),
-    width = "full",
-  }, {
-    type = "checkbox",
-    name = text("Auto Move Attribute Bars"),
-    getFunc = function() return l.getSavedVars().patchMoveBarsEnabled end,
-    setFunc = function(value) l.getSavedVars().patchMoveBarsEnabled = value end,
-    width = "full",
-    default = patchSavedVarsDefaults.patchMoveBarsEnabled,
-  })
+    controls={ {
+      type = "checkbox",
+      name = text("Auto Move Attribute Bars"),
+      getFunc = function() return l.getSavedVars().patchMoveBarsEnabled end,
+      setFunc = function(value) l.getSavedVars().patchMoveBarsEnabled = value end,
+      width = "full",
+      default = patchSavedVarsDefaults.patchMoveBarsEnabled,
+    }}})
 end)
+
+
+
 
 
 

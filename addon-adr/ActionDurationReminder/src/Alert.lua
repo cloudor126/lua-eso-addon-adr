@@ -96,7 +96,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   local control,key = l.controlPool:AcquireObject()
   local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
   control.label:SetFont(fontstr)
-  
+
   control.label:SetText(zo_strformat('<<C:1>>',ability.name))
   control.icon:SetTexture(ability.icon)
   control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.alertOffsetX, -150 + savedVars.alertOffsetY)
@@ -125,7 +125,7 @@ l.checkAction --#(Models#Action:action)->()
   -- check action alerted
   if action.data.alerted then return end
   -- check action just override without new effects
-  if action:getEndTime()-action.startTime < 3000 then return end 
+  if action:getEndTime()-action.startTime < 3000 then return end
 
   --
   local onlyShowAfterTimeout = false
@@ -271,128 +271,128 @@ end)
 addon.extend(settings.EXTKEY_ADD_MENUS, function ()
   local text = addon.text
   settings.addMenuOptions({
-    type = "header",
+    type = "submenu",
     name = text("Popup Alert"),
-    width = "full",
-  }, {
-    type = "checkbox",
-    name = text("Enabled"),
-    getFunc = function() return l.getSavedVars().alertEnabled end,
-    setFunc = function(value) l.getSavedVars().alertEnabled = value end,
-    width = "full",
-    default = alertSavedVarsDefaults.alertEnabled,
-  }, {
-    type = "checkbox",
-    name = text("Remove When Cast Again"),
-    getFunc = function() return l.getSavedVars().alertRemoveWhenCastAgain end,
-    setFunc = function(value) l.getSavedVars().alertRemoveWhenCastAgain = value end,
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    width = "full",
-    default = alertSavedVarsDefaults.alertRemoveWhenCastAgain,
-  }, {
-    type = "button",
-    name = text("Move Alert Frame"),
-    func = function()
-      SCENE_MANAGER:Hide("gameMenuInGame")
-      l.openAlertFrame()
-      zo_callLater(function()
-        SetGameCameraUIMode(true)
-      end, 10)
-    end,
-    width = "full",
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-  }, {
-    type = "checkbox",
-    name = text("Sound Enabled"),
-    getFunc = function() return l.getSavedVars().alertPlaySound end,
-    setFunc = function(value) l.getSavedVars().alertPlaySound = value end,
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    width = "full",
-    default = alertSavedVarsDefaults.alertPlaySound,
-  }, {
-    type = "slider",
-    name = text("Sound Select Index"),
-    --tooltip = "",
-    min = 1, max = #l.soundChoices, step = 1,
-    getFunc = function() return l.getSavedVars().alertSoundIndex end,
-    setFunc = function(value) l.getSavedVars().alertSoundIndex = value; PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]]) end,
-    width = "full",
-    disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
-    default = alertSavedVarsDefaults.alertSoundIndex,
-  }, {
-    type = "button",
-    name = text("Sound Test"),
-    func = function()
-      PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]])
-    end,
-    width = "full",
-    disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
-  }, {
-    type = "slider",
-    name = text("Seconds to Show Before End"),
-    --tooltip = "",
-    min = 0, max = 3, step = 0.5,
-    getFunc = function() return l.getSavedVars().alertAheadSeconds end,
-    setFunc = function(value) l.getSavedVars().alertAheadSeconds = value end,
-    width = "full",
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    default = alertSavedVarsDefaults.alertAheadSeconds,
-  }, {
-    type = "slider",
-    name = text("Seconds to Show"),
-    --tooltip = "",
-    min = 1, max = 5, step = 0.5,
-    getFunc = function() return l.getSavedVars().alertKeepSeconds end,
-    setFunc = function(value) l.getSavedVars().alertKeepSeconds = value end,
-    width = "full",
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    default = alertSavedVarsDefaults.alertKeepSeconds,
-  }, {
-    type = "dropdown",
-    name = text("Font Name"),
-    choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
-    getFunc = function() return l.getSavedVars().alertFontName end,
-    setFunc = function(value) l.getSavedVars().alertFontName = value end,
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    width = "full",
-    default = alertSavedVarsDefaults.alertFontName,
-  }, {
-    type = "slider",
-    name = text("Font Size"),
-    --tooltip = "",
-    min = 18, max = 48, step = 2,
-    getFunc = function() return l.getSavedVars().alertFontSize end,
-    setFunc = function(value) l.getSavedVars().alertFontSize = value end,
-    disabled = function() return not l.getSavedVars().alertEnabled end,
-    width = "full",
-    default = alertSavedVarsDefaults.alertFontSize,
-  },{
-    type = "editbox",
-    name = text("Patterns of White List in line"), -- or string id or function returning a string
-    getFunc = function() return l.getSavedVars().alertKeyWords end,
-    setFunc = function(text) l.getSavedVars().alertKeyWords = text end,
-    -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-    isMultiline = true, --boolean (optional)
-    isExtraWide = true, --boolean (optional)
-    width = "full", --or "half" (optional)
-    disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
-    -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-    requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-    default = alertSavedVarsDefaults.alertKeyWords, -- default value or function that returns the default value (optional)
-  -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
-  },{
-    type = "editbox",
-    name = text("Patterns of Black List in line"), -- or string id or function returning a string
-    getFunc = function() return l.getSavedVars().alertBlackKeyWords end,
-    setFunc = function(text) l.getSavedVars().alertBlackKeyWords = text end,
-    -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-    isMultiline = true, --boolean (optional)
-    isExtraWide = true, --boolean (optional)
-    width = "full", --or "half" (optional)
-    disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
-    -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-    requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-    default = alertSavedVarsDefaults.alertBlackKeyWords, -- default value or function that returns the default value (optional)
-  -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
-  })
+    controls = {
+      {
+        type = "checkbox",
+        name = text("Enabled"),
+        getFunc = function() return l.getSavedVars().alertEnabled end,
+        setFunc = function(value) l.getSavedVars().alertEnabled = value end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertEnabled,
+      }, {
+        type = "checkbox",
+        name = text("Remove When Cast Again"),
+        getFunc = function() return l.getSavedVars().alertRemoveWhenCastAgain end,
+        setFunc = function(value) l.getSavedVars().alertRemoveWhenCastAgain = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertRemoveWhenCastAgain,
+      }, {
+        type = "button",
+        name = text("Move Alert Frame"),
+        func = function()
+          SCENE_MANAGER:Hide("gameMenuInGame")
+          l.openAlertFrame()
+          zo_callLater(function()
+            SetGameCameraUIMode(true)
+          end, 10)
+        end,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+      }, {
+        type = "checkbox",
+        name = text("Sound Enabled"),
+        getFunc = function() return l.getSavedVars().alertPlaySound end,
+        setFunc = function(value) l.getSavedVars().alertPlaySound = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertPlaySound,
+      }, {
+        type = "slider",
+        name = text("Sound Select Index"),
+        --tooltip = "",
+        min = 1, max = #l.soundChoices, step = 1,
+        getFunc = function() return l.getSavedVars().alertSoundIndex end,
+        setFunc = function(value) l.getSavedVars().alertSoundIndex = value; PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]]) end,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
+        default = alertSavedVarsDefaults.alertSoundIndex,
+      }, {
+        type = "button",
+        name = text("Sound Test"),
+        func = function()
+          PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]])
+        end,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
+      }, {
+        type = "slider",
+        name = text("Seconds to Show Before End"),
+        --tooltip = "",
+        min = 0, max = 3, step = 0.5,
+        getFunc = function() return l.getSavedVars().alertAheadSeconds end,
+        setFunc = function(value) l.getSavedVars().alertAheadSeconds = value end,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        default = alertSavedVarsDefaults.alertAheadSeconds,
+      }, {
+        type = "slider",
+        name = text("Seconds to Show"),
+        --tooltip = "",
+        min = 1, max = 5, step = 0.5,
+        getFunc = function() return l.getSavedVars().alertKeepSeconds end,
+        setFunc = function(value) l.getSavedVars().alertKeepSeconds = value end,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        default = alertSavedVarsDefaults.alertKeepSeconds,
+      }, {
+        type = "dropdown",
+        name = text("Font Name"),
+        choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
+        getFunc = function() return l.getSavedVars().alertFontName end,
+        setFunc = function(value) l.getSavedVars().alertFontName = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertFontName,
+      }, {
+        type = "slider",
+        name = text("Font Size"),
+        --tooltip = "",
+        min = 18, max = 48, step = 2,
+        getFunc = function() return l.getSavedVars().alertFontSize end,
+        setFunc = function(value) l.getSavedVars().alertFontSize = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertFontSize,
+      },{
+        type = "editbox",
+        name = text("Patterns of White List in line"), -- or string id or function returning a string
+        getFunc = function() return l.getSavedVars().alertKeyWords end,
+        setFunc = function(text) l.getSavedVars().alertKeyWords = text end,
+        -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
+        isMultiline = true, --boolean (optional)
+        isExtraWide = true, --boolean (optional)
+        width = "full", --or "half" (optional)
+        disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
+        -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
+        requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
+        default = alertSavedVarsDefaults.alertKeyWords, -- default value or function that returns the default value (optional)
+      -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+      },{
+        type = "editbox",
+        name = text("Patterns of Black List in line"), -- or string id or function returning a string
+        getFunc = function() return l.getSavedVars().alertBlackKeyWords end,
+        setFunc = function(text) l.getSavedVars().alertBlackKeyWords = text end,
+        -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
+        isMultiline = true, --boolean (optional)
+        isExtraWide = true, --boolean (optional)
+        width = "full", --or "half" (optional)
+        disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
+        -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
+        requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
+        default = alertSavedVarsDefaults.alertBlackKeyWords, -- default value or function that returns the default value (optional)
+      -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+      }}})
 end)
