@@ -1,9 +1,0 @@
-## APIVersion: 100027 100028
-## Title: Lib Type Registry
-## Author: Cloudor
-## Version: 1.0
-## AddOnVersion: 1
-## IsLibrary: true
-## Description: A library to aid in the implementation of type registry.
-
-src/LibTypeRegistry.lua

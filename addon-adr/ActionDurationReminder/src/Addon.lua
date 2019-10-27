@@ -12,7 +12,7 @@ local VERSION = '@@ADDON_VERSION@@'
 l.actionMap = {} -- #map<#string,#()->()> store actions for bindings
 l.dict = {} --#map<#string,#string>
 l.extensionMap = {} -- #map<#string,#list<#()->()>> store extensions for types
-l.registry = LibTypeRegistry(NAME) -- LibTypeRegistry#Registry
+l.registry = {} --#map<#string,#any>
 l.started = false
 l.startListeners = {} -- #list<#()->()> store start listeners for initiation
 
@@ -75,7 +75,7 @@ end
 
 m.load -- #(#string:typeName)->($1)
 = function(typeName)
-  return l.registry:get(typeName)
+  return l.registry[typeName]
 end
 
 m.putText -- #(#string:key, #string:value)->()
@@ -85,7 +85,7 @@ end
 
 m.register -- #(#string:typeName, #any:typeProto)->()
 = function(typeName, typeProto)
-  l.registry:put(typeName,typeProto)
+  l.registry[typeName]=typeProto
 end
 
 m.text -- #(#string:key, #any:...)->(#string)
