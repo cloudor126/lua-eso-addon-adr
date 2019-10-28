@@ -134,7 +134,9 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   local matches = function(s1,s2) -- #(#string:s1,#string:s2)->(#boolean)
     if s1=='' or s2=='' then return false end
     if s1 == s2 then return true end
-    return s1:find(s2, 1,true) or s2:find(s1, 1,true)
+    if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
+    
+    return false
   end
   if self.id==other.id then return true end
   if fMatchIconPath(self.icon, other.icon) then return true end
@@ -146,9 +148,9 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   if not strict
     and other.name:find(" ",1,true) -- do not match a one word name in description
     and self.description
-    and matches(self.description, other.name)
   then
-    return true
+    if matches(self.description, other.name) then return true end
+    if self.description:gmatch(other.name:gsub(" "," %w+ %w+ ")) then return true end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
   end
   return false
 end
