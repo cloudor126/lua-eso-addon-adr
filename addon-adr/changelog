@@ -1,3 +1,6 @@
+v3.4.4
+- Fixed a regex bug.
+
 v3.4.3
 - Optimized sound option saving by its name instead of its index. But the settings ui is not changed.
 

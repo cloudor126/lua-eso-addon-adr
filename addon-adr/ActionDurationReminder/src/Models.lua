@@ -150,7 +150,7 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
     and self.description
   then
     if matches(self.description, other.name) then return true end
-    if self.description:gmatch(other.name:gsub(" "," %w+ %w+ ")) then return true end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
+    if self.description:find(other.name:gsub(" "," %%w+ %%w+ ")) then return true end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
   end
   return false
 end
