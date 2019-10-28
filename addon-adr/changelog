@@ -1,3 +1,6 @@
+v3.4.2
+- Changed some settigs value range.
+
 v3.4.1
 - Optimized a matching strategy e.g. Major Sorcery can be matched in Critical Surge description of Major Brutality and Sorcery.
 
