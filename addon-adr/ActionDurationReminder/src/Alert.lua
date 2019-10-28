@@ -20,7 +20,7 @@ local zhFlags = {
 local alertSavedVarsDefaults ={
   alertEnabled = true,
   alertPlaySound = true,
-  alertSoundIndex = 266,
+  alertSoundName = 'NEW_TIMED_NOTIFICATION',
   alertAheadSeconds = 1,
   alertKeepSeconds = 2,
   alertIconSize = 50,
@@ -70,7 +70,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     if line and ability.name:lower():match(line) then return end
   end
   --
-  if savedVars.alertPlaySound then PlaySound(SOUNDS[l.soundChoices[savedVars.alertSoundIndex]]) end
+  if savedVars.alertPlaySound then PlaySound(SOUNDS[savedVars.alertSoundName]) end
   if not l.controlPool then
     l.controlPool = ZO_ObjectPool:New(function(pool)
       local control = WINDOW_MANAGER:CreateTopLevelWindow()
@@ -155,8 +155,17 @@ l.checkAction --#(Models#Action:action)->()
         showAbility = slotAbility
       end
     end
+    df('%s %s',action.ability.name, instant and 'true' or 'false')
     l.alert(showAbility, action.startTime)
   end
+end
+
+l.findSoundIndex -- #(#string:name)->(#number)
+= function(name)
+  for key, var in ipairs(l.soundChoices) do
+  	if var==name then return key end
+  end
+  return -1
 end
 
 l.getSavedVars -- #()->(#AlertSavedVars)
@@ -314,16 +323,16 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         name = text("Sound Select Index"),
         --tooltip = "",
         min = 1, max = #l.soundChoices, step = 1,
-        getFunc = function() return l.getSavedVars().alertSoundIndex end,
-        setFunc = function(value) l.getSavedVars().alertSoundIndex = value; PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]]) end,
+        getFunc = function() return l.findSoundIndex(l.getSavedVars().alertSoundName) end,
+        setFunc = function(value) l.getSavedVars().alertSoundName = l.soundChoices[value]; PlaySound(SOUNDS[l.getSavedVars().alertSoundName]) end,
         width = "full",
         disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
-        default = alertSavedVarsDefaults.alertSoundIndex,
+        default = l.findSoundIndex(alertSavedVarsDefaults.alertSoundName),
       }, {
         type = "button",
         name = text("Sound Test"),
         func = function()
-          PlaySound(SOUNDS[l.soundChoices[l.getSavedVars().alertSoundIndex]])
+          PlaySound(SOUNDS[l.getSavedVars().alertSoundName])
         end,
         width = "full",
         disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,

@@ -1,3 +1,6 @@
+v3.4.3
+- Optimized sound option saving by its name instead of its index. But the settings ui is not changed.
+
 v3.4.2
 - Changed some settigs value range.
 
