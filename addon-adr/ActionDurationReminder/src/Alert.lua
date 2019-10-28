@@ -155,7 +155,6 @@ l.checkAction --#(Models#Action:action)->()
         showAbility = slotAbility
       end
     end
-    df('%s %s',action.ability.name, instant and 'true' or 'false')
     l.alert(showAbility, action.startTime)
   end
 end
