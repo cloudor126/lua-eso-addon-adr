@@ -329,7 +329,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
   local hint = string.format('%.1f', remain/1000)
-  if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 > l.getSavedVars().barLabelIgnoreDeciamlThreshold then
+  if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
     hint = string.format('%d', remain/1000)
   end
   self.label:SetText(hint)
