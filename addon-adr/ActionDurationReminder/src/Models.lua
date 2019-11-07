@@ -300,6 +300,7 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   end
   -- 2. fast check already matched effects
   local strict = effect.startTime > self.startTime + self.castTime + 2000
+  strict = strict or (effect.duration>0 and effect.duration<5000)
   for i, var in ipairs(self.effectList) do
     local e = var --#Effect
     if effect.ability.id == e.ability.id then return true end
