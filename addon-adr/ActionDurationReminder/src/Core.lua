@@ -134,8 +134,8 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
   return true
 end
 
-l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
-= function(effect)
+l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
+= function(effect,stacking)
   -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
     if l.lastAction:matchesNewEffect(effect) then
@@ -161,7 +161,7 @@ l.findActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
     end
   end
   -- try slotted actions
-  local action = l.findBarActionByNewEffect(effect)
+  local action = l.findBarActionByNewEffect(effect, stacking)
   if action then return action end
   -- not found
   l.debug(DS_ACTION,1)('[?]not found in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
@@ -193,13 +193,13 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:updating)->(Models#Act
   return nil
 end
 
-l.findBarActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
-= function(effect)
+l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
+= function(effect, stacking)
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
   local checkDescription =  effect.ability.name:find(" ",1,true)
-  checkDescription = checkDescription and effect.duration > 5000
+  checkDescription = checkDescription and (not stacking and effect.duration > 5000)
   --
   local matchSlotNum = nil
   for slotNum = 3,8 do
@@ -372,7 +372,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         end
       end
     else
-      action = l.searchActionByNewEffect(effect)
+      action = l.searchActionByNewEffect(effect, true)
       if not action then return end
       if not l.filterAbilityOk(effect.ability) then
         l.debug(DS_EFFECT,1)('[]New effect filtered')
@@ -623,14 +623,14 @@ l.searchAction --#(#map<#number,#boolean>:searching)->(Models#Action)
   return nil
 end
 
-l.searchActionByNewEffect --#(Models#Effect:effect)->(Models#Action)
-= function(effect)
+l.searchActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
+= function(effect,stacking)
   local searching = l.idSearchingMap[effect.ability.id]
   -- no searching object yet
   if not searching then
     searching = {}
     l.idSearchingMap[effect.ability.id] = searching
-    local action = l.findActionByNewEffect(effect)
+    local action = l.findActionByNewEffect(effect, stacking)
     if action then
       searching[action.ability.id] = true
     end
