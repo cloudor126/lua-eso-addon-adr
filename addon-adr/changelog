@@ -1,3 +1,6 @@
+3.4.7
+- Fixed a bug in last version. The stack info of Seething Fury is supported again.
+
 v3.4.6
 - Adjusted some strategies to avoid matching poison effect with action in bars.
 

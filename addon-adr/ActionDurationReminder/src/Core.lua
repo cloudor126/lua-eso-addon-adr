@@ -199,7 +199,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
   local checkDescription =  effect.ability.name:find(" ",1,true)
-  checkDescription = checkDescription and (not stacking and effect.duration > 5000)
+  checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
   for slotNum = 3,8 do
