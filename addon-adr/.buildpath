@@ -3,6 +3,4 @@
 	<buildpathentry kind="src" path="ActionDurationReminder/src"/>
 	<buildpathentry kind="src" path="ActionDurationReminder/i18n"/>
 	<buildpathentry combineaccessrules="false" kind="prj" path="/eso-api"/>
-	<buildpathentry combineaccessrules="false" kind="prj" path="/addon-ltd"/>
-	<buildpathentry combineaccessrules="false" kind="prj" path="/addon-ltr"/>
 </buildpath>
