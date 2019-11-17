@@ -138,11 +138,6 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
     
     return false
   end
-  local isTooSimple = function(s) --#(#string:s)->(#boolean)
-    if s:find(' ',1,true) then return false end
-    if s:find('(',1,true) then return false end
-    return true
-  end
   if self.id==other.id then return true end
   if fMatchIconPath(self.icon, other.icon) then return true end
   if other.icon2  then
@@ -151,7 +146,7 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   if matches(self.name , other.name) then return true end
   if self.progressionName and matches(self.progressionName, other.name) then return true end
   if not strict
-    and not isTooSimple(other.name) -- do not match a one word name in description
+    and not addon.isSimpleWord(other.name) -- do not match a one word name in description
     and self.description
   then
     if matches(self.description, other.name) then return true end

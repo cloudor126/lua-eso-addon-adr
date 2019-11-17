@@ -73,6 +73,14 @@ m.hookStart -- #(#()->():listener)->()
   table.insert(l.startListeners, listener)
 end
 
+m.isSimpleWord -- #(#stirng:s)->(#boolean)
+= function(s)
+  if s:find(' ',1,true) then return false end
+  if s:find('(',1,true) then return false end
+  if s:byte(1) and s:byte(1)>128 then return false end
+  return true
+end
+
 m.load -- #(#string:typeName)->($1)
 = function(typeName)
   return l.registry[typeName]

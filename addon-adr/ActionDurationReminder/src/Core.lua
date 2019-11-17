@@ -242,7 +242,7 @@ l.getActionByAbilityName -- #(#string:abilityName,#map<#number,#boolean>:searche
     if flag == nil then -- only test those not searched, no matter flag is true or false
       if abilityName:match(action.ability.name,1)
         -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-        or (abilityName:find(" ",1,true) and action.description:find(abilityName,1,true))
+        or (not addon.isSimpleWord(abilityName) and action.description:find(abilityName,1,true))
     then
       return action
     end
