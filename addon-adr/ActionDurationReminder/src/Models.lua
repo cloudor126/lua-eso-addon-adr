@@ -31,9 +31,13 @@ local fMatchIconPath -- #(#string:path1,#string:path2)->(#boolean)
   return path1:find(path2,1,true) or path2:find(path1,1,true)
 end
 
-local fStripBracket -- #(#string:origin)->(#string)
-= function(origin)
-  return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
+local fStripBracket -- #(#string:origin,#boolean:zh)->(#string)
+= function(origin, zh)
+  if zh then
+    return origin:gsub("^%s*([^<]+)%s*<.*$","%1",1)
+  else
+    return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
+  end
 end
 
 --========================================
@@ -48,7 +52,11 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   end
   icon = getIconPath(icon)
   ability.id = id -- #number
-  ability.name = zo_strformat("<<1>>", name) --#string
+  ability.showName = zo_strformat("<<1>>", name) --#string
+  ability.name= fStripBracket(ability.showName) --#string
+  if ability.showName ~= ability.name then
+    ability.showName = fStripBracket(ability.showName,true)
+  end
   ability.icon = icon -- #string
   local icon2 = getIconPath(GetAbilityIcon(id))
   if icon2 ~= icon then
@@ -72,7 +80,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local action = {} -- #Action
   action.fake = false
   action.slotNum = slotNum --#number
-  action.ability = m.newAbility(GetSlotBoundId(slotNum),fStripBracket(GetSlotName(slotNum)),GetSlotTexture(slotNum)) -- #Ability
+  action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
@@ -135,7 +143,7 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
     if s1=='' or s2=='' then return false end
     if s1 == s2 then return true end
     if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
-    
+
     return false
   end
   if self.id==other.id then return true end
@@ -416,6 +424,9 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+
+
 
 
 

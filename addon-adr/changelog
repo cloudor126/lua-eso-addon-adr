@@ -1,5 +1,8 @@
+3.4.8b
+- Adjusted alert text for some i18n cases.
+
 3.4.8a
-- Added a patch for some i18n situations.
+- Added a patch for some i18n cases.
 
 3.4.7a
 - Modified some i18n files.

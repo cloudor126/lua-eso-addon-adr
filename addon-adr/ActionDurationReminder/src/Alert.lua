@@ -97,7 +97,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
   control.label:SetFont(fontstr)
 
-  control.label:SetText(zo_strformat('<<C:1>>',ability.name))
+  control.label:SetText(zo_strformat('<<C:1>>',ability.showName))
   control.icon:SetTexture(ability.icon)
   control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.alertOffsetX, -150 + savedVars.alertOffsetY)
   control:SetHidden(false)
