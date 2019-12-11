@@ -25,6 +25,7 @@ local alertSavedVarsDefaults ={
   alertKeepSeconds = 2,
   alertIconSize = 50,
   alertFontName = "BOLD_FONT",
+  alertCustomFontName = "",
   alertFontSize = 32,
   alertOffsetX = 0,
   alertOffsetY = 0,
@@ -94,7 +95,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     end)
   end
   local control,key = l.controlPool:AcquireObject()
-  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
+  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or savedVars.alertCustomFontName or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
   control.label:SetFont(fontstr)
 
   control.label:SetText(zo_strformat('<<C:1>>',ability.showName))
@@ -162,7 +163,7 @@ end
 l.findSoundIndex -- #(#string:name)->(#number)
 = function(name)
   for key, var in ipairs(l.soundChoices) do
-  	if var==name then return key end
+    if var==name then return key end
   end
   return -1
 end

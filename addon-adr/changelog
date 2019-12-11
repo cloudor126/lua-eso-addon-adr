@@ -1,3 +1,6 @@
+3.4.9
+- Fixed a settings bug in submenu 'patch'.
+
 3.4.8b
 - Adjusted alert text for some i18n cases.
 

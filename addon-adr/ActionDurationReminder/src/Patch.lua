@@ -172,7 +172,7 @@ end)
 addon.extend(settings.EXTKEY_ADD_MENUS, function ()
   local text = addon.text
   settings.addMenuOptions({
-    type = "header",
+    type = "submenu",
     name = text("Patch"),
     controls={ {
       type = "checkbox",
@@ -183,6 +183,11 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
       default = patchSavedVarsDefaults.patchMoveBarsEnabled,
     }}})
 end)
+
+
+
+
+
 
 
 
