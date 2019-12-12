@@ -95,7 +95,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     end)
   end
   local control,key = l.controlPool:AcquireObject()
-  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or savedVars.alertCustomFontName or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
+  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
   control.label:SetFont(fontstr)
 
   control.label:SetText(zo_strformat('<<C:1>>',ability.showName))
