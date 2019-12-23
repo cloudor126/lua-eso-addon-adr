@@ -78,11 +78,10 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     end
     backdrop:SetDimensions(50 , 50)
     backdrop:SetTexture("esoui/art/actionbar/abilityframe64_up.dds")
-    backdrop:SetTextureCoords(0, .625, 0, .8125)
     background = WINDOW_MANAGER:CreateControl(nil, backdrop, CT_TEXTURE)
     inst.background = background--TextureControl#TextureControl
-    background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, 2, 2)
-    background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -2, -2 )
+    background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, 4.2, 4.2)
+    background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -4.2, -4.2 )
   end
   local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
   inst.label = label --LabelControl#LabelControl

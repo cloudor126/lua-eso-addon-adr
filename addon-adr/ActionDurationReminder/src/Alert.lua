@@ -19,7 +19,7 @@ local zhFlags = {
 --@type AlertSavedVars
 local alertSavedVarsDefaults ={
   alertEnabled = true,
-  alertPlaySound = true,
+  alertPlaySound = false,
   alertSoundName = 'NEW_TIMED_NOTIFICATION',
   alertAheadSeconds = 1,
   alertKeepSeconds = 2,

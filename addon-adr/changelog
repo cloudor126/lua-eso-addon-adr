@@ -1,3 +1,7 @@
+3.4.10
+- Fixed a cooldown line position bug.
+- Change alert sound enabled default setting value to false. 
+
 3.4.9a
 - Fixed another settings bug in 3.4.9.
 
