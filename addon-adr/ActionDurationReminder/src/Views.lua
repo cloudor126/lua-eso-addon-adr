@@ -30,13 +30,13 @@ l.debugIdList = {} -- #list<#number>
 --========================================
 --        m
 --========================================
-m.newCooldown -- #(Control#Control:background, #number:drawLayer)->(#Cooldown)
-= function(background, drawLayer)
+m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
+= function(background, drawTier)
   local inst = {} -- #Cooldown
   inst.id = GetGameTimeMilliseconds()
   table.insert(l.debugIdList,inst.id)
   inst.background = background -- Control#Control
-  inst.drawLayer = drawLayer -- #number
+  inst.drawTier = drawTier -- #number
   inst.hidden = false
   inst.duration = 0 -- #number
   inst.endTime = 0 -- #number
@@ -84,14 +84,19 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, offset, offset)
     background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset )
   end
-  local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
+  local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)  --LabelControl#LabelControl
   inst.label = label --LabelControl#LabelControl
   label:SetFont(l.getLabelFont())
   label:SetColor(1,1,1)
   label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
   label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  label:SetAnchor(BOTTOM, backdrop or slotIcon, BOTTOM, 0, shifted and (-savedVars.barLabelYOffsetInShift+1) or (-savedVars.barLabelYOffset + 3))
+  if slotNum == 9 then
+    label:SetAnchor(TOPLEFT, slotIcon, TOPLEFT, 5, 3)
+    label:SetDrawTier(DT_HIGH)
+  else
+    label:SetAnchor(BOTTOM, backdrop or slotIcon, BOTTOM, 0, shifted and (-savedVars.barLabelYOffsetInShift+1) or (-savedVars.barLabelYOffset + 3))
+  end
   local stackLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
   inst.stackLabel = stackLabel --LabelControl#LabelControl
   stackLabel:SetFont(l.getStackLabelFont())
@@ -100,7 +105,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
-  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DL_TEXT) --#Cooldown
+  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cdMark = 0
   --
   return setmetatable(inst, {__index=mWidget})
@@ -161,8 +166,9 @@ end
 mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
 = function(self)
   local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
-  if self.drawLayer and self.drawLayer>0 then
-    part:SetDrawLayer(self.drawLayer)
+  if self.drawTier and self.drawTier>0 then
+    part:SetDrawTier(self.drawTier)
+    part:SetDrawLayer(DL_TEXT)
   else
     part:SetDrawLevel(1)
   end

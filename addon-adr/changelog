@@ -1,3 +1,6 @@
+3.5.0
+- Added an option in Bar submenu to track quickslot.
+
 3.4.10
 - Auto adjust cooldown lines position for addon DarkUI.
 - Change alert sound enabled default setting value to false. 

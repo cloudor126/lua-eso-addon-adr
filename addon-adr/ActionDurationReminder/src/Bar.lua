@@ -5,6 +5,7 @@ local addon = ActionDurationReminder -- Addon#M
 local settings = addon.load("Settings#M")
 local core = addon.load("Core#M")
 local views = addon.load("Views#M")
+local models = addon.load("Models#M")
 local l = {} -- #L
 local m = {l=l} -- #M
 
@@ -13,6 +14,7 @@ local m = {l=l} -- #M
 local barSavedVarsDefaults
   = {
     barShowShift = true,
+    barShowInQuickslot = false,
     barShiftOffsetX = 0,
     barShiftOffsetY = 5,
     barLabelFontName = "BOLD_FONT",
@@ -34,6 +36,8 @@ local barSavedVarsDefaults
 --========================================
 l.shiftBarFrame = nil -- BackdropControl#BackdropControl
 l.mainBarWidgetMap = {}--#map<#number, Views#Widget>
+l.quickslotWidget = nil --Views#Widget
+l.quickslotFakeAction = nil --Models#Action
 l.shiftedBarWidgetMap = {}--#map<#number, Views#Widget>
 l.appendedBarWidgetMap = {}--#map<#number, Views#Widget>
 
@@ -66,15 +70,33 @@ l.onCoreUpdate -- #()->()
   end
   -- 2. clean shift and extend widgets
   for key,var in pairs(l.shiftedBarWidgetMap) do
-    local widget = var --adr.ui.Widget#Widget
+    local widget = var --Views#Widget
     widget:hide()
   end
   for key,var in pairs(l.appendedBarWidgetMap) do
-    local widget = var --adr.ui.Widget#Widget
+    local widget = var --Views#Widget
     widget:hide()
   end
+  -- 3. show quickslot
+  if l.getSavedVars().barShowInQuickslot then
+    local remain,duration, global = GetSlotCooldownInfo(GetCurrentQuickslot())
+    if remain>0 and not global then
+      if not l.quickslotWidget then
+        l.quickslotWidget = views.newWidget(9, false)
+      end
+      if not l.quickslotFakeAction then
+        l.quickslotFakeAction = models.newAction(3,1,false)
+      end
+      l.quickslotFakeAction.startTime = now+remain-duration
+      l.quickslotFakeAction.duration = duration
+      l.quickslotFakeAction.endTime = now +remain 
+      l.quickslotWidget:updateWithAction(l.quickslotFakeAction, now)
+    elseif l.quickslotWidget then
+      l.quickslotWidget:hide()
+    end
+  end
+  -- 4. prepare to show shift and extend
   if not l.getSavedVars().barShowShift then return end
-  -- 3. prepare to show shift and extend
   local toShowActionMap = {} --#map<#number,adr.model.Action#Action>
   local toShowIdList = {} --#list<#number>
   for id, action in pairs(core.getIdActionMap()) do
@@ -85,7 +107,7 @@ l.onCoreUpdate -- #()->()
     end
   end
   if #toShowIdList==0 then return end
-  -- 3.$ sort later actions show first
+  -- 4.$ sort later actions show first
   table.sort(toShowIdList, function(id1,id2)return toShowActionMap[id1]:getStartTime() > toShowActionMap[id2]:getStartTime() end)
   local appendIndex = 0
   for i=1,#toShowIdList do
@@ -197,134 +219,141 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       type = "submenu",
       name = text("Bar"),
       controls = {
-    {
-      type = "checkbox",
-      name = text("Shift Bar Enabled"),
-      getFunc = function() return l.getSavedVars().barShowShift end,
-      setFunc = function(value) l.getSavedVars().barShowShift = value end,
-      width = "full",
-      default = barSavedVarsDefaults.barShowShift,
-    },{
-      type = "description",
-      text = "",
-      title = text("Shift Bar Location"),
-      width = "half",
-    },{
-      type = "button",
-      name = text("Move Shift Bar"),
-      func = function()
-        SCENE_MANAGER:Hide("gameMenuInGame")
-        l.openShiftBarFrame()
-        zo_callLater(function()
-          SetGameCameraUIMode(true)
-        end, 10)
-      end,
-      width = "half",
-      disabled = function() return not l.getSavedVars().barShowShift end,
-    },{
-      type = "dropdown",
-      name = text("Label Font Name"),
-      choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
-      getFunc = function() return l.getSavedVars().barLabelFontName end,
-      setFunc = function(value) l.getSavedVars().barLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
-      width = "full",
-      default = barSavedVarsDefaults.barLabelFontName,
-    },{
-      type = "slider",
-      name = text("Label Font Size"),
-      --tooltip = "",
-      min = 12, max = 48, step = 1,
-      getFunc = function() return l.getSavedVars().barLabelFontSize end,
-      setFunc = function(value) l.getSavedVars().barLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
-      width = "full",
-      default = barSavedVarsDefaults.barLabelFontSize,
-    },{
-      type = "slider",
-      name = text("Label Vertical Offset"),
-      min = -50, max = 50, step = 1,
-      getFunc = function() return l.getSavedVars().barLabelYOffset end,
-      setFunc = function(value) l.getSavedVars().barLabelYOffset = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
-      width = "full",
-      default = barSavedVarsDefaults.barLabelYOffset,
-    },{
-      type = "slider",
-      name = text("Label Vertical Offset In Shift Bar"),
-      min = -50, max = 50, step = 1,
-      getFunc = function() return l.getSavedVars().barLabelYOffsetInShift end,
-      setFunc = function(value) l.getSavedVars().barLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
-      width = "full",
-      disabled = function() return not l.getSavedVars().barShowShift end,
-      default = barSavedVarsDefaults.barLabelYOffsetInShift,
-    },{
-      type = "checkbox",
-      name = text("Label Ignore Decimal Part"),
-      getFunc = function() return l.getSavedVars().barLabelIgnoreDecimal end,
-      setFunc = function(value) l.getSavedVars().barLabelIgnoreDecimal = value end,
-      width = "full",
-      default = barSavedVarsDefaults.barLabelIgnoreDecimal,
-    },{
-      type = "slider",
-      name = text("Label Ignore Decimal Part Threshold"),
-      min = 0, max = 30, step = 0.5,
-      getFunc = function() return l.getSavedVars().barLabelIgnoreDeciamlThreshold end,
-      setFunc = function(value) l.getSavedVars().barLabelIgnoreDeciamlThreshold = value end,
-      width = "full",
-      disabled = function() return not l.getSavedVars().barLabelIgnoreDecimal end,
-      default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
-    },{
-      type = "dropdown",
-      name = text("Stack Label Font Name"),
-      choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
-      getFunc = function() return l.getSavedVars().barStackLabelFontName end,
-      setFunc = function(value) l.getSavedVars().barStackLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
-      width = "full",
-      default = barSavedVarsDefaults.barStackLabelFontName,
-    },{
-      type = "slider",
-      name = text("Stack Label Font Size"),
-      --tooltip = "",
-      min = 12, max = 48, step = 1,
-      getFunc = function() return l.getSavedVars().barStackLabelFontSize end,
-      setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
-      width = "full",
-      default = barSavedVarsDefaults.barStackLabelFontSize,
-    },{
-      type = "checkbox",
-      name = text("Line Enabled"),
-      getFunc = function() return l.getSavedVars().barCooldownVisible end,
-      setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownVisible,
-    },{
-      type = "slider",
-      name = text("Line Thickness"),
-      min = 2, max = 8, step = 1,
-      getFunc = function() return l.getSavedVars().barCooldownThickness end,
-      setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownThickness,
-    },{
-      type = "slider",
-      name = text("Line Opacity %"),
-      min = 10, max = 100, step = 10,
-      getFunc = function() return l.getSavedVars().barCooldownOpacity end,
-      setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      width = "full",
-      default = barSavedVarsDefaults.barCooldownOpacity,
+        {
+          type = "checkbox",
+          name = text("Shift Bar Enabled"),
+          getFunc = function() return l.getSavedVars().barShowShift end,
+          setFunc = function(value) l.getSavedVars().barShowShift = value end,
+          width = "full",
+          default = barSavedVarsDefaults.barShowShift,
+        },{
+          type = "description",
+          text = "",
+          title = text("Shift Bar Location"),
+          width = "half",
+        },{
+          type = "button",
+          name = text("Move Shift Bar"),
+          func = function()
+            SCENE_MANAGER:Hide("gameMenuInGame")
+            l.openShiftBarFrame()
+            zo_callLater(function()
+              SetGameCameraUIMode(true)
+            end, 10)
+          end,
+          width = "half",
+          disabled = function() return not l.getSavedVars().barShowShift end,
+        },{
+          type = "checkbox",
+          name = text("Track Quickslot"),
+          getFunc = function() return l.getSavedVars().barShowInQuickslot end,
+          setFunc = function(value) l.getSavedVars().barShowInQuickslot = value end,
+          width = "full",
+          default = barSavedVarsDefaults.barShowInQuickslot,
+        },{
+          type = "dropdown",
+          name = text("Label Font Name"),
+          choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
+          getFunc = function() return l.getSavedVars().barLabelFontName end,
+          setFunc = function(value) l.getSavedVars().barLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
+          width = "full",
+          default = barSavedVarsDefaults.barLabelFontName,
+        },{
+          type = "slider",
+          name = text("Label Font Size"),
+          --tooltip = "",
+          min = 12, max = 48, step = 1,
+          getFunc = function() return l.getSavedVars().barLabelFontSize end,
+          setFunc = function(value) l.getSavedVars().barLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
+          width = "full",
+          default = barSavedVarsDefaults.barLabelFontSize,
+        },{
+          type = "slider",
+          name = text("Label Vertical Offset"),
+          min = -50, max = 50, step = 1,
+          getFunc = function() return l.getSavedVars().barLabelYOffset end,
+          setFunc = function(value) l.getSavedVars().barLabelYOffset = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
+          width = "full",
+          default = barSavedVarsDefaults.barLabelYOffset,
+        },{
+          type = "slider",
+          name = text("Label Vertical Offset In Shift Bar"),
+          min = -50, max = 50, step = 1,
+          getFunc = function() return l.getSavedVars().barLabelYOffsetInShift end,
+          setFunc = function(value) l.getSavedVars().barLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barShowShift end,
+          default = barSavedVarsDefaults.barLabelYOffsetInShift,
+        },{
+          type = "checkbox",
+          name = text("Label Ignore Decimal Part"),
+          getFunc = function() return l.getSavedVars().barLabelIgnoreDecimal end,
+          setFunc = function(value) l.getSavedVars().barLabelIgnoreDecimal = value end,
+          width = "full",
+          default = barSavedVarsDefaults.barLabelIgnoreDecimal,
+        },{
+          type = "slider",
+          name = text("Label Ignore Decimal Part Threshold"),
+          min = 0, max = 30, step = 0.5,
+          getFunc = function() return l.getSavedVars().barLabelIgnoreDeciamlThreshold end,
+          setFunc = function(value) l.getSavedVars().barLabelIgnoreDeciamlThreshold = value end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barLabelIgnoreDecimal end,
+          default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
+        },{
+          type = "dropdown",
+          name = text("Stack Label Font Name"),
+          choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
+          getFunc = function() return l.getSavedVars().barStackLabelFontName end,
+          setFunc = function(value) l.getSavedVars().barStackLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
+          width = "full",
+          default = barSavedVarsDefaults.barStackLabelFontName,
+        },{
+          type = "slider",
+          name = text("Stack Label Font Size"),
+          --tooltip = "",
+          min = 12, max = 48, step = 1,
+          getFunc = function() return l.getSavedVars().barStackLabelFontSize end,
+          setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
+          width = "full",
+          default = barSavedVarsDefaults.barStackLabelFontSize,
+        },{
+          type = "checkbox",
+          name = text("Line Enabled"),
+          getFunc = function() return l.getSavedVars().barCooldownVisible end,
+          setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          default = barSavedVarsDefaults.barCooldownVisible,
+        },{
+          type = "slider",
+          name = text("Line Thickness"),
+          min = 2, max = 8, step = 1,
+          getFunc = function() return l.getSavedVars().barCooldownThickness end,
+          setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
+          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          width = "full",
+          default = barSavedVarsDefaults.barCooldownThickness,
+        },{
+          type = "slider",
+          name = text("Line Opacity %"),
+          min = 10, max = 100, step = 10,
+          getFunc = function() return l.getSavedVars().barCooldownOpacity end,
+          setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
+          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          width = "full",
+          default = barSavedVarsDefaults.barCooldownOpacity,
 
-    },{
-      type = "colorpicker",
-      name = text("Line Color"),
-      getFunc = function() return unpack(l.getSavedVars().barCooldownColor) end,
-      setFunc = function(r,g,b,a) l.getSavedVars().barCooldownColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
-      width = "full",
-      disabled = function() return not l.getSavedVars().barCooldownVisible end,
-      default = {
-        r = barSavedVarsDefaults.barCooldownColor[1],
-        g = barSavedVarsDefaults.barCooldownColor[2],
-        b = barSavedVarsDefaults.barCooldownColor[3],
-      }
-    }}})
+        },{
+          type = "colorpicker",
+          name = text("Line Color"),
+          getFunc = function() return unpack(l.getSavedVars().barCooldownColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barCooldownColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          default = {
+            r = barSavedVarsDefaults.barCooldownColor[1],
+            g = barSavedVarsDefaults.barCooldownColor[2],
+            b = barSavedVarsDefaults.barCooldownColor[3],
+          }
+        }}})
 end)

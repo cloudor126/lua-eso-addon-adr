@@ -30,3 +30,4 @@ put("Patterns of White List in line","Добавить способность в
 put("Patterns of Black List in line","Добавить способность в Черный Список")
 put("Remove When Cast Again","Отключить всплывание тех же способностей")
 put("Auto Move Attribute Bars","Позиционирует панель атрибутов")
+put("Track Quickslot","трек быстрый слот")
