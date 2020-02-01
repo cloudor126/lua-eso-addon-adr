@@ -1,3 +1,7 @@
+3.5.1
+- Adjust the max value of trackable durations from 100s to 150s.
+- Added some patches for ZH language environment.
+
 3.5.0
 - Added an option in Bar submenu to track quickslot.
 

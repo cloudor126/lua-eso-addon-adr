@@ -66,6 +66,7 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   ability.progressionName = hasProgression and GetAbilityProgressionInfo(progressionIndex) or nil
   if ability.progressionName and ability.progressionName ~= name then
     ability.progressionName =  zo_strformat("<<1>>", ability.progressionName)
+    ability.progressionName = fStripBracket(ability.progressionName)
   else
     ability.progressionName = nil
   end -- only keep different name
@@ -97,7 +98,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local target = GetAbilityTargetDescription(action.ability.id)
   local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA)
   local forGround = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_GROUND)
-  local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF)
+  local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or target=='自己' --[[汉化组修正翻译前的补丁]]
   local forTank = GetAbilityRoles(action.ability.id)
   ---
   --@type ActionFlags

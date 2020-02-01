@@ -344,7 +344,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local startTime =  math.floor(beginTimeSec * 1000)
   local endTime =  math.floor(endTimeSec * 1000)
   local duration = endTime-startTime
-  if duration > 100000 then return end -- ignore effects that last longer than 100 seconds
+  if duration > 150000 then return end -- ignore effects that last longer than 150 seconds
   if l.lastAction and not l.lastAction.flags.forGround and startTime and
     startTime - (l.lastAction.startTime + l.lastAction.castTime)>2000 then
     l.debug(DS_ACTION,1)('[w] wipe lastAction by time')
@@ -373,7 +373,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
     else
       action = l.searchActionByNewEffect(effect, true)
-      if not action then return end
+      if not action then
+        l.debug(DS_EFFECT,1)('[]New effect action not found')
+        return
+      end
       if not l.filterAbilityOk(effect.ability) then
         l.debug(DS_EFFECT,1)('[]New effect filtered')
         return
@@ -463,7 +466,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   if not DoesUnitExist('reticleover') then return end
   -- 1. remove all non player and non playerpet effect actions from self.idActionMap
   for key,action in pairs(l.idActionMap) do
-    if not action.flags.forGround and not action.flags.forArea and not action:isOnPlayer() and not action:isOnPlayerpet() then
+    if not action.flags.forGround and not action.flags.forArea and not action.flags.forSelf --[[ e.g. daedric mines ]] and not action:isOnPlayer() and not action:isOnPlayerpet() then
       l.idActionMap[key] = nil
       l.debug(DS_TARGET,1)('[RC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
