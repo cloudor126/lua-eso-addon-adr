@@ -1,3 +1,6 @@
+3.5.2
+- Added a new policy to adjust priority of the multiple effects from one action e.g. templar's POTL is now in a 6 sec duration. 
+
 3.5.1
 - Adjust the max value of trackable durations from 100s to 150s.
 - Added some patches for ZH language environment.

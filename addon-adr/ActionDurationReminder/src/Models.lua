@@ -348,15 +348,23 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
     -- do nothing
     elseif not optEffect then
       optEffect = effect
-    elseif self.flags.forArea and optEffect:isLongDuration() and not effect:isLongDuration() then -- opt normal duration
-      optEffect = effect
-    elseif self.flags.forArea and not optEffect:isLongDuration() and effect:isLongDuration() then -- opt normal duration
-      optEffect = optEffect
-    elseif optEffect.endTime < effect.endTime then -- opt last end
-      optEffect = effect
+    else
+      optEffect = self:optEffectOf(optEffect,effect)
     end
   end
   return optEffect
+end
+
+mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect)
+= function(self,effect1, effect2)
+  if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
+    return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
+  end
+  if self.duration >0 then
+    if self.duration == effect1.duration then return effect1 end
+    if self.duration == effect2.duration then return effect2 end
+  end
+  return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
 end
 
 mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
@@ -425,6 +433,11 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+
+
+
+
 
 
 
