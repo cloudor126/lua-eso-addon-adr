@@ -88,6 +88,15 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = GetAbilityDuration(action.ability.id) --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
+  if not action.duration or action.duration == 0 then
+    -- search XX seconds in description
+    local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
+    pattern = '.*('..pattern:gsub("2","(%%d+.%%d+)|r")..').*'
+    local numStr,n = action.description:gsub(pattern,'%2')
+    if n and n > 0 then
+      action.descriptionDuration = tonumber(numStr)*1000 --#number
+    end
+  end
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
   action.oldAction = nil --#Action
@@ -176,13 +185,16 @@ end
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
   local optEffect = self:optEffect() -- #Effect
-  return optEffect and optEffect.duration or self.duration
+  return optEffect and optEffect.duration or self.duration or self.descriptionDuration
 end
 
 mAction.getEndTime -- #(#Action:self)->(#number)
 = function(self)
   local optEffect = self:optEffect() -- #Effect
-  return optEffect and optEffect.endTime or (self.endTime>0 and self.endTime or self.startTime)
+  if optEffect then return optEffect.endTime end
+  if self.endTime>0 then return self.endTime end
+  if self.descriptionDuration and self.descriptionDuration>0 then return self.startTime+self.descriptionDuration end
+  return self.startTime
 end
 
 mAction.getFlagsInfo -- #(#Action:self)->(#string)
@@ -440,24 +452,3 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

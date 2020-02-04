@@ -295,6 +295,10 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     end
     l.saveAction(action)
   end
+  -- 6. save short
+  if action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
+    l.saveAction(action)
+  end
 end
 
 l.onActionSlotsAllHotbarsUpdated -- #(#number:eventCode)->()

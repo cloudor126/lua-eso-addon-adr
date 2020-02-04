@@ -1,3 +1,6 @@
+3.5.3
+- Added a new policy to acquire duration infomation from action description e.g. dragonknight's Inhale is now with a duration.
+
 3.5.2a
 - Improved the newly added policy to ignore the overriden effects duration.
 
