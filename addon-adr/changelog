@@ -1,3 +1,6 @@
+3.5.2a
+- Improved the newly added policy to ignore the overriden effects duration.
+
 3.5.2
 - Added a new policy to adjust priority of the multiple effects from one action e.g. templar's POTL is now in a 6 sec duration. 
 

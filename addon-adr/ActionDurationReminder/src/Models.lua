@@ -131,6 +131,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.startTime = startTime -- #number
   effect.endTime = endTime -- #number
   effect.duration = endTime-startTime -- #number
+  effect.ignored = false -- #boolean
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -341,8 +342,8 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
 = function(self)
   local optEffect = nil --#Effect
   for i, effect in ipairs(self.effectList) do
+    local ignored = effect.ignored
     -- filter Major Gallop if not mount
-    local ignored = false
     if effect.ability.icon:find("major_gallop",1,true) and not IsMounted() then ignored = true end
     if ignored then
     -- do nothing
@@ -361,8 +362,14 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
   end
   if self.duration >0 then
-    if self.duration == effect1.duration then return effect1 end
-    if self.duration == effect2.duration then return effect2 end
+    if self.duration == effect1.duration then
+      if self.duration ~= effect2.duration and math.abs(effect1.startTime-effect2.startTime)<300 then effect2.ignored = true end
+      return effect1
+    end
+    if self.duration == effect2.duration then
+      if self.duration ~= effect1.duration and math.abs(effect1.startTime-effect2.startTime)<300 then effect1.ignored = true end
+      return effect2
+    end
   end
   return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
 end
@@ -433,6 +440,14 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+
+
+
+
+
+
+
 
 
 
