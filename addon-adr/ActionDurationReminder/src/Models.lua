@@ -356,7 +356,10 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
   for i, effect in ipairs(self.effectList) do
     local ignored = effect.ignored
     -- filter Major Gallop if not mount
-    if effect.ability.icon:find("major_gallop",1,true) and not IsMounted() then ignored = true end
+    if effect.ability.icon:find("major_gallop",1,true) then
+      if IsMounted() then return effect end
+      ignored = true
+    end
     if ignored then
     -- do nothing
     elseif not optEffect then
