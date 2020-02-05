@@ -369,11 +369,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
       l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
-      if action:getEndTime() <= now+20 then
-        l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
-        if action:getStartTime()>now-500 then -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
-          l.removeAction(action)
-        end
+      if action:getEndTime() <= now+20 and action:getStartTime()>now-500 then  -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
+        l.debug(DS_ACTION,1)('[P]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
+        l.removeAction(action)
       end
     else
       action = l.searchActionByNewEffect(effect, true)
@@ -435,11 +433,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     if action then
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
-      if action:getEndTime() <= now+20 then -- 20ms for latency maybe
-        l.debug(DS_ACTION,1)('[P]%s@%.2f', action.ability:toLogString(), action.startTime/1000)
-        if action:getStartTime()>now-500 then -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
-          l.removeAction(action)
-        end
+      if action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
+        l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
+        l.removeAction(action)
       end
       return
     end
@@ -529,6 +525,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
     if endTime < (action.fake and now or endLimit) then
+      l.debug(DS_ACTION,1)('[dt]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
       l.removeAction(action)
     end
   end
@@ -536,7 +533,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.timeActionMap) do
     if action:getEndTime() < endLimit then
       l.timeActionMap[key] = nil
-      l.debug(DS_ACTION, 1)('[dt]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration())
+      l.debug(DS_ACTION, 1)('[dt]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
     end
   end
 end
@@ -547,8 +544,8 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   -- remove from idActionMap
   if l.idActionMap[action.ability.id] then
     l.idActionMap[action.ability.id] = nil
-    l.debug(DS_ACTION, 1)('[d]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
     removed = true
+    l.debug(DS_ACTION, 1)('[d]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
   end
   -- remove fake/trigger actions from queue, otherwise next fake action will failed to recognize i.e. Crystal Fragment
   if action.oldAction and action.oldAction.fake then

@@ -87,6 +87,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = GetAbilityDuration(action.ability.id) --#number
+  if action.duration and action.duration<1000 then action.duration = 0 end
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
   if not action.duration or action.duration == 0 then
     -- search XX seconds in description

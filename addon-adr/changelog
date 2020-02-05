@@ -1,3 +1,6 @@
+3.5.5
+- Filtered abnormal result of api GetAbilityDuration that cause duration after some activation ended suddenly e.g. Bound Armament's duration now can be fully displayed.    
+
 3.5.4
 - Added mounting condition in comparing multiple effects priorities e.g. Charging Maneuver's duration is now 30 sec when mounted. 
 

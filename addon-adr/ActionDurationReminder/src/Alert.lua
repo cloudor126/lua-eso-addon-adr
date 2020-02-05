@@ -178,12 +178,24 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
   -- check fakeInstant i.e. Crystal Fragment
   if action.fake and action.stackCount ==0 then return true end
   -- check transmuteInstant i.e. Assasin's Will
-  local oldestAction = action:getOldest()
-  if action.startTime + 1000 < GetGameTimeMilliseconds() -- give some time to be stable after switching
-    and oldestAction.ability.id ~= GetSlotBoundId(oldestAction.slotNum)
-    and oldestAction:matchesAbility(models.newAbility(0,GetSlotName(oldestAction.slotNum),''))
-  then
-    return true
+  if GetGameTimeMilliseconds() > action.startTime + 300 then -- switching shouldn't happen just after performing
+    local oldestAction = action:getOldest()
+    if oldestAction:matchesAbility(models.newAbility(0,GetSlotName(oldestAction.slotNum),'')) then
+      if not action.data['alert.transmuteRefChecked'] then
+        action.data['alert.transmuteRefChecked'] = true
+        action.data['alert.transmuteRefId'] = GetSlotBoundId(oldestAction.slotNum)
+      end
+      local currentId = GetSlotBoundId(oldestAction.slotNum)
+      if oldestAction.ability.id ~= currentId
+        and action.data['alert.transmuteRefId'] ~= currentId
+      then
+        if action.stackCount <= 1 then -- i.e. Bound Armaments transmute when just getting an attack stack
+          action.data['alert.transmuteRefId'] = currentId
+          return false
+        end 
+        return true
+      end
+    end
   end
   --
   return false
