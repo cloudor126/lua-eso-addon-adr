@@ -377,14 +377,14 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
     return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
   end
-  if self.duration >0 then
-    if self.duration == effect1.duration then
-      if self.duration ~= effect2.duration and math.abs(effect1.startTime-effect2.startTime)<300 then effect2.ignored = true end
-      return effect1
-    end
-    if self.duration == effect2.duration then
-      if self.duration ~= effect1.duration and math.abs(effect1.startTime-effect2.startTime)<300 then effect1.ignored = true end
-      return effect2
+  if self.duration >0 then -- opt major effect that matches action duration
+    local delta1 = effect1.duration - self.duration
+    local delta2 = effect2.duration - self.duration
+    if delta1*delta2 == 0 and delta1+delta2 ~= 0 then
+      local majorEffect = delta1==0 and effect1 or effect2 --#Effect
+      local minorEffect = delta1==0 and effect2 or effect1 --#Effect
+      if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
+      return majorEffect
     end
   end
   return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
