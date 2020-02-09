@@ -86,8 +86,9 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
-  action.duration = GetAbilityDuration(action.ability.id) --#number
-  if action.duration and action.duration<1000 then action.duration = 0 end
+  action.duration = GetAbilityDuration(action.ability.id) or 0 --#number
+  if action.duration<1000 then action.duration = 0 end
+  action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
   if not action.duration or action.duration == 0 then
     -- search XX seconds in description
@@ -314,7 +315,7 @@ end
 mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 0. filter ended action
-  if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 300 < effect.startTime then
+  if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 500 < effect.startTime then
     return false
   end
   -- 1. taunt
@@ -323,6 +324,11 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   end
   -- 2. fast check already matched effects
   local strict = effect.startTime > self.startTime + self.castTime + 2000
+  if strict and self.duration > 0 then -- try to accept continued effect
+    if effect.startTime > self.endTime and effect.startTime < self.endTime + 500 then
+      strict = false
+    end
+  end
   strict = strict or (effect.duration>0 and effect.duration<5000)
   for i, var in ipairs(self.effectList) do
     local e = var --#Effect
@@ -361,6 +367,10 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
       if IsMounted() then return effect end
       ignored = true
     end
+    -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
+    if self.duration > 0 and self.startTime+self.duration-300 <= effect.startTime then
+      ignored = true
+    end 
     if ignored then
     -- do nothing
     elseif not optEffect then
@@ -377,13 +387,18 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
     return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
   end
-  if self.duration >0 then -- opt major effect that matches action duration
-    local delta1 = effect1.duration - self.duration
-    local delta2 = effect2.duration - self.duration
+  -- opt major effect that matches action duration, including inherit duration e.g. activation of Bound Armaments
+  local duration = self.duration > 0 and self.duration or self.inheritDuration --#number
+  if duration >0 then 
+    local delta1 = effect1.duration - duration
+    local delta2 = effect2.duration - duration
     if delta1*delta2 == 0 and delta1+delta2 ~= 0 then
       local majorEffect = delta1==0 and effect1 or effect2 --#Effect
       local minorEffect = delta1==0 and effect2 or effect1 --#Effect
+      -- ignore same start minor
       if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
+      -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
+      if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
       return majorEffect
     end
   end

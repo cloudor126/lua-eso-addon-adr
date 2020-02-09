@@ -1,3 +1,7 @@
+3.5.6
+- Ignored effects duration brought by action end e.g. 6 sec Major Breach after 3 sec warden's Scorch.
+- Ignored extra effects duration when the main effect duration can still exists e.g. Beast Trap's duration switch from 60s to 18s but Bound Armaments' duration doesn't switch from 40s to 10s. 
+
 3.5.5
 - Filtered abnormal result of api GetAbilityDuration that cause duration after some activation ended suddenly e.g. Bound Armament's duration now can be fully displayed.    
 

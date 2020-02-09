@@ -282,6 +282,11 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
     action.oldAction = sameNameAction
+    if action.duration == 0 and sameNameAction.duration >0 then
+      action.inheritDuration = sameNameAction.duration
+    elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
+      action.inheritDuration = sameNameAction.inheritDuration
+    end
     local abilityAccepter -- # (#Ability:relatedAbility)->()
     = function(relatedAbility)
       if not action.ability.name:match(relatedAbility.name,1) then
@@ -525,7 +530,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
     if endTime < (action.fake and now or endLimit) then
-      l.debug(DS_ACTION,1)('[dt]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
+      l.debug(DS_ACTION,1)('[dr]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
       l.removeAction(action)
     end
   end
