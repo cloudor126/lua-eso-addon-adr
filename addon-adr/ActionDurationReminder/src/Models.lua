@@ -70,7 +70,7 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   else
     ability.progressionName = nil
   end -- only keep different name
-  ability.description = zo_strformat("<<1>>", GetAbilityDescription(id)) -- #string
+  ability.description = GetAbilityDescription(id):gsub('%^%w','') -- #string
   setmetatable(ability,{__index=mAbility})
   return ability
 end
@@ -156,7 +156,6 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
     if s1=='' or s2=='' then return false end
     if s1 == s2 then return true end
     if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
-
     return false
   end
   if self.id==other.id then return true end

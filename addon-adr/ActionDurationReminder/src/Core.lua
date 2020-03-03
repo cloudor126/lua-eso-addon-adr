@@ -334,7 +334,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
 = function(eventCode,changeType,effectSlot,effectName,unitTag,beginTimeSec,endTimeSec,stackCount,iconName,buffType,
   effectType,abilityType,statusEffectType,unitName,unitId,abilityId,sourceType)
   local now = GetGameTimeMilliseconds()
-  effectName = effectName:gsub('^.*< (.*) >$','%1')
+  effectName = effectName:gsub('^.*< (.*) >$','%1'):gsub('%^%w','')
   l.debug(DS_EFFECT, 1)('[%s%s]%s(%s)@%.2f<%.2f>[%s] for %s(%i)',
     ({'+','-','=','*','/'})[changeType] or '?',
     stackCount > 0 and tostring(stackCount) or '',
