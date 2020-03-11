@@ -1,3 +1,6 @@
+3.5.8
+- Adjusted effects priority based on current group member role. e.g. Stagger in Stone Giant is ignored for tank, but kept for dps.
+
 3.5.7
 - Adjusted parsing method to be compatible with a zos literal bug in the description of Shrouded Daggers of German language version. 
 

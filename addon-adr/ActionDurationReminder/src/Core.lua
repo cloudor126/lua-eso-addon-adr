@@ -281,6 +281,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.effectList = sameNameAction.effectList
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
+    action.stackEffect = sameNameAction.stackEffect
     action.oldAction = sameNameAction
     if action.duration == 0 and sameNameAction.duration >0 then
       action.inheritDuration = sameNameAction.duration
@@ -370,13 +371,17 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     if changeType == EFFECT_RESULT_FADED then
       action = l.findActionByOldEffect(effect)
       if not action then return end
-      action.stackCount = 0
+      local stackInfoUpdated = action:updateStackInfo(0, effect)
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
-      l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
-      if action:getEndTime() <= now+20 and action:getStartTime()>now-500 then  -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
-        l.debug(DS_ACTION,1)('[P]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
-        l.removeAction(action)
+      if stackInfoUpdated then
+        l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
+        if action:getEndTime() <= now+20 and action:getStartTime()>now-500 then  -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
+          l.debug(DS_ACTION,1)('[P]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
+          l.removeAction(action)
+        end
+      else
+        l.debug(DS_ACTION,1)('[cs] purged ignored stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
       end
     else
       action = l.searchActionByNewEffect(effect, true)
@@ -393,10 +398,14 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         effect.duration = action.duration
         effect.endTime = action.endTime
       end
-      action.stackCount = stackCount
+      local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
       action:saveEffect(effect)
+      if stackInfoUpdated then
       l.debug(DS_ACTION,1)('[us] updated stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
       l.saveAction(action)
+      else
+        l.debug(DS_ACTION,1)('[us] updated ignored stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
+      end
     end
     return
   end
@@ -696,6 +705,7 @@ end
 m.EXTKEY_UPDATE = "Core:update"
 
 m.debugLevels = {} -- config by console e.g. /script ActionDurationReminder.load("Core#M").debugLevels.effect = 1
+addon.debugLevels = m.debugLevels
 
 m.SPECIAL_ABILITY_IDS = SPECIAL_ABILITY_IDS
 
@@ -709,6 +719,7 @@ m.getIdActionMap -- #()->(#map<#number,Models#Action>)
 = function()
   return l.idActionMap
 end
+addon.getIdActionMap = m.getIdActionMap
 
 m.getWeaponPairInfo -- #()->(#WeaponPairInfo)
 = function()

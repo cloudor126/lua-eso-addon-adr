@@ -129,6 +129,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.data = {} -- #table to store data in
   action.effectList = {} -- #list<#Effect>
   action.stackCount = 0
+  action.stackEffect = nil -- #Effect
   setmetatable(action,{__index=mAction})
   return action
 end
@@ -326,7 +327,7 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   if strict and self.duration > 0 then -- try to accept continued effect
     if effect.startTime > self.endTime and effect.startTime < self.endTime + 500 then
       strict = false
-    end
+  end
   end
   strict = strict or (effect.duration>0 and effect.duration<5000)
   for i, var in ipairs(self.effectList) do
@@ -369,7 +370,7 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
     -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
     if self.duration > 0 and self.startTime+self.duration-300 <= effect.startTime then
       ignored = true
-    end 
+    end
     if ignored then
     -- do nothing
     elseif not optEffect then
@@ -386,21 +387,38 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
     return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
   end
-  -- opt major effect that matches action duration, including inherit duration e.g. activation of Bound Armaments
+  -- check priority
+  -- including inherit duration e.g. activation of Bound Armaments
   local duration = self.duration > 0 and self.duration or self.inheritDuration --#number
-  if duration >0 then 
-    local delta1 = effect1.duration - duration
-    local delta2 = effect2.duration - duration
-    if delta1*delta2 == 0 and delta1+delta2 ~= 0 then
-      local majorEffect = delta1==0 and effect1 or effect2 --#Effect
-      local minorEffect = delta1==0 and effect2 or effect1 --#Effect
-      -- ignore same start minor
+  local role = GetSelectedLFGRole()
+  local getPriority -- #(#Effect:effect)->(#number)
+  = function(effect)
+    -- opt non-player effect for dps
+    if role==LFG_ROLE_DPS and not effect:isOnPlayer() then return 2 end
+    -- opt player effect for tank
+    if role==LFG_ROLE_TANK and effect:isOnPlayer() then return 2 end
+    -- opt major effect that matches action duration
+    if duration > 0 and effect.duration-duration ==0 then return 1 end
+    return 0
+  end
+
+  local p1 = getPriority(effect1)
+  local p2 = getPriority(effect2)
+  if p1~= p2 then
+    local majorEffect = p1>p2 and effect1 or effect2
+    local minorEffect = p1>p2 and effect2 or effect1
+    if math.max(p1,p2) == 2 then
+      minorEffect.ignored = true -- TODO widen its scope if major fades earlier
+    end
+    if math.max(p1,p2) == 1 then
+      -- ignore same start minor e.g. 
       if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
       -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
       if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
-      return majorEffect
     end
+    return majorEffect
   end
+
   return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
 end
 
@@ -448,6 +466,27 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   return nil
 end
 
+mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
+= function(self, stackCount, effect)
+  if not self.stackEffect or self.stackEffect.ability.id == effect.ability.id then
+    self.stackCount = stackCount
+    self.stackEffect = effect
+    return true
+  end
+  local role = GetSelectedLFGRole()
+  if LFG_ROLE_DPS == role then
+    if not effect:isOnPlayer() then
+      self.stackCount = stackCount
+      self.stackEffect = effect
+      return true
+    end
+  elseif effect:isOnPlayer() then
+    self.stackCount = stackCount
+    self.stackEffect = effect
+    return true
+  end
+  return false
+end
 
 --========================================
 --        mEffect
