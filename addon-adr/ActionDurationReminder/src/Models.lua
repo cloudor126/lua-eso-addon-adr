@@ -391,34 +391,36 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   -- including inherit duration e.g. activation of Bound Armaments
   local duration = self.duration > 0 and self.duration or self.inheritDuration --#number
   local role = GetSelectedLFGRole()
-  local getPriority -- #(#Effect:effect)->(#number)
+  local getPriority -- #(#Effect:effect)->(#number,#number)
   = function(effect)
+    local p1=0
+    local p2=0
     -- opt non-player effect for dps
-    if role==LFG_ROLE_DPS and not effect:isOnPlayer() then return 2 end
+    if role==LFG_ROLE_DPS and not effect:isOnPlayer() then p1=2 end
     -- opt player effect for tank
-    if role==LFG_ROLE_TANK and effect:isOnPlayer() then return 2 end
+    if role==LFG_ROLE_TANK and effect:isOnPlayer() then p1=2 end
     -- opt major effect that matches action duration
-    if duration > 0 and effect.duration-duration ==0 then return 1 end
-    return 0
+    if duration > 0 and effect.duration-duration ==0 then p2= 1 end
+    return p1,p2
   end
 
-  local p1 = getPriority(effect1)
-  local p2 = getPriority(effect2)
-  if p1~= p2 then
-    local majorEffect = p1>p2 and effect1 or effect2
-    local minorEffect = p1>p2 and effect2 or effect1
-    if math.max(p1,p2) == 2 then
-      minorEffect.ignored = true -- TODO widen its scope if major fades earlier
-    end
-    if math.max(p1,p2) == 1 then
-      -- ignore same start minor e.g. 
-      if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
-      -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
-      if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
-    end
+  local p11,p12 = getPriority(effect1)
+  local p21,p22 = getPriority(effect2)
+  if p11~=p21 then
+    local majorEffect = p11>p21 and effect1 or effect2
+    local minorEffect = p11>p21 and effect2 or effect1
+    minorEffect.ignored = true -- widen its scope if major fades earlier
     return majorEffect
   end
-
+  if p12~=p22 then
+    local majorEffect = p12>p22 and effect1 or effect2
+    local minorEffect = p12>p22 and effect2 or effect1
+    -- ignore same start minor e.g.
+    if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
+    -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
+    if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
+    return majorEffect
+  end
   return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
 end
 

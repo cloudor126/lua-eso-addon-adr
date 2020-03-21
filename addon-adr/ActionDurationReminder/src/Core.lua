@@ -239,17 +239,18 @@ l.getActionByAbilityName -- #(#string:abilityName,#map<#number,#boolean>:searche
   searchedIdMap = searchedIdMap or {}
   for id, action in pairs(l.idActionMap) do
     local flag = searchedIdMap[id]
-    if flag == nil then -- only test those not searched, no matter flag is true or false
+    if flag == nil then
+      -- only test those not searched, no matter flag is true or false
       if abilityName:match(action.ability.name,1)
         -- i.e. Assassin's Will name can match Merciless Resolve action by its description
         or (not addon.isSimpleWord(abilityName) and action.description:find(abilityName,1,true))
-    then
-      return action
-    end
-    -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
-    for key, var in ipairs(action.relatedAbilityList) do
-      if abilityName:match(var.name,1) then return action end
-    end
+      then
+        return action
+      end
+      -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
+      for key, var in ipairs(action.relatedAbilityList) do
+        if abilityName:match(var.name,1) then return action end
+      end
     end
   end
   return nil
@@ -401,8 +402,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
       action:saveEffect(effect)
       if stackInfoUpdated then
-      l.debug(DS_ACTION,1)('[us] updated stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
-      l.saveAction(action)
+        l.debug(DS_ACTION,1)('[us] updated stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
+        l.saveAction(action)
       else
         l.debug(DS_ACTION,1)('[us] updated ignored stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
       end

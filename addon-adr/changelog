@@ -1,3 +1,6 @@
+3.5.9
+- Used a multi dimensional data to represent the priority of a effect so that both features in v3.5.8 and v3.5.2 are compatible.  
+
 3.5.8
 - Adjusted effects priority based on current group member role. e.g. Stagger in Stone Giant is ignored for tank, but kept for dps.
 
