@@ -8,10 +8,10 @@ local l = {} -- #L
 local m = {l=l} -- #M
 
 -- In Game Debug Usage:
--- /script ActionDurationReminder.load('Core#M').debugLevels.action=2
--- /script ActionDurationReminder.load('Core#M').debugLevels.effect=2
--- /script ActionDurationReminder.load('Core#M').debugLevels.target=2
--- /script ActionDurationReminder.load('Core#M').debugLevels.all=2
+-- /script ActionDurationReminder.debugLevels.action=2
+-- /script ActionDurationReminder.debugLevels.effect=2
+-- /script ActionDurationReminder.debugLevels.target=2
+-- /script ActionDurationReminder.debugLevels.all=2
 
 local DS_ACTION = "action" -- debug switch for action
 local DS_EFFECT = "effect" -- debug switch for effect
