@@ -234,16 +234,16 @@ l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
   return l.idActionMap[abilityId]
 end
 
-l.getActionByAbilityName -- #(#string:abilityName,#map<#number,#boolean>:searchedIdMap)->(Models#Action)
-= function(abilityName,searchedIdMap)
+l.getActionByAbilityName -- #(#string:abilityName,#map<#number,#boolean>:searchedIdMap, #boolean:strict,#number:weaponPairIndex, #number:slotNum)->(Models#Action)
+= function(abilityName,searchedIdMap, strict, weaponPairIndex, slotNum)
   searchedIdMap = searchedIdMap or {}
   for id, action in pairs(l.idActionMap) do
     local flag = searchedIdMap[id]
-    if flag == nil then
+    if flag == nil and (not weaponPairIndex or weaponPairIndex==action.weaponPairIndex) and (not slotNum or slotNum==action.slotNum) then
       -- only test those not searched, no matter flag is true or false
       if abilityName:match(action.ability.name,1)
         -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-        or (not addon.isSimpleWord(abilityName) and action.description:find(abilityName,1,true))
+        or (not addon.isSimpleWord(abilityName) and not strict and action.description:find(abilityName,1,true))
       then
         return action
       end
@@ -273,7 +273,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. queue it
   l.queueAction(action)
   -- 5. replace saved
-  local sameNameAction = l.getActionByAbilityName(action.ability.name)
+  local sameNameAction = l.getActionByAbilityName(action.ability.name, nil, false, l.weaponPairInfo.activeIndex, slotNum)
   if sameNameAction then
     sameNameAction = sameNameAction:getNewest()
     l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
@@ -581,7 +581,7 @@ l.saveAction -- #(Models#Action:action)->()
   l.lastEffectAction = action
 
   -- clear same name action that can have a different id
-  local sameNameAction = l.getActionByAbilityName(action.ability.name)
+  local sameNameAction = l.getActionByAbilityName(action.ability.name, nil, false, action.weaponPairIndex, action.slotNum)
   if sameNameAction then l.idActionMap[sameNameAction.ability.id] = nil end
 
   l.idActionMap[action.ability.id] = action
@@ -671,8 +671,8 @@ l.searchActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#
   return action
 end
 
-l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
-= function(slotBoundId)
+l.searchActionBySlot --#(#number:weaponPairIndex, #number:slotNum, #number:slotBoundId)->(Models#Action)
+= function(weaponPairIndex, slotNum, slotBoundId)
   local searching = l.idSearchingMap[slotBoundId]
   -- no searching object yet
   if not searching then
@@ -687,8 +687,14 @@ l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
       if action then return action end
     end
   end
+  for key, var in pairs(l.idActionMap) do
+  	if var.weaponPairIndex == weaponPairIndex and var.slotNum == slotNum then
+     searching[var.ability.id] = true
+  	 return var
+  	end
+  end
   local abilityName = zo_strformat("<<1>>", GetAbilityName(slotBoundId))
-  action = l.getActionByAbilityName(abilityName, searching)
+  action = l.getActionByAbilityName(abilityName, searching, true, weaponPairIndex, slotNum)
   if action then
     searching[action.ability.id] = true
   else
@@ -714,7 +720,7 @@ m.getActionByAbilityId = l.getActionByAbilityId -- #(#number:abilityId)->(Models
 
 m.getActionByAbilityName = l.getActionByAbilityName-- #(#string:abilityName)->(Models#Action)
 
-m.searchActionBySlotBoundId = l.searchActionBySlotBoundId --#(#number:slotBoundId)->(Models#Action)
+m.searchActionBySlot = l.searchActionBySlot --#(#number:weaponPairIndex, #number:slotNum, #number:slotBoundId)->(Models#Action)
 
 m.getIdActionMap -- #()->(#map<#number,Models#Action>)
 = function()

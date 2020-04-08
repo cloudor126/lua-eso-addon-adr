@@ -50,11 +50,12 @@ l.onCoreUpdate -- #()->()
 = function()
   local now = GetGameTimeMilliseconds()
   local showedActionMap = {} --#map<#number,Models#Action>
+  local weaponPairIndex = GetActiveWeaponPairInfo()
   -- 1. show in action bar widgets
   for slotNum = 3,8 do
     local widget = l.mainBarWidgetMap[slotNum]
     local abilityId = GetSlotBoundId(slotNum)
-    local action = core.searchActionBySlotBoundId(abilityId)
+    local action = core.searchActionBySlot(weaponPairIndex,slotNum, abilityId)
     if action then
       action.flags.isShifted = false
       showedActionMap[action.ability.id] = action
