@@ -218,22 +218,18 @@ end
 
 l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
 = function(abilityId)
-  return l.idActionMap[abilityId]
+  local action = l.idActionMap[abilityId]
+  if action then return action end
+  for key, var in pairs(l.idActionMap) do
+  	if var:matchesAbilityId(abilityId) then return var end
+  end
+  return nil
 end
 
 l.getActionByAbilityName -- #(#string:abilityName, #boolean:strict)->(Models#Action)
 = function(abilityName, strict)
   for id, action in pairs(l.idActionMap) do
-    if abilityName:match(action.ability.name,1)
-      -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-      or (not strict and not addon.isSimpleWord(abilityName) and action.description:find(abilityName,1,true))
-    then
-      return action
-    end
-    -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
-    for key, var in ipairs(action.relatedAbilityList) do
-      if abilityName:match(var.name,1) then return action end
-    end
+    if action:matchesAbilityName(abilityName) then return action end
   end
   return nil
 end

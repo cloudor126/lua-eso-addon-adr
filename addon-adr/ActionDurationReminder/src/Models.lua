@@ -312,6 +312,30 @@ mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#b
   end
 end
 
+mAction.matchesAbilityId -- #(#Action:self,#string:abilityId)->(#boolean)
+= function(self, abilityId, strict)
+  if self.ability.id == abilityId then return true end
+  -- check related
+  for key, var in ipairs(self.relatedAbilityList) do
+    if var.id == abilityId then return true end
+  end
+end
+
+mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
+= function(self, abilityName, strict)
+  if abilityName:match(self.ability.name,1)
+    -- i.e. Assassin's Will name can match Merciless Resolve action by its description
+    or (not strict and not addon.isSimpleWord(abilityName) and self.description:find(abilityName,1,true))
+  then
+    return true
+  end
+  -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
+  for key, var in ipairs(self.relatedAbilityList) do
+    if abilityName:match(var.name,1) then return true end
+  end
+  return false
+end
+
 mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 0. filter ended action
