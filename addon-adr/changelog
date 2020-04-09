@@ -1,3 +1,6 @@
+3.5.11a
+- Fixed bugs produced in 3.5.11 and removed redundant caches.
+
 3.5.11
 - Adjusted policies to strict ability matching e.g. Summoner's Armor duration won't be put into Blastbones, Skeletal Mage, and Spirit Mender.
 

@@ -55,7 +55,8 @@ l.onCoreUpdate -- #()->()
   for slotNum = 3,8 do
     local widget = l.mainBarWidgetMap[slotNum]
     local abilityId = GetSlotBoundId(slotNum)
-    local action = core.searchActionBySlot(weaponPairIndex,slotNum, abilityId)
+    local action = core.getActionBySlot(weaponPairIndex,slotNum)
+    if not action then action = core.getActionByAbilityId(abilityId) end
     if action then
       action.flags.isShifted = false
       showedActionMap[action.ability.id] = action
@@ -115,7 +116,8 @@ l.onCoreUpdate -- #()->()
     local id = toShowIdList[i]
     local action = toShowActionMap[id]
     local slotNum = action.slotNum
-    local inAppend = core.getWeaponPairInfo().ultimate and ( action.weaponPairIndex ~= core.getWeaponPairInfo().index) or action.weaponPairUltimate
+--    local inAppend = core.getWeaponPairInfo().ultimate and ( action.weaponPairIndex ~= core.getWeaponPairInfo().index) or action.weaponPairUltimate
+    local inAppend = false
     local widget = l.shiftedBarWidgetMap[slotNum]
     if inAppend or (widget and widget.visible) then
       appendIndex=appendIndex+1

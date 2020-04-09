@@ -91,7 +91,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
   if not action.duration or action.duration == 0 then
-    -- search XX seconds in description
+    -- look for XX seconds in description
     local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
     pattern = '.*('..pattern:gsub("2","(%%d+.%%d+)|r")..').*'
     local numStr,n = action.description:gsub(pattern,'%2')
@@ -329,7 +329,7 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
       strict = false
   end
   end
-  strict = strict or (effect.duration>0 and effect.duration<5000)
+  strict = strict or (effect.duration>0 and effect.duration<4000) -- Render Flesh has a 4 second Minor Defile
   for i, var in ipairs(self.effectList) do
     local e = var --#Effect
     if effect.ability.id == e.ability.id then return true end
