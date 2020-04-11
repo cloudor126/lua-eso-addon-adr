@@ -1,3 +1,6 @@
+3.5.13
+- Supported restoring timer of gallop effect when getting mounted.
+
 3.5.12
 - Restricted effects updating only on recorded ones thus prevented updating already ignored effects. e.g. Restoring Focus whith Mighty Chudan is supported now.  
 

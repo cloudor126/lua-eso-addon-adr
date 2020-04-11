@@ -448,6 +448,17 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
 end
 
+mAction.optGallopEffect -- #(#Action:self)->(#Effect)
+= function(self)
+  for i, effect in ipairs(self.effectList) do
+     -- filter Major Gallop if not mount
+    if effect.ability.icon:find("major_gallop",1,true) then
+      return effect
+    end
+  end
+  return false
+end
+
 mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
 = function(self)
   for i, effect in ipairs(self.effectList) do

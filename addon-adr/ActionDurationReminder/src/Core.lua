@@ -56,6 +56,8 @@ l.idFilteringMap = {} --#map<#number,#boolean>
 
 l.lastAction = nil -- Models#Action
 
+l.gallopAction = nil -- Models#Action
+
 l.lastEffectAction = nil -- Models#Action
 
 l.lastQuickslotTime = 0 -- #number
@@ -448,6 +450,17 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
 end
 
+l.onMountedStateChanged -- #(#number:eventCode,#boolean:mounted)->()
+= function(eventCode,mounted)
+  if mounted and l.gallopAction then
+    local gallopEffect = l.gallopAction:optGallopEffect()
+    if gallopEffect and gallopEffect.endTime>GetGameTimeMilliseconds() then
+      l.saveAction(l.gallopAction)
+      l.gallopAction = nil
+    end
+  end
+end
+
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
 = function(eventCode,inCombat)
   if not l.getSavedVars().coreClearWhenCombatEnd then return end
@@ -511,8 +524,8 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
-
   EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_ACTION_UPDATE_COOLDOWNS, l.onActionUpdateCooldowns  )
+  EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_MOUNTED_STATE_CHANGED, l.onMountedStateChanged   )
 
 end
 
@@ -531,6 +544,8 @@ l.refineActions -- #()->()
     if endTime < (action.fake and now or endLimit) then
       l.debug(DS_ACTION,1)('[dr]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
       l.removeAction(action)
+      local gallopEffect = action:optGallopEffect()
+      if gallopEffect and gallopEffect.endTime > now then l.gallopAction = action end
     end
   end
   endLimit = endLimit - 3000 -- timeActionMap remains a little longer to be found by further effect
