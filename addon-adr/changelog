@@ -1,3 +1,6 @@
+3.5.12
+- Restricted effects updating only on recorded ones thus prevented updating already ignored effects. e.g. Restoring Focus whith Mighty Chudan is supported now.  
+
 3.5.11b
 - Fixed bugs produced in 3.5.11 and removed redundant caches.
 

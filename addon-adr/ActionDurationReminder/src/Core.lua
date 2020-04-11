@@ -156,9 +156,9 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   return nil
 end
 
-l.findActionByOldEffect --#(Models#Effect:effect,#boolean:updating)->(Models#Action)
-= function(effect, updating)
-  -- 1. find that can
+l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Action)
+= function(effect, appending)
+  -- 1. find that existed
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
@@ -167,7 +167,8 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:updating)->(Models#Act
       return action
     end
   end
-  if updating then
+  -- 2. appending
+  if appending then
     for i = 1,#l.actionQueue do
       local action = l.actionQueue[i]
       if action:matchesNewEffect(effect) then
@@ -422,7 +423,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
-    local action = l.findActionByOldEffect(effect, true)
+    local action = l.findActionByOldEffect(effect, effect.duration>0)
     if action then
       local old = action:saveEffect(effect)
       local weird = not old and effect.duration == 0
