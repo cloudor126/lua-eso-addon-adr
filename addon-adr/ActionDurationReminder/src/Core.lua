@@ -195,7 +195,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
     if slotBoundId >0 then
-      if effect.ability.name:match(fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum))),1)
+      if effect.ability.name:find(fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum))),1,true)
         or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
       then
         matchSlotNum = slotNum
@@ -245,9 +245,9 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if a.ability.id == action.ability.id then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
-      if abilityName:match(var.name,1) then return true end
+      if abilityName:find(var.name,1,true) then return true end
     end
-    if abilityName:match(a.ability.name,1) then return true end
+    if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     if action.weaponPairIndex == a.weaponPairIndex and action.slotNum == a.slotNum
       and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true)
@@ -296,7 +296,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     end
     local abilityAccepter -- # (#Ability:relatedAbility)->()
     = function(relatedAbility)
-      if not action.ability.name:match(relatedAbility.name,1) then
+      if not action.ability.name:find(relatedAbility.name,1,true) then
         l.debug(DS_ACTION,1)('[aMs]%s', relatedAbility:toLogString())
         table.insert(action.relatedAbilityList, relatedAbility)
       end

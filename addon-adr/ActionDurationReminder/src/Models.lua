@@ -323,7 +323,7 @@ end
 
 mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
 = function(self, abilityName, strict)
-  if abilityName:match(self.ability.name,1)
+  if abilityName:find(self.ability.name,1,true)
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     or (not strict and not addon.isSimpleWord(abilityName) and self.description:find(abilityName,1,true))
   then
@@ -331,7 +331,7 @@ mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:stric
   end
   -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
   for key, var in ipairs(self.relatedAbilityList) do
-    if abilityName:match(var.name,1) then return true end
+    if abilityName:find(var.name,1,true) then return true end
   end
   return false
 end
