@@ -54,9 +54,11 @@ l.idActionMap = {}--#map<#number,Models#Action>
 
 l.idFilteringMap = {} --#map<#number,#boolean>
 
-l.lastAction = nil -- Models#Action
+l.ignoredEffectMap = {} --#map<#number,#string>
 
 l.gallopAction = nil -- Models#Action
+
+l.lastAction = nil -- Models#Action
 
 l.lastEffectAction = nil -- Models#Action
 
@@ -224,7 +226,7 @@ l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
   local action = l.idActionMap[abilityId]
   if action then return action end
   for key, var in pairs(l.idActionMap) do
-  	if var:matchesAbilityId(abilityId) then return var end
+    if var:matchesAbilityId(abilityId) then return var end
   end
   return nil
 end
@@ -377,13 +379,18 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         l.debug(DS_ACTION,1)('[cs] purged ignored stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
       end
     else
+      if l.ignoredEffectMap[effect.ability.id] then
+        l.debug(DS_EFFECT,1)('[]New stack effect ignored.')
+        return
+      end
       action = l.findActionByNewEffect(effect, true)
       if not action then
-        l.debug(DS_EFFECT,1)('[]New effect action not found')
+        l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
+        l.ignoredEffectMap[effect.ability.id] = effect.ability.name
         return
       end
       if not l.filterAbilityOk(effect.ability) then
-        l.debug(DS_EFFECT,1)('[]New effect filtered')
+        l.debug(DS_EFFECT,1)('[]New stack effect filtered.')
         return
       end
       if action.duration and action.duration > 0 then -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
@@ -405,12 +412,16 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
+    if l.ignoredEffectMap[effect.ability.id] then
+      l.debug(DS_EFFECT,1)('[]New effect ignored.')
+      return
+    end
     if duration == 0 then
-      l.debug(DS_EFFECT,1)('[]New effect without duration ignored')
+      l.debug(DS_EFFECT,1)('[]New effect without duration ignored.')
       return
     end
     if not l.filterAbilityOk(effect.ability) then
-      l.debug(DS_EFFECT,1)('[]New effect filtered')
+      l.debug(DS_EFFECT,1)('[]New effect filtered.')
       return
     end
     local action = l.findActionByNewEffect(effect)
@@ -421,6 +432,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       return
     end
     l.debug(DS_EFFECT,1)('[]New effect action not found')
+    l.ignoredEffectMap[effect.ability.id] = effect.ability.name
     return
   end
   -- 3. update
@@ -459,6 +471,11 @@ l.onMountedStateChanged -- #(#number:eventCode,#boolean:mounted)->()
       l.gallopAction = nil
     end
   end
+end
+
+l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
+= function(eventCode,initial)
+  l.ignoredEffectMap = {}
 end
 
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
@@ -524,6 +541,7 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
+  EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_ACTIVATED, l.onPlayerActivated )
   EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_ACTION_UPDATE_COOLDOWNS, l.onActionUpdateCooldowns  )
   EVENT_MANAGER:RegisterForEvent(addon.name,  EVENT_MOUNTED_STATE_CHANGED, l.onMountedStateChanged   )
 
