@@ -43,6 +43,8 @@ end
 --========================================
 --        m
 --========================================
+m.cacheOfActionMatchingEffect = {} -- #map<#string:#boolean>
+m.cacheOfActionMatchingAbilityName = {} -- #map<#string:#boolean>
 m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
 = function(id, name, icon)
   local ability = {} -- #Ability
@@ -323,6 +325,15 @@ end
 
 mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
 = function(self, abilityName, strict)
+  local key = self.ability.id..'/'..abilityName..'/'..(strict and 'y' or 'n')
+  local value = m.cacheOfActionMatchingAbilityName[key]
+  if value~=nil then return value end
+  value = self:_matchesAbilityName(abilityName,strict)
+  m.cacheOfActionMatchingAbilityName[key] = value
+  return value
+end
+mAction._matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
+= function(self, abilityName, strict)
   if abilityName:find(self.ability.name,1,true)
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     or (not strict and not addon.isSimpleWord(abilityName) and self.description:find(abilityName,1,true))
@@ -342,6 +353,17 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 500 < effect.startTime then
     return false
   end
+  -- 1. using cache to match
+  local key = self.ability.id..'/'..effect.ability.id
+  local value = m.cacheOfActionMatchingEffect[key]
+  if value ~= nil then return value end
+  value = self:_matchesNewEffect(effect)
+  m.cacheOfActionMatchingEffect[key] = value
+  return value
+end
+
+mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
+= function(self, effect)
   -- 1. taunt
   if effect.ability.id == SPECIAL_ABILITY_IDS.TAUNT and self.flags.forTank then
     return true
@@ -451,7 +473,7 @@ end
 mAction.optGallopEffect -- #(#Action:self)->(#Effect)
 = function(self)
   for i, effect in ipairs(self.effectList) do
-     -- filter Major Gallop if not mount
+    -- filter Major Gallop if not mount
     if effect.ability.icon:find("major_gallop",1,true) then
       return effect
     end
