@@ -25,6 +25,7 @@ local alertSavedVarsDefaults ={
   alertKeepSeconds = 2,
   alertIconSize = 50,
   alertFontName = "BOLD_FONT",
+  alertFontStyle = "thick-outline",
   alertCustomFontName = "",
   alertFontSize = 32,
   alertOffsetX = 0,
@@ -95,7 +96,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     end)
   end
   local control,key = l.controlPool:AcquireObject()
-  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|thick-outline"
+  local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|"..savedVars.alertFontStyle
   control.label:SetFont(fontstr)
 
   control.label:SetText(zo_strformat('<<C:1>>',ability.showName))
@@ -387,6 +388,14 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         disabled = function() return not l.getSavedVars().alertEnabled end,
         width = "full",
         default = alertSavedVarsDefaults.alertFontSize,
+      },{
+        type = "dropdown",
+        name = text("Font Style"),
+        choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin"},
+        getFunc = function() return l.getSavedVars().alertFontStyle end,
+        setFunc = function(value) l.getSavedVars().alertFontStyle = value end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertFontStyle,
       },{
         type = "editbox",
         name = text("Patterns of White List in line"), -- or string id or function returning a string

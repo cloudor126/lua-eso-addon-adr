@@ -18,12 +18,12 @@ end
 
 l.getLabelFont -- #()->(#string)
 = function()
-  return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|thick-outline"
+  return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|"..l.getSavedVars().barLabelFontStyle
 end
 
 l.getStackLabelFont -- #()->(#string)
 = function()
-  return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|thick-outline"
+  return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|"..l.getSavedVars().barStackLabelFontStyle
 end
 
 l.debugIdList = {} -- #list<#number>

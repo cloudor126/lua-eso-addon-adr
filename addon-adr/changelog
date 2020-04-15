@@ -1,5 +1,7 @@
 3.5.14
-- Added some cache to improve performance. 
+- Added some cache to improve performance.
+- Added options to config font styles.
+- Ajusted effect priority e.g. Templar's POTL will showes the longer 9 sec timer for a healer role.
 
 3.5.13
 - Supported restoring timer of gallop effect when getting mounted.

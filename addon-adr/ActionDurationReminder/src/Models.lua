@@ -445,11 +445,14 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     if role==LFG_ROLE_DPS and not effect:isOnPlayer() then p1=2 end
     -- opt player effect for tank
     if role==LFG_ROLE_TANK and effect:isOnPlayer() then p1=2 end
+    -- opt player effect for healer
+    if role== LFG_ROLE_HEAL and not effect:isOnPlayer() then p1 =2 end
     -- opt major effect that matches action duration
     if duration > 0 and effect.duration-duration ==0 then p2= 1 end
+    -- opt long effect for healer
+    if role== LFG_ROLE_HEAL and duration>0 and effect.duration>duration then p2=2 end
     return p1,p2
   end
-
   local p11,p12 = getPriority(effect1)
   local p21,p22 = getPriority(effect2)
   if p11~=p21 then
