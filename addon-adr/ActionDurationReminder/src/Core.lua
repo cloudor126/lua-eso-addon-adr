@@ -187,6 +187,8 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
+  -- check if it's a buff, e.g. avoid abuse of major expedition
+  if effect.ability.icon:find('ability_buff_',1,true) then return nil end
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion

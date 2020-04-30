@@ -1,3 +1,6 @@
+3.5.15
+- Restricted major/minor buffs matching e.g. Major Expedition effect from killing with False God set won't match psijic acceleration or other skills with the same buff.
+
 3.5.14
 - Added some cache to improve performance.
 - Added options to config font styles.
