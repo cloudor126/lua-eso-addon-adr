@@ -4,7 +4,7 @@ plugins{
 
 ext.addonName = "ActionDurationReminder"
 ext.addonId = 1536
-ext.addonCompatible = '5.3.4,5.2.5'
+ext.addonCompatible = '6.0.0,5.3.4'
 file('changelog').withReader{reader->
     def m = reader.readLine() =~ /\d+(\.\w+)+/
     ext.addonVersion = m? m[0][0] : 'SNAPSHOT'
