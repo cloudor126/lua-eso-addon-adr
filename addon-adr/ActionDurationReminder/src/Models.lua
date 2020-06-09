@@ -354,7 +354,7 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     return false
   end
   -- 1. using cache to match
-  local key = self.ability.id..'/'..effect.ability.id
+  local key = self.ability.id..'/'..effect.ability.id..'/'..effect.duration
   local value = m.cacheOfActionMatchingEffect[key]
   if value ~= nil then return value end
   value = self:_matchesNewEffect(effect)
