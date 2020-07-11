@@ -54,8 +54,6 @@ l.idActionMap = {}--#map<#number,Models#Action>
 
 l.idFilteringMap = {} --#map<#number,#boolean>
 
-l.ignoredEffectMap = {} --#map<#number,#string>
-
 l.gallopAction = nil -- Models#Action
 
 l.lastAction = nil -- Models#Action
@@ -381,14 +379,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         l.debug(DS_ACTION,1)('[cs] purged ignored stack info %s (%s)', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect')
       end
     else
-      if l.ignoredEffectMap[effect.ability.id] then
-        l.debug(DS_EFFECT,1)('[]New stack effect ignored.')
-        return
-      end
       action = l.findActionByNewEffect(effect, true)
       if not action then
         l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
-        l.ignoredEffectMap[effect.ability.id] = effect.ability.name
         return
       end
       if not l.filterAbilityOk(effect.ability) then
@@ -414,10 +407,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
-    if l.ignoredEffectMap[effect.ability.id] then
-      l.debug(DS_EFFECT,1)('[]New effect ignored.')
-      return
-    end
     if duration == 0 then
       l.debug(DS_EFFECT,1)('[]New effect without duration ignored.')
       return
@@ -434,7 +423,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       return
     end
     l.debug(DS_EFFECT,1)('[]New effect action not found')
-    l.ignoredEffectMap[effect.ability.id] = effect.ability.name
     return
   end
   -- 3. update
@@ -477,7 +465,6 @@ end
 
 l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
 = function(eventCode,initial)
-  l.ignoredEffectMap = {}
 end
 
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()

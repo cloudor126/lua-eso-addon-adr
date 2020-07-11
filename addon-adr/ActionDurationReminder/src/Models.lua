@@ -240,6 +240,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     and math.abs(optEffect.startTime-self.startTime)< 500
     and optEffect.duration * 7 < self.duration*4
   then
+    self.data.firstStageId = optEffect.ability.id
     return '1/2'
   end
   -- 1/2 by normal effect with long duration effect present
@@ -251,20 +252,20 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     self.data.firstStageId = optEffect.ability.id -- #number
     return '1/2'
   end
-  -- 2/2 by same end and >2/5 duration and <4/5 duration
-  if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
-    if optEffect.duration*5 > self.duration *2 then
-      if optEffect.duration*5 < self.duration *4 then
-        return '2/2'
+  if self.data.firstStageId and self.data.firstStageId ~= optEffect.ability.id then
+    -- 2/2 by same end and >2/5 duration and <4/5 duration
+    if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
+      if optEffect.duration*5 > self.duration *2 then
+        if optEffect.duration*5 < self.duration *4 then
+          return '2/2'
+        end
       end
     end
-  end
-  -- 2/2 by normal effect with firstStagedId and without long duration effect present
-  if self.flags.forArea and self.data.firstStageId
-    and self.data.firstStageId ~= optEffect.ability.id
-    and not longDurationEffect
-  then
-    return '2/2'
+    -- 2/2 by normal effect with firstStagedId and without long duration effect present
+    if self.flags.forArea and not longDurationEffect
+    then
+      return '2/2'
+    end
   end
   return nil
 end
