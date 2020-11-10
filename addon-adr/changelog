@@ -1,3 +1,6 @@
+3.6.1
+- Patched to accept wrongly inputted number in skill descriptions e.g. '1.5' is wrongly inputted as '1,5' in Heroic Slash skill description in some language translation.
+
 3.6.0
 - From this version on, dirty patches will be introduced into this addon because skills' duration definitions in this game become self-contradictional e.g. Sorcerer's Haunting Curse duration count all 2 phases but Warden's Subterrian Assault duration only count 1 phase. So there couldn't be a consistent logic to handle those situations and dirty patches become required.
 
