@@ -102,7 +102,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
     pattern = '.*('..pattern:gsub("2","(%%d+.%%d+)|r")..').*'
     local numStr,n = action.description:gsub(pattern,'%2')
     if n and n > 0 then
-      action.descriptionDuration = tonumber(numStr:gsub(',','.'))*1000 --#number
+      action.descriptionDuration = tonumber((numStr:gsub(',','.')))*1000 --#number
     end
   end
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
