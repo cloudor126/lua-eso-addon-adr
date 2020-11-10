@@ -1,3 +1,9 @@
+3.6.0
+- From this version on, dirty patches will be introduced into this addon because skills' duration definitions in this game become self-contradictional e.g. Sorcerer's Haunting Curse duration count all 2 phases but Warden's Subterrian Assault duration only count 1 phase. So there couldn't be a consistent logic to handle those situations and dirty patches become required.
+
+3.5.18
+- Accpted effects that occurs after the action duration e.g. Warden's Subterrian Assault will count the second 3 seconds period.
+
 3.5.17
 - Ajusted detection policy for two phase duration actions.
 

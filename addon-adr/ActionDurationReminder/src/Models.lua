@@ -11,6 +11,10 @@ local SPECIAL_ABILITY_IDS = {
   TAUNT = 38541,
 }
 
+local SPECIAL_DURATION_PATCH = {
+  ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
+}
+
 local fRefinePath -- #(#string:path)->(#string)
 = function(path)
   if not path then return path end
@@ -88,7 +92,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
-  action.duration = GetAbilityDuration(action.ability.id) or 0 --#number
+  action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
@@ -416,7 +420,10 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
     end
     -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
     if self.duration > 0 and self.startTime+self.duration-300 <= effect.startTime then
-      ignored = true
+      -- only ignore if this duration is not equal to action duration e.g. warden's Subterrian Assault
+      if self.duration ~= effect.duration then
+        ignored = true
+      end
     end
     if ignored then
     -- do nothing

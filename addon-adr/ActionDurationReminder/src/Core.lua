@@ -536,10 +536,29 @@ l.onStart -- #()->()
 
 end
 
+l.lastUpdateLog = 0
 l.onUpdate -- #()->()
 = function()
   l.refineActions()
   addon.callExtension(m.EXTKEY_UPDATE)
+  -- log
+  local now = GetGameTimeMilliseconds()
+  -- input: /script ActionDurationReminder.debugOnUpdate = true
+  if addon.debugOnUpdate and now - l.lastUpdateLog>1000 then
+    l.lastUpdateLog = now
+    d('<<<<<----')
+    for key, action in pairs(l.idActionMap) do
+      d(key..':'..action.ability.name)
+      local optEffect = action:optEffect()
+      for ek, ev in ipairs(action.effectList) do
+      	d('effect:'..ev.ability.id..' '..ev.ability.name..', endTime-now'..(ev.endTime-now))
+      end
+      if optEffect then
+        d('opt:'..optEffect.ability.id..', endTime-now:'..(optEffect.endTime-now))
+      end
+    end
+    d('---->>>>')
+  end
 end
 
 l.refineActions -- #()->()
