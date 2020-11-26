@@ -32,7 +32,7 @@ local SPECIAL_ABILITY_IDS = {
 local coreSavedVarsDefaults = {
   coreMultipleTargetTracking = true,
   coreSecondsBeforeFade = 5,
-  coreMinimumDurationSeconds = 3,
+  coreMinimumDurationSeconds = 2.5,
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
@@ -526,8 +526,16 @@ l.onStart -- #()->()
 = function()
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_ACTION_SLOT_ABILITY_USED, l.onActionSlotAbilityUsed)
   EVENT_MANAGER:RegisterForUpdate(addon.name, 100, l.onUpdate)
-  EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_EFFECT_CHANGED, l.onEffectChanged )
+  EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_EFFECT_CHANGED, l.onEffectChanged)
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
+
+  -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
+  EVENT_MANAGER:RegisterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, function(...)
+  	local icon = select(9, ...) -- #string
+  	if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
+  end)
+  EVENT_MANAGER:AddFilterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_NONE)
+
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_ACTIVATED, l.onPlayerActivated )
@@ -551,7 +559,7 @@ l.onUpdate -- #()->()
       d(key..':'..action.ability.name)
       local optEffect = action:optEffect()
       for ek, ev in ipairs(action.effectList) do
-      	d('effect:'..ev.ability.id..' '..ev.ability.name..', endTime-now'..(ev.endTime-now))
+        d('effect:'..ev.ability.id..' '..ev.ability.name..', endTime-now'..(ev.endTime-now))
       end
       if optEffect then
         d('opt:'..optEffect.ability.id..', endTime-now:'..(optEffect.endTime-now))

@@ -1,3 +1,6 @@
+3.6.2
+- Patched to accept effect event of source unit type none e.g. Force Siphon is now supported even if ESO tell us those effects are not from player.
+
 3.6.1a
 3.6.1
 - Patched to accept wrongly inputted number in skill descriptions e.g. '1.5' is wrongly inputted as '1,5' in Heroic Slash skill description in some language translation.
