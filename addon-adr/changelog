@@ -1,3 +1,6 @@
+3.6.3
+- Trimmed fraction part of event duration value according to the action time e.g. Events of Unstable Wall have durations a bit longer than their 10 sec action time, i.e. 10.2, 10.4 etc.
+
 3.6.2
 - Patched to accept effect event of source unit type none e.g. Force Siphon is now supported even if ESO tell us those effects are not from player.
 
