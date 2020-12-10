@@ -345,6 +345,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- 0. prepare
   if abilityId == SPECIAL_ABILITY_IDS.PURIFYING_LIGHT_TICK then return end
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
+  -- ignore short time expedition, usually come from buggy Path Of Darkness
+  if iconName:find('buff_major_expedition',1,true) and endTimeSec>beginTimeSec and endTimeSec<beginTimeSec+6  then return end
+  
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)
   local endTime =  math.floor(endTimeSec * 1000)

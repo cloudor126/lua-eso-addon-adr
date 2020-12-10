@@ -1,3 +1,6 @@
+3.6.4
+- Filtered interfering event infomation e.g. duration of psijic Channeled Acceleration will not be reset by Path Of Darkness and its morphs. 
+
 3.6.3
 - Trimmed fraction part of event duration value according to the action time e.g. Events of Unstable Wall have durations a bit longer than their 10 sec action time, i.e. 10.2, 10.4 etc.
 
