@@ -331,7 +331,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   effectType,abilityType,statusEffectType,unitName,unitId,abilityId,sourceType)
   local now = GetGameTimeMilliseconds()
   effectName = effectName:gsub('^.*< (.*) >$','%1'):gsub('%^%w','')
-  l.debug(DS_EFFECT, 1)('[%s%s]%s(%s)@%.2f<%.2f>[%s] for %s(%i)',
+  l.debug(DS_EFFECT, 1)('[%s%s]%s(%s)@%.2f<%.2f>[%s] for %s(%i), effectType:%d, abilityType:%d, statusEffectType:%d',
     ({'+','-','=','*','/'})[changeType] or '?',
     stackCount > 0 and tostring(stackCount) or '',
     effectName,
@@ -340,13 +340,16 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     endTimeSec-beginTimeSec,
     iconName,
     unitTag~='' and unitTag or 'none',
-    unitId
+    unitId,
+    effectType,
+    abilityType,
+    statusEffectType
   )
   -- 0. prepare
   if abilityId == SPECIAL_ABILITY_IDS.PURIFYING_LIGHT_TICK then return end
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
-  -- ignore short time expedition, usually come from buggy Path Of Darkness
-  if iconName:find('buff_major_expedition',1,true) and endTimeSec>beginTimeSec and endTimeSec<beginTimeSec+6  then return end
+  -- ignore expedition on others
+  if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
   
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)
