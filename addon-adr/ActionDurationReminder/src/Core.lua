@@ -350,7 +350,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
   -- ignore expedition on others
   if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
-  
+
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)
   local endTime =  math.floor(endTimeSec * 1000)
@@ -535,12 +535,16 @@ l.onStart -- #()->()
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_EFFECT_CHANGED, l.onEffectChanged)
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
 
-  -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
   EVENT_MANAGER:RegisterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, function(...)
-  	local icon = select(9, ...) -- #string
-  	if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
+      local sourceType = select(17, ... ) -- #string
+      if sourceType == COMBAT_UNIT_TYPE_NONE or sourceType == COMBAT_UNIT_TYPE_TARGET_DUMMY then
+        local icon = select(9, ...) -- #string
+        -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
+        if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
+        -- patch for Restoring Aura, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
+        if icon:find('minor_magickasteal',1,true) then l.onEffectChanged(...) end
+      end
   end)
-  EVENT_MANAGER:AddFilterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_NONE)
 
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
