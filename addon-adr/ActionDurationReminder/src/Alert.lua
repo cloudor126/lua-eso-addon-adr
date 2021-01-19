@@ -128,6 +128,7 @@ l.checkAction --#(Models#Action:action)->()
   if action.data.alerted then return end
   -- check action just override without new effects
   if action:getEndTime()-action.startTime < 3000 then return end
+  if action:getStageInfo() == '1/2' then return end
 
   --
   local onlyShowAfterTimeout = false
