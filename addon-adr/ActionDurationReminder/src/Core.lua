@@ -350,6 +350,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
   -- ignore expedition on others
   if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
+  -- ignore blight seed
+  if iconName:find('mage_039',1,true) then return end
 
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)
