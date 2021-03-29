@@ -13,6 +13,7 @@ local m = {l=l} -- #M
 --@type BarSavedVars
 local barSavedVarsDefaults
   = {
+    barEnabled = true,
     barShowShift = true,
     barShowInQuickslot = false,
     barShiftOffsetX = 0,
@@ -48,8 +49,22 @@ l.getSavedVars -- #()->(#BarSavedVars)
   return settings.getSavedVars()
 end
 
+l.hideWidgets -- #()->()
+= function()
+  for key, var in pairs(l.mainBarWidgetMap) do
+  	var:hide()
+  end
+  for key, var in pairs(l.shiftedBarWidgetMap) do
+  	var:hide()
+  end
+  for key, var in pairs(l.appendedBarWidgetMap) do
+  	var:hide()
+  end
+end
+
 l.onCoreUpdate -- #()->()
 = function()
+  if not l.getSavedVars().barEnabled then return end
   local now = GetGameTimeMilliseconds()
   local showedActionMap = {} --#map<#number,Models#Action>
   local weaponPairIndex = GetActiveWeaponPairInfo()
@@ -227,16 +242,26 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       controls = {
         {
           type = "checkbox",
+          name = text("Timers Enabled"),
+          getFunc = function() return l.getSavedVars().barEnabled end,
+          setFunc = function(value) l.getSavedVars().barEnabled = value;if not value then l.hideWidgets() end end,
+          width = "full",
+          default = barSavedVarsDefaults.barEnabled,
+        },
+        {
+          type = "checkbox",
           name = text("Shift Bar Enabled"),
           getFunc = function() return l.getSavedVars().barShowShift end,
           setFunc = function(value) l.getSavedVars().barShowShift = value end,
           width = "full",
           default = barSavedVarsDefaults.barShowShift,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "description",
           text = "",
           title = text("Shift Bar Location"),
           width = "half",
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "button",
           name = text("Move Shift Bar"),
@@ -248,7 +273,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             end, 10)
           end,
           width = "half",
-          disabled = function() return not l.getSavedVars().barShowShift end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift end,
         },{
           type = "checkbox",
           name = text("Track Quickslot"),
@@ -256,6 +281,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barShowInQuickslot = value end,
           width = "full",
           default = barSavedVarsDefaults.barShowInQuickslot,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "dropdown",
           name = text("Label Font Name"),
@@ -264,6 +290,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barLabelFontName,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Label Font Size"),
@@ -273,6 +300,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barLabelFontSize,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "dropdown",
           name = text("Label Font Style"),
@@ -281,6 +309,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barLabelFontStyle = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barLabelFontStyle,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Label Vertical Offset"),
@@ -289,6 +318,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barLabelYOffset = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
           width = "full",
           default = barSavedVarsDefaults.barLabelYOffset,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Label Vertical Offset In Shift Bar"),
@@ -296,7 +326,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           getFunc = function() return l.getSavedVars().barLabelYOffsetInShift end,
           setFunc = function(value) l.getSavedVars().barLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
           width = "full",
-          disabled = function() return not l.getSavedVars().barShowShift end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift end,
           default = barSavedVarsDefaults.barLabelYOffsetInShift,
         },{
           type = "checkbox",
@@ -305,6 +335,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barLabelIgnoreDecimal = value end,
           width = "full",
           default = barSavedVarsDefaults.barLabelIgnoreDecimal,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Label Ignore Decimal Part Threshold"),
@@ -312,7 +343,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           getFunc = function() return l.getSavedVars().barLabelIgnoreDeciamlThreshold end,
           setFunc = function(value) l.getSavedVars().barLabelIgnoreDeciamlThreshold = value end,
           width = "full",
-          disabled = function() return not l.getSavedVars().barLabelIgnoreDecimal end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelIgnoreDecimal end,
           default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
         },{
           type = "dropdown",
@@ -322,6 +353,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barStackLabelFontName = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barStackLabelFontName,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Stack Label Font Size"),
@@ -331,6 +363,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barStackLabelFontSize,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "dropdown",
           name = text("Stack Label Font Style"),
@@ -339,6 +372,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barStackLabelFontStyle = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
           default = barSavedVarsDefaults.barStackLabelFontStyle,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "checkbox",
           name = text("Line Enabled"),
@@ -346,6 +380,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
           width = "full",
           default = barSavedVarsDefaults.barCooldownVisible,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Line Thickness"),
@@ -355,6 +390,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barCooldownVisible end,
           width = "full",
           default = barSavedVarsDefaults.barCooldownThickness,
+          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Line Opacity %"),
@@ -364,6 +400,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barCooldownVisible end,
           width = "full",
           default = barSavedVarsDefaults.barCooldownOpacity,
+          disabled = function() return not l.getSavedVars().barEnabled end,
 
         },{
           type = "colorpicker",
@@ -371,7 +408,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           getFunc = function() return unpack(l.getSavedVars().barCooldownColor) end,
           setFunc = function(r,g,b,a) l.getSavedVars().barCooldownColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
           width = "full",
-          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barCooldownVisible end,
           default = {
             r = barSavedVarsDefaults.barCooldownColor[1],
             g = barSavedVarsDefaults.barCooldownColor[2],
