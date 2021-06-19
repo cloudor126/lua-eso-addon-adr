@@ -314,8 +314,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     end
     l.saveAction(action)
   end
-  -- 6. save short
+  -- 6. save
   if action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
+    -- 6.x save short without effects
+    l.saveAction(action)
+  elseif action.duration > l.getSavedVars().coreMinimumDurationSeconds and action.flags.forArea then
+    -- 6.x save area without effects
     l.saveAction(action)
   end
 end
@@ -365,7 +369,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     return
   end
-  
+
   -- 0. prepare
   if abilityId == SPECIAL_ABILITY_IDS.PURIFYING_LIGHT_TICK then return end
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
