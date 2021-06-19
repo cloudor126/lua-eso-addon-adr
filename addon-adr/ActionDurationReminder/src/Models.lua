@@ -132,6 +132,8 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
     = forTank,
     shifted -- #boolean
     = false,
+    onlyOneTarget -- #boolean
+    = false
   }
   action.data = {} -- #table to store data in
   action.effectList = {} -- #list<#Effect>

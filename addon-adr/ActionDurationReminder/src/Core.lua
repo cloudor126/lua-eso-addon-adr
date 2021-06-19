@@ -277,6 +277,14 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   l.debug(DS_ACTION,1)('[a]%s@%.2f+%i++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
     action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
+  if action.ability.icon:find('_curse',1,true) then -- daedric curse, haunting curse, daedric prey
+    action.flags.onlyOneTarget = true
+  end
+  if action.ability.icon:find('dark_haze',1,true) -- rune cage
+    or action.ability.icon:find('dark_fog',1,true) -- rune prison
+  then
+    action.flags.onlyOneTarget = true
+  end
   -- 3. filter by keywords
   if not l.filterAbilityOk(action.ability) then
     l.debug(DS_EFFECT,1)('[]filtered')
@@ -561,10 +569,15 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   if not l.getSavedVars().coreMultipleTargetTracking then return end
   if not DoesUnitExist('reticleover') then return end
   -- 1. remove all non player and non playerpet effect actions from self.idActionMap
+  local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
-    if not action.flags.forGround and not action.flags.forArea and not action.flags.forSelf --[[ e.g. daedric mines ]] and not action:isOnPlayer() and not action:isOnPlayerpet() then
+    if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
+      for i, effect in ipairs(action.effectList) do
+      	ignoredEffectIds[effect.ability.id] = true
+      end
+    elseif not action.flags.forGround and not action.flags.forArea and not action.flags.forSelf --[[ e.g. daedric mines ]] and not action:isOnPlayer() and not action:isOnPlayerpet() then
       l.idActionMap[key] = nil
-      l.debug(DS_TARGET,1)('[RC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+      l.debug(DS_TARGET,1)('[RT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
     end
   end
@@ -574,7 +587,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
       statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('reticleover', i)
-    if castByPlayer and not l.ignoredIds[abilityId] and l.ignoredCache:countMark(abilityId..'_'..buffName)<3 then
+    if not ignoredEffectIds[abilityId] and castByPlayer and not l.ignoredIds[abilityId] and l.ignoredCache:countMark(abilityId..'_'..buffName)<3 then
       local startTime =  math.floor(timeStarted * 1000)
       local action = l.timeActionMap[startTime]
       if action then
