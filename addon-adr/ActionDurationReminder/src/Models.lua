@@ -511,35 +511,39 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     end
   end
   local now = GetGameTimeMilliseconds()
-  if not self:hasEffect() and oldEffect.duration > 0 then self.endTime =now end
+  local availableEffectCount = 0
+  for key, var in pairs(self.effectList) do
+  	if not var.ignored then availableEffectCount = availableEffectCount+1 end
+  end
+  if availableEffectCount==0 and oldEffect.duration > 0 then self.endTime =now end
   return oldEffect
 end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
   -- ignore abnormal long duration effect
-  if self.duration and self.duration >=10000 and effect.duration > self.duration * 1.5 then return end 
+  if self.duration and self.duration >=10000 and effect.duration > self.duration * 1.5 then return end
   -- adjust effect for covering i.e. lightning splash
   if self.duration and self.duration > 0 and effect.duration == self.duration + 1000 then
     local existedEffect = self:optEffect() -- #Effect:effect
-    if existedEffect and existedEffect.duration == self.duration then 
+    if existedEffect and existedEffect.duration == self.duration then
       effect.endTime = effect.endTime - 1000
       effect.duration = effect.duration - 1000
     end
   end
   -- adjust effect for explosive duration i.e. unstable wall
   if self.duration and self.duration >0 and effect.duration > self.duration and effect.duration < self.duration+500 and effect.startTime< self.startTime+900 then
-    effect.duration = self.duration 
+    effect.duration = self.duration
     local existedEffect = nil
     for key, var in ipairs(self.effectList) do
-    	if var.startTime>self.startTime and var.startTime< self.startTime+500 then existedEffect = var end
+      if var.startTime>self.startTime and var.startTime< self.startTime+500 then existedEffect = var end
     end
     if existedEffect then
       effect.startTime = existedEffect.startTime
     end
     effect.endTime = effect.startTime + effect.duration
   end
-  
+
   self.lastEffectTime = effect.startTime
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then

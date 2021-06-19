@@ -1,3 +1,6 @@
+3.9
+- Optimized action ending recognition e.g. Barbed Trap can stop counting after target dies.
+
 3.8
 - Patched to accept area actions without duration effects after blackwood version.
 
