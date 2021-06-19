@@ -347,12 +347,12 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   end
   self.label:SetText(hint)
   self.label:SetHidden(false)
-  local stageInfo = action:getStageInfo()
+  local otherInfo = action:getStageInfo() or action:getAreaEffectCount()
   if action.stackCount and action.stackCount > 0 then
     self.stackLabel:SetText(action.stackCount)
     self.stackLabel:SetHidden(false)
-  elseif stageInfo then
-    self.stackLabel:SetText(stageInfo)
+  elseif otherInfo then
+    self.stackLabel:SetText(otherInfo)
     self.stackLabel:SetHidden(false)
   else
     self.stackLabel:SetHidden(true)

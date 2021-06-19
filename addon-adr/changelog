@@ -1,3 +1,9 @@
+3.12
+- Optimized action starting recognition.
+
+3.11
+- Supported number of Daedric Mines.
+
 3.10
 - Seperated vertical offset options for the timers and the stack counter.
 

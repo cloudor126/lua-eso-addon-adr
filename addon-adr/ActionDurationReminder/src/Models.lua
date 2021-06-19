@@ -58,6 +58,7 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   end
   icon = getIconPath(icon)
   ability.id = id -- #number
+  ability.type = 0
   ability.showName = zo_strformat("<<1>>", name) --#string
   ability.name= fStripBracket(ability.showName) --#string
   if ability.showName ~= ability.name then
@@ -190,6 +191,15 @@ end
 --========================================
 --        mAction
 --========================================
+mAction.getAreaEffectCount -- #(#Action:self)->(#number)
+= function(self)
+  local count = 0
+  for key, var in pairs(self.effectList) do
+  	if var.ability.type == ABILITY_TYPE_AREAEFFECT then count = count+1 end
+  end
+  return count > 0 and count or nil
+end
+
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
   local optEffect = self:optEffect() -- #Effect
