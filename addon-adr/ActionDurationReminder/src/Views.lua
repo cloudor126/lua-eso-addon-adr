@@ -104,7 +104,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
+  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cdMark = 0
   --
@@ -138,10 +138,6 @@ m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
     widget.label:SetAnchor(BOTTOM, widget.label:GetParent(), BOTTOM, 0,
       widget.shifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3))
   end
-  if widget.stackLabel then
-    widget.stackLabel:ClearAnchors()
-    widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0, - l.getSavedVars().barLabelYOffset - 5)
-  end
 end
 
 m.updateWidgetShiftOffset -- #(#Widget:widget)->()
@@ -157,6 +153,15 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
     else
       widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX , offsetY)
     end
+  end
+end
+
+m.updateWidgetStackLabelYOffset -- #(#Widget:widget)->()
+= function(widget)
+  if widget.stackLabel then
+    widget.stackLabel:ClearAnchors()
+    widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0,
+      widget.shifted and (- l.getSavedVars().barStackLabelYOffsetInShift - 5) or (- l.getSavedVars().barStackLabelYOffset - 5))
   end
 end
 
@@ -321,6 +326,8 @@ mWidget.updateCooldown = m.updateWidgetCooldown -- #(#Widget:self)->()
 mWidget.updateFont = m.updateWidgetFont -- #(#Widget:self)->()
 
 mWidget.updateLabelYOffset = m.updateWidgetLabelYOffset -- #(#Widget:self)->()
+
+mWidget.updateStackLabelYOffset = m.updateWidgetStackLabelYOffset -- #(#Widget:self)->()
 
 mWidget.updateShiftOffset = m.updateWidgetShiftOffset -- #(#Widget:self)->()
 

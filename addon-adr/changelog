@@ -1,3 +1,6 @@
+3.10
+- Seperated vertical offset options for the timers and the stack counter.
+
 3.9
 - Optimized action ending recognition e.g. Barbed Trap can stop counting after target dies.
 
