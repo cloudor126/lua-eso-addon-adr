@@ -9,6 +9,7 @@
 ## SavedVariables: ADRSV
 
 src/Addon.lua
+src/Utils.lua
 
 i18n/en.lua
 i18n/$(language).lua

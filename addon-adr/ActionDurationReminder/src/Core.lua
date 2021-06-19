@@ -2,6 +2,7 @@
 --        vars
 --========================================
 local addon = ActionDurationReminder -- Addon#M
+local utils = addon.load("Utils#M")
 local settings = addon.load("Settings#M")
 local models = addon.load("Models#M")
 local l = {} -- #L
@@ -61,6 +62,10 @@ l.lastAction = nil -- Models#Action
 l.lastEffectAction = nil -- Models#Action
 
 l.lastQuickslotTime = 0 -- #number
+
+l.ignoredCache = utils.newRecentCache(5)
+
+l.ignoredIds = {} -- #map<#number,#boolean>
 
 l.timeActionMap = {}--#map<#number,Models#Action>
 
@@ -345,13 +350,28 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     abilityType,
     statusEffectType
   )
+  -- ignore rubbish effects
+  if l.ignoredIds[abilityId] then
+    l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId)
+    return
+  end
+  local key = abilityId..'_'..effectName
+  local numMarks = l.ignoredCache:countMark(key)
+  if numMarks>=3 then
+    l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
+    l.ignoredCache:mark(key)
+    if numMarks>=20 then
+      l.ignoredIds[abilityId]=true
+    end
+    return
+  end
+  
   -- 0. prepare
   if abilityId == SPECIAL_ABILITY_IDS.PURIFYING_LIGHT_TICK then return end
   if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
   -- ignore expedition on others
   if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
-  -- ignore blight seed
-  if iconName:find('mage_039',1,true) then return end
+
 
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)
@@ -373,7 +393,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = nil -- Models#Action
     if changeType == EFFECT_RESULT_FADED then
       action = l.findActionByOldEffect(effect)
-      if not action then return end
+      if not action then
+        l.ignoredCache:mark(key)
+        return
+      end
       local stackInfoUpdated = action:updateStackInfo(0, effect)
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
@@ -389,7 +412,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     else
       action = l.findActionByNewEffect(effect, true)
       if not action then
-        l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
+        l.debug(DS_EFFECT,1)('[]New stack effect action not found.'..l.ignoredCache:countMark(key))
+        l.ignoredCache:mark(key)
         return
       end
       if not l.filterAbilityOk(effect.ability) then
@@ -510,7 +534,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
       statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('reticleover', i)
-    if castByPlayer then
+    if castByPlayer and not l.ignoredIds[abilityId] and l.ignoredCache:countMark(abilityId..'_'..buffName)<3 then
       local startTime =  math.floor(timeStarted * 1000)
       local action = l.timeActionMap[startTime]
       if action then
@@ -538,14 +562,14 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
 
   EVENT_MANAGER:RegisterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, function(...)
-      local sourceType = select(17, ... ) -- #string
-      if sourceType == COMBAT_UNIT_TYPE_NONE or sourceType == COMBAT_UNIT_TYPE_TARGET_DUMMY then
-        local icon = select(9, ...) -- #string
-        -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
-        if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
-        -- patch for Restoring Aura, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
-        if icon:find('minor_magickasteal',1,true) then l.onEffectChanged(...) end
-      end
+    local sourceType = select(17, ... ) -- #string
+    if sourceType == COMBAT_UNIT_TYPE_NONE or sourceType == COMBAT_UNIT_TYPE_TARGET_DUMMY then
+      local icon = select(9, ...) -- #string
+      -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
+      if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
+      -- patch for Restoring Aura, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
+      if icon:find('minor_magickasteal',1,true) then l.onEffectChanged(...) end
+    end
   end)
 
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )
