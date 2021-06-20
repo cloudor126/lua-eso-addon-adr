@@ -252,13 +252,17 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if a.ability.id == action.ability.id then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
-      if abilityName:find(var.name,1,true) then return true end
+      if abilityName:find(var.name,1,true) then
+        l.debug(DS_ACTION,1)('[aM:related name]')
+        return true
+      end
     end
     if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     if action.weaponPairIndex == a.weaponPairIndex and action.slotNum == a.slotNum
       and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true)
     then
+      l.debug(DS_ACTION,1)('[aM:slot]')
       return true
     end
   end
@@ -300,9 +304,11 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
     sameNameAction.newAction = action
     action.effectList = sameNameAction.effectList
+    sameNameAction.effectList = {}
     action.lastEffectTime = sameNameAction.lastEffectTime
     action.stackCount = sameNameAction.stackCount
     action.stackEffect = sameNameAction.stackEffect
+    sameNameAction.stackEffect = nil
     action.oldAction = sameNameAction
     if action.duration == 0 and sameNameAction.duration >0 then
       action.inheritDuration = sameNameAction.duration
@@ -312,8 +318,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local abilityAccepter -- # (#Ability:relatedAbility)->()
     = function(relatedAbility)
       if not action.ability.name:find(relatedAbility.name,1,true) then
-        l.debug(DS_ACTION,1)('[aMs]%s', relatedAbility:toLogString())
         table.insert(action.relatedAbilityList, relatedAbility)
+        l.debug(DS_ACTION,1)('[aMs]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
       end
     end
     abilityAccepter(sameNameAction.ability)
@@ -343,7 +349,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
-  if result ~= 2240 and result ~= 2245 then return end
+  if result ~= 2240 and result ~= 2245 then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
   local now = GetGameTimeMilliseconds()
   l.debug(DS_EFFECT, 1)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
     abilityName,
@@ -573,8 +579,8 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for key,action in pairs(l.idActionMap) do
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do
-      	ignoredEffectIds[effect.ability.id] = true
-      end
+        ignoredEffectIds[effect.ability.id] = true
+    end
     elseif not action.flags.forGround and not action.flags.forArea and not action.flags.forSelf --[[ e.g. daedric mines ]] and not action:isOnPlayer() and not action:isOnPlayerpet() then
       l.idActionMap[key] = nil
       l.debug(DS_TARGET,1)('[RT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
