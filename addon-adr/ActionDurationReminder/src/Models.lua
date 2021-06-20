@@ -459,19 +459,19 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   local role = GetSelectedLFGRole()
   local getPriority -- #(#Effect:effect)->(#number,#number)
   = function(effect)
-    local p1=0
-    local p2=0
-    -- opt non-player effect for dps
-    if role==LFG_ROLE_DPS and not effect:isOnPlayer() then p1=2 end
+    local px1=0
+    local px2=0
+    -- opt non-player effect for dps, if not area effect
+    if role==LFG_ROLE_DPS and not self.flags.forArea and not effect:isOnPlayer() then px1=2 end
     -- opt player effect for tank
-    if role==LFG_ROLE_TANK and effect:isOnPlayer() then p1=2 end
-    -- opt player effect for healer
-    if role== LFG_ROLE_HEAL and not effect:isOnPlayer() then p1 =2 end
+    if role==LFG_ROLE_TANK and effect:isOnPlayer() then px1=2 end
+    -- opt player effect for healer, if not area effect, e.g. Regeneration can be applied on player or ally
+    if role== LFG_ROLE_HEAL and not self.flags.forArea and effect:isOnPlayer() then px1 =2 end
     -- opt major effect that matches action duration
-    if duration > 0 and effect.duration-duration ==0 then p2= 1 end
+    if duration > 0 and effect.duration-duration ==0 then px2= 1 end
     -- opt long effect for healer
-    if role== LFG_ROLE_HEAL and duration>0 and effect.duration>duration then p2=2 end
-    return p1,p2
+    if role== LFG_ROLE_HEAL and duration>0 and effect.duration>duration then px2=2 end
+    return px1,px2
   end
   local p11,p12 = getPriority(effect1)
   local p21,p22 = getPriority(effect2)

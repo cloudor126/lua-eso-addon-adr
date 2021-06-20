@@ -1,3 +1,6 @@
+3.14
+- Optimized effect priority selection for actions with area target e.g. Regeneration and Blessing of Protection's timer can restart no matter on player or ally.
+
 3.13
 - Optimized multi-target tracking for Daedric Curse and Rune Cage. 
 
