@@ -437,10 +437,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.lastEffectAction = nil
   end
   local ability = models.newAbility(abilityId, effectName, iconName)
-  local ofDaedricMines =
-    iconName:find('daedric_mines',1,true)
-    or iconName:find('mage_065',1,true)
-  if ofDaedricMines then ability.type = abilityType end -- record area effect for daedric mines
   local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime);
   -- 1. stack
   if stackCount > 0 then -- e.g. relentless focus
@@ -504,8 +500,15 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByNewEffect(effect)
     if action then
       action:saveEffect(effect)
+      -- patches
+      -- weird patch
       local weird = effect.duration == 0
       if not weird then l.saveAction(action) end
+      -- count for daedric mines
+      local ofDaedricMines = iconName:find('daedric_mines',1,true)
+        or (iconName:find('mage_065',1,true) and action.ability.icon:find('daedric_[mt][io][nm][eb]',1,false)) -- this icon also appears in Wall of Element, we can filter by duration
+      if ofDaedricMines then ability.type = abilityType end -- record area effect for daedric mines
+
       return
     end
     l.debug(DS_EFFECT,1)('[]New effect action not found')
