@@ -197,7 +197,7 @@ mAction.getAreaEffectCount -- #(#Action:self)->(#number)
 = function(self)
   local count = 0
   for key, var in pairs(self.effectList) do
-  	if var.ability.type == ABILITY_TYPE_AREAEFFECT then count = count+1 end
+    if var.ability.type == ABILITY_TYPE_AREAEFFECT then count = count+1 end
   end
   return count > 0 and count or nil
 end
@@ -250,6 +250,10 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   if not optEffect or not self.duration
   then
     return nil
+  end
+  -- 1/2 by firstStageId cache
+  if self.data.firstStageId and self.data.firstStageId == optEffect.ability.id then
+    return '1/2'
   end
   -- 1/2 by same id, same start and <4/7 duration
   if optEffect.ability.id==self.ability.id
@@ -450,8 +454,24 @@ end
 
 mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect)
 = function(self,effect1, effect2)
+  -- override long duration
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
     return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
+  end
+  -- check 1/2 phase
+  if self.data.firstStageId then
+    if self.data.firstStageId == effect1.ability.id then return effect1 end
+    if self.data.firstStageId == effect2.ability.id then return effect2 end
+  end
+  if math.abs(effect1.startTime-effect2.startTime)<500 then
+    local isEffect1Bigger = effect1.duration>effect2.duration
+    local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
+    local longDur = isEffect1Bigger and effect1.duration or effect2.duration
+    local percent = shortDur*100/longDur
+    if percent > 45 and percent < 65 then
+      self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
+      return isEffect1Bigger and effect2 or effect1
+    end
   end
   -- check priority
   -- including inherit duration e.g. activation of Bound Armaments
@@ -525,7 +545,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   local availableEffectCount = 0
   for key, var in pairs(self.effectList) do
-  	if not var.ignored then availableEffectCount = availableEffectCount+1 end
+    if not var.ignored then availableEffectCount = availableEffectCount+1 end
   end
   if availableEffectCount==0 and oldEffect.duration > 0 then self.endTime =now end
   return oldEffect

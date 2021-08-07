@@ -1,3 +1,6 @@
+3.16
+- Added a policy to treat different duration effects as '1/2' and '2/2' stages e.g. '1/2' for frost staff shield timer and '2/2' for remaining dot timer. 
+
 3.15
 - Added an option to adjust alert popup icon size.
 
