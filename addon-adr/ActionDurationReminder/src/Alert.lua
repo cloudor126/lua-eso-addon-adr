@@ -381,6 +381,16 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertFontName,
       }, {
         type = "slider",
+        name = text("Icon Size"),
+        --tooltip = "",
+        min = 18, max = 98, step = 2,
+        getFunc = function() return l.getSavedVars().alertIconSize end,
+        setFunc = function(value) l.getSavedVars().alertIconSize = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertIconSize,
+      }, {
+        type = "slider",
         name = text("Font Size"),
         --tooltip = "",
         min = 18, max = 48, step = 2,
@@ -395,6 +405,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin"},
         getFunc = function() return l.getSavedVars().alertFontStyle end,
         setFunc = function(value) l.getSavedVars().alertFontStyle = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
         width = "full",
         default = alertSavedVarsDefaults.alertFontStyle,
       },{

@@ -1,3 +1,6 @@
+3.15
+- Added an option to adjust alert popup icon size.
+
 3.14
 - Optimized effect priority selection for actions with area target e.g. Regeneration and Blessing of Protection's timer can restart no matter on player or ally.
 
