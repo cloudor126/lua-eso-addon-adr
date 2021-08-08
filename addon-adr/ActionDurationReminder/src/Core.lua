@@ -281,10 +281,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   l.debug(DS_ACTION,1)('[a]%s@%.2f+%i++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
     action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
-  if action.ability.icon:find('_curse',1,true) then -- daedric curse, haunting curse, daedric prey
-    action.flags.onlyOneTarget = true
-  end
-  if action.ability.icon:find('dark_haze',1,true) -- rune cage
+  if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
+    or action.ability.icon:find('dark_haze',1,true) -- rune cage
     or action.ability.icon:find('dark_fog',1,true) -- rune prison
   then
     action.flags.onlyOneTarget = true
