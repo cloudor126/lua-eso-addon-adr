@@ -104,9 +104,13 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
   local checkOk = false
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
-    if line then
+    if line and #line>0 then
       checked = true
-      checkOk = ability.name:lower():match(line)
+      if line:match('%d+') then
+          checkOk = tonumber(line) == ability.id
+      else
+        checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
+      end
       if checkOk then break end
     end
   end
@@ -118,9 +122,18 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
   keywords = l.getSavedVars().coreBlackKeyWords:lower()
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
-    if line and ability.name:lower():match(line) then
-      l.idFilteringMap[ability.id] = false
-      return false
+    if line and #line>0 then
+      local match = false
+      if line:match('%d+') then
+        local id = tonumber(line)
+          match = id == ability.id 
+      else
+        match = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
+      end
+      if match then
+        l.idFilteringMap[ability.id] = false
+        return false
+      end
     end
   end
   --

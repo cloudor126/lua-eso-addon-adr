@@ -1,3 +1,6 @@
+3.18
+- Optimized pattern matching and added support for taking ability id as pattern in CORE option section.
+
 3.17
 - Fixed a bug that some aoe effects are recognized as countable e.g. counters should not appear with Wall of Fire.
 
