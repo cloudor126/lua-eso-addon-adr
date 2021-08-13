@@ -1,3 +1,6 @@
+3.19
+- Optimized the feature added in v3.16. Frost Blockade is now supported with 2 stage tracking too.
+
 3.18
 - Optimized pattern matching and added support for taking ability id as pattern in CORE option section.
 

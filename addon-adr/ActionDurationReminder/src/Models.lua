@@ -468,7 +468,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
     local longDur = isEffect1Bigger and effect1.duration or effect2.duration
     local percent = shortDur*100/longDur
-    if percent > 45 and percent < 65 then
+    if percent > 40 and percent < 65 then
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
       return isEffect1Bigger and effect2 or effect1
     end
