@@ -1,5 +1,9 @@
+3.21
+- Fixed a multi-target tracking bug.
+- Loosen the restrication on 2-stage judgement e.g. Pierce Armor with Master set can show a 2-stage timer.
+
 3.20
-- Adapted to a game bug properly that timers can hide when another Crystal Fragment proc effect comes after first proc but fades weirdly without player using it.
+- Adapted to a game bug properly that timers can hide when another Crystal Fragment proc effect comes at the moment a previous proc is cost but the next one fades weirdly without being used.
 
 3.19
 - Optimized the feature added in v3.16. Frost Blockade is now supported with 2 stage tracking too.
