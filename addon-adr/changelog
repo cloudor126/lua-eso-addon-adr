@@ -1,3 +1,6 @@
+3.20
+- Adapted to a game bug properly that timers can hide when another Crystal Fragment proc effect comes after first proc but fades weirdly without player using it.
+
 3.19
 - Optimized the feature added in v3.16. Frost Blockade is now supported with 2 stage tracking too.
 

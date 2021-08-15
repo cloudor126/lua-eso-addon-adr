@@ -187,6 +187,12 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
       return action
     end
   end
+  for key, action in pairs(l.idActionMap) do
+  	if action.fake and action:matchesOldEffect(effect) then
+  	  l.debug(DS_ACTION,1)('[F]found one by old fake match:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+  	end
+  end
   -- 2. appending
   if appending then
     for i = 1,#l.actionQueue do
