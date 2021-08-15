@@ -273,18 +273,22 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '1/2'
   end
   if self.data.firstStageId and self.data.firstStageId ~= optEffect.ability.id then
-    -- 2/2 by same end and >2/5 duration and <4/5 duration
+    -- 2/2 by same end  
     if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
-      if optEffect.duration*5 > self.duration *2 then
-        if optEffect.duration*5 < self.duration *4 then
-          return '2/2'
-        end
+      -- 40%~80% duration
+      if optEffect.duration*5 > self.duration *2 and
+        optEffect.duration*5 < self.duration *4 then
+        return '2/2'
       end
     end
     -- 2/2 by normal effect with firstStagedId and without long duration effect present
     if self.flags.forArea and not longDurationEffect
     then
       return '2/2'
+    end
+    -- 2/2 by non-action duration, e.g. Pierce Armor with Master 1H-1S
+    if self.duration == 0 then
+      return '2/2' 
     end
   end
   return nil
@@ -468,7 +472,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
     local longDur = isEffect1Bigger and effect1.duration or effect2.duration
     local percent = shortDur*100/longDur
-    if percent > 40 and percent < 65 then
+    if percent > 32 and percent < 65 then
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
       return isEffect1Bigger and effect2 or effect1
     end
