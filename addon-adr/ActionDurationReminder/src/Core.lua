@@ -547,7 +547,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByOldEffect(effect)
     if action then
       local oldEffect = action:purgeEffect(effect)
-      l.timeActionMap[oldEffect.startTime] = nil
+      local clearTimeRecord = true
+      for key, var in ipairs(action.effectList) do
+      	if var.startTime == oldEffect.startTime then clearTimeRecord=false end
+      end
+      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there  
       if action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
         l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
         l.removeAction(action)
@@ -608,7 +612,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
     end
   end
   -- 2. scan all matched buffs
-  local numBuffs = GetNumBuffs('reticleover')
+  local numBuffs = GetNumBuffs('reticleover') -- #number
   local numRestored = 0
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
