@@ -1,6 +1,9 @@
+3.22
+- Enforced the restriction on 2-stage judgement e.g. Path of Darkness and Psijic Acceleration won't show 2-stage timers. 
+
 3.21
 - Fixed a multi-target tracking bug.
-- Loosen the restrication on 2-stage judgement e.g. Pierce Armor with Master set can show a 2-stage timer.
+- Loosen the restriction on 2-stage judgement e.g. Pierce Armor with Master set can show a 2-stage timer.
 
 3.20
 - Adapted to a game bug properly that timers can hide when another Crystal Fragment proc effect comes at the moment a previous proc is cost but the next one fades weirdly without being used.

@@ -273,7 +273,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '1/2'
   end
   if self.data.firstStageId and self.data.firstStageId ~= optEffect.ability.id then
-    -- 2/2 by same end  
+    -- 2/2 by same end
     if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
       -- 40%~80% duration
       if optEffect.duration*5 > self.duration *2 and
@@ -288,7 +288,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     end
     -- 2/2 by non-action duration, e.g. Pierce Armor with Master 1H-1S
     if self.duration == 0 then
-      return '2/2' 
+      return '2/2'
     end
   end
   return nil
@@ -472,7 +472,12 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
     local longDur = isEffect1Bigger and effect1.duration or effect2.duration
     local percent = shortDur*100/longDur
-    if percent > 32 and percent < 65 then
+    local shortIcon = isEffect1Bigger and effect2.ability.icon or effect1.ability.icon -- #string
+    if shortDur>4900 --[[ filter trivia effects less than 5 sec ]]
+      and percent > 32
+      and percent < 65
+      and not shortIcon:find('expedition',30,true) -- reject expedition buffs as 1/2 stage
+    then
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
       return isEffect1Bigger and effect2 or effect1
     end
