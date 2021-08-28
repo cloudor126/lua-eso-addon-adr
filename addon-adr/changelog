@@ -1,3 +1,6 @@
+3.23
+- Filtered stacked effects from the 2-stage judgement e.g. Carve showes a 10 sec timer for bleeding effects and a 6 sec timer when without target.  
+
 3.22
 - Enforced the restriction on 2-stage judgement e.g. Path of Darkness and Psijic Acceleration won't show 2-stage timers. 
 

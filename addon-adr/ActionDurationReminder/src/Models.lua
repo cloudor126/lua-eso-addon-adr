@@ -469,6 +469,8 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   end
   if math.abs(effect1.startTime-effect2.startTime)<500 then
     local isEffect1Bigger = effect1.duration>effect2.duration
+    local longEffect = isEffect1Bigger and effect1 or effect2 -- #Effect
+    if self.stackEffect == longEffect then return longEffect end
     local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
     local longDur = isEffect1Bigger and effect1.duration or effect2.duration
     local percent = shortDur*100/longDur
