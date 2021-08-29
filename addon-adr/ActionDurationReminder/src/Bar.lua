@@ -32,6 +32,8 @@ local barSavedVarsDefaults
     barStackLabelFontStyle = 'thick-outline',
     barCooldownVisible = true,
     barCooldownColor = {1,1,0},
+    barCooldownEndingSeconds = 1,
+    barCooldownEndingColor = {1,0,0},
     barCooldownOpacity = 100,
     barCooldownThickness = 2,
   }
@@ -54,13 +56,13 @@ end
 l.hideWidgets -- #()->()
 = function()
   for key, var in pairs(l.mainBarWidgetMap) do
-  	var:hide()
+    var:hide()
   end
   for key, var in pairs(l.shiftedBarWidgetMap) do
-  	var:hide()
+    var:hide()
   end
   for key, var in pairs(l.appendedBarWidgetMap) do
-  	var:hide()
+    var:hide()
   end
 end
 
@@ -111,7 +113,7 @@ l.onCoreUpdate -- #()->()
       end
       l.quickslotFakeAction.startTime = now+remain-duration
       l.quickslotFakeAction.duration = duration
-      l.quickslotFakeAction.endTime = now +remain 
+      l.quickslotFakeAction.endTime = now +remain
       l.quickslotWidget:updateWithAction(l.quickslotFakeAction, now)
     elseif l.quickslotWidget then
       l.quickslotWidget:hide()
@@ -136,7 +138,7 @@ l.onCoreUpdate -- #()->()
     local id = toShowIdList[i]
     local action = toShowActionMap[id]
     local slotNum = action.slotNum
---    local inAppend = core.getWeaponPairInfo().ultimate and ( action.weaponPairIndex ~= core.getWeaponPairInfo().index) or action.weaponPairUltimate
+    --    local inAppend = core.getWeaponPairInfo().ultimate and ( action.weaponPairIndex ~= core.getWeaponPairInfo().index) or action.weaponPairUltimate
     local inAppend = false
     local widget = l.shiftedBarWidgetMap[slotNum]
     if inAppend or (widget and widget.visible) then
@@ -407,20 +409,18 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           min = 2, max = 8, step = 1,
           getFunc = function() return l.getSavedVars().barCooldownThickness end,
           setFunc = function(value) l.getSavedVars().barCooldownThickness = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barCooldownVisible end,
           width = "full",
           default = barSavedVarsDefaults.barCooldownThickness,
-          disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
           name = text("Line Opacity %"),
           min = 10, max = 100, step = 10,
           getFunc = function() return l.getSavedVars().barCooldownOpacity end,
           setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
-          disabled = function() return not l.getSavedVars().barCooldownVisible end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barCooldownVisible end,
           width = "full",
           default = barSavedVarsDefaults.barCooldownOpacity,
-          disabled = function() return not l.getSavedVars().barEnabled end,
 
         },{
           type = "colorpicker",
@@ -434,5 +434,27 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             g = barSavedVarsDefaults.barCooldownColor[2],
             b = barSavedVarsDefaults.barCooldownColor[3],
           }
-        }}})
+        },{
+          type = "slider",
+          name = text("Line Ending Seconds"),
+          min = 0, max = 4, step = 0.5,
+          getFunc = function() return l.getSavedVars().barCooldownEndingSeconds end,
+          setFunc = function(value) l.getSavedVars().barCooldownEndingSeconds = value ; l.updateWidgets(views.updateWidgetCooldown) end,
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barCooldownVisible end,
+          width = "full",
+          default = barSavedVarsDefaults.barCooldownEndingSeconds,
+        },{
+          type = "colorpicker",
+          name = text("Line Ending Color"),
+          getFunc = function() return unpack(l.getSavedVars().barCooldownEndingColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barCooldownEndingColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barCooldownVisible end,
+          default = {
+            r = barSavedVarsDefaults.barCooldownEndingColor[1],
+            g = barSavedVarsDefaults.barCooldownEndingColor[2],
+            b = barSavedVarsDefaults.barCooldownEndingColor[3],
+          }
+        }
+      }})
 end)

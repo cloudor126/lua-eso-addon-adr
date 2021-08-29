@@ -45,6 +45,9 @@ m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
   inst.bottom = nil -- TextureControl#TextureControl
   inst.left = nil -- TextureControl#TextureControl
   inst.topLeft = nil -- TextureControl#TextureControl
+  inst.endingSeconds = l.getSavedVars().barCooldownEndingSeconds
+  inst.endingColor = l.getSavedVars().barCooldownEndingColor
+  inst.color = l.getSavedVars().barCooldownColor
   return setmetatable(inst, {__index=mCooldown})
 end
 
@@ -117,6 +120,8 @@ m.updateWidgetCooldown -- #(#Widget:widget)->()
   if widget.cooldown then
     widget.cooldown:setHidden(not savedVars.barCooldownVisible)
     widget.cooldown:setColor(unpack(savedVars.barCooldownColor))
+    widget.cooldown:setEndingSeconds(savedVars.barCooldownEndingSeconds)
+    widget.cooldown:setEndingColor(unpack(savedVars.barCooldownEndingColor))
     if savedVars.barCooldownOpacity < 100 then
       widget.cooldown:setAlpha(savedVars.barCooldownOpacity/100)
     else
@@ -271,6 +276,8 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
   else
     if self.topLeft and not self.topLeft:IsHidden() then self.topLeft:SetHidden(true) end
   end
+  -- $. updateColor
+  self:updateColor(not self.noEnding and remain<self.endingSeconds*1000)
 end
 
 mCooldown.setAlpha -- #(#Cooldown:self, #number:alpha)->()
@@ -283,10 +290,17 @@ end
 
 mCooldown.setColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
 = function(self, r,g,b,a)
-  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
-  for key, var in ipairs(list) do
-    if var then var:SetColor(r,g,b,a) end
-  end
+  self.color = {r,g,b,a}
+end
+
+mCooldown.setEndingColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
+= function(self, r,g,b,a)
+  self.endingColor = {r,g,b,a}
+end
+
+mCooldown.setEndingSeconds -- #(#Cooldown:self, #number:endingSeconds)->()
+= function(self, endingSeconds)
+  self.endingSeconds = endingSeconds
 end
 
 mCooldown.setHidden -- #(#Cooldown:self, #boolean:hidden)->()
@@ -296,8 +310,8 @@ mCooldown.setHidden -- #(#Cooldown:self, #boolean:hidden)->()
   self:draw(self.duration, self.endTime)
 end
 
-mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration)->()
-= function(self, remain, duration)
+mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration, #boolean:noEnding)->()
+= function(self, remain, duration, noEnding)
   local endTime = GetGameTimeMilliseconds() + remain
   if not self.hidden and self.duration == duration and self.endTime == endTime then
     return
@@ -305,7 +319,18 @@ mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration)->()
   self.endTime = endTime
   self.duration = duration
   self.hidden = false
+  self.noEnding = noEnding
   self:draw(duration, self.endTime)
+end
+
+mCooldown.updateColor --#(#Cooldown:self, #boolean:ending)->()
+= function(self, ending)
+  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
+  for key, var in ipairs(list) do
+    if var then
+      var:SetColor(unpack(ending and self.endingColor or self.color))
+    end
+  end
 end
 
 --========================================
@@ -371,12 +396,12 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       local scale = duration/1000 - 7
       local scaledTotal = duration * scale
       local scaledRemain = scaledTotal - (duration - remain)
-      self.cooldown:start(scaledRemain, scaledTotal)
+      self.cooldown:start(scaledRemain, scaledTotal, true)
     end
   elseif remain > 0 then
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      self.cooldown:start(remain, 8000)
+      self.cooldown:start(remain, 8000, otherInfo == '1/2')
     end
   else
     self.cdMark = 0

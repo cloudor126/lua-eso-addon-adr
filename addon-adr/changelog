@@ -1,3 +1,6 @@
+3.24
+- Added options to config ending color for cooldown lines in BAR category.
+
 3.23
 - Filtered stacked effects from the 2-stage judgement e.g. Carve showes a 10 sec timer for bleeding effects and a 6 sec timer when without target.  
 
