@@ -291,6 +291,11 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
       return '2/2'
     end
   end
+  -- activated stage e.g. Beast Trap and Scalding Rune
+  if optEffect.activated or (optEffect.startTime-self.startTime>1500 and optEffect.duration ~= self.duration) then
+    optEffect.activated = true
+    return '@'
+  end
   return nil
 end
 
