@@ -292,7 +292,12 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     end
   end
   -- activated stage e.g. Beast Trap and Scalding Rune
-  if optEffect.activated or (optEffect.startTime-self.startTime>1500 and optEffect.duration ~= self.duration) then
+  if optEffect.activated then return '@' end
+  if self.duration and self.duration>0 -- action with duration prop
+    and optEffect.startTime-self.startTime>1500 -- triggered after a delay
+    and optEffect.duration ~= self.duration -- with different activation duration
+    and optEffect.duration%1000==0 -- with whole seconds duration
+  then
     optEffect.activated = true
     return '@'
   end

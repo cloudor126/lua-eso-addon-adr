@@ -1,3 +1,6 @@
+3.26
+- Set strict limits on the feature introduced in v3.25. 
+
 3.25
 - Added a symbol mark '@' for blow up durations e.g. Beast Trap and Scalding Rune will get an '@' symbol after activation.
 
