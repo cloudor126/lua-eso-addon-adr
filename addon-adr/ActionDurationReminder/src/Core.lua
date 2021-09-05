@@ -327,6 +327,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.stackEffect = sameNameAction.stackEffect
     sameNameAction.stackEffect = nil
     action.oldAction = sameNameAction
+    
     if action.duration == 0 and sameNameAction.duration >0 then
       action.inheritDuration = sameNameAction.duration
     elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
@@ -367,6 +368,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   if result ~= 2240 and result ~= 2245 then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
+  if l.idActionMap[abilityId] then return end
   local now = GetGameTimeMilliseconds()
   l.debug(DS_EFFECT, 1)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
     abilityName,
@@ -382,7 +384,6 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     result,
     powerType
   )
-  if l.idActionMap[abilityId] then return end
   for key, action in pairs(l.actionQueue) do
     if action.ability.id == abilityId and now-action.startTime<2000
       and action.duration > l.getSavedVars().coreMinimumDurationSeconds
@@ -552,8 +553,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       	if var.startTime == oldEffect.startTime then clearTimeRecord=false end
       end
       if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there  
-      if action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
-        l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
+      --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
+      if action.oldAction and action.oldAction.fake and action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then
+        l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
         l.removeAction(action)
       end
       return

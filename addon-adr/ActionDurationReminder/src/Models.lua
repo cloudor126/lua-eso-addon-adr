@@ -568,7 +568,11 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   for key, var in pairs(self.effectList) do
     if not var.ignored then availableEffectCount = availableEffectCount+1 end
   end
-  if availableEffectCount==0 and oldEffect.duration > 0 then self.endTime =now end
+  if availableEffectCount==0 and oldEffect.duration > 0
+    and now-self.startTime>500 -- maybe old effect is being purged before a new one is coming, we shouldn't consider it ended
+  then
+    self.endTime =now
+  end
   return oldEffect
 end
 
