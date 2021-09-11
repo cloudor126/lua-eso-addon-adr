@@ -370,7 +370,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   if result ~= 2240 and result ~= 2245 then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
   if l.idActionMap[abilityId] then return end
   local now = GetGameTimeMilliseconds()
-  l.debug(DS_EFFECT, 1)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
+  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
     abilityName,
     abilityId,
     now/1000,
