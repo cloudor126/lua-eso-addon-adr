@@ -1,3 +1,6 @@
+3.27.debug
+- Temp
+
 3.27
 - Fixed a bug that some timer disappears when action is cast again at previous end e.g. Beast Trap should not lost timer.
 
