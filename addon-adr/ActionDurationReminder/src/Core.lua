@@ -19,15 +19,6 @@ local DS_EFFECT = "effect" -- debug switch for effect
 local DS_TARGET = "target" -- debug switch for target
 local DS_ALL = "all" -- debug switch for all
 
-local SPECIAL_ABILITY_IDS = {
-
-    PURIFYING_LIGHT_TICK = 68581, -- ignore purifying light healing after main duration
-
-    LIGHTINING_SPLASH = 23195, -- ignore this (n+1)s redundant effect
-
-    HAUNTING_CURSE_1 = 24330, -- haunting curse first phase
-}
-
 ---
 --@type CoreSavedVars
 local coreSavedVarsDefaults = {
@@ -435,8 +426,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
 
   -- 0. prepare
-  if abilityId == SPECIAL_ABILITY_IDS.PURIFYING_LIGHT_TICK then return end
-  if abilityId == SPECIAL_ABILITY_IDS.LIGHTINING_SPLASH then return end
   -- ignore expedition on others
   if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
 
@@ -780,8 +769,6 @@ m.EXTKEY_UPDATE = "Core:update"
 
 m.debugLevels = {} -- config by console e.g. /script ActionDurationReminder.load("Core#M").debugLevels.effect = 1
 addon.debugLevels = m.debugLevels
-
-m.SPECIAL_ABILITY_IDS = SPECIAL_ABILITY_IDS
 
 m.getActionByAbilityId = l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
 

@@ -132,13 +132,6 @@ l.checkAction --#(Models#Action:action)->()
 
   --
   local onlyShowAfterTimeout = false
-  if action.ability.id == core.SPECIAL_ABILITY_IDS.HAUNTING_CURSE_1  then
-    if action:optEffect() and action:optEffect().ability and action:optEffect().ability.id == action.ability.id then
-      return
-    else
-      onlyShowAfterTimeout = true
-    end
-  end
   local instant = l.isActionInstant(action)
   local aheadTime = l.getSavedVars().alertAheadSeconds *1000
   local markTime = action.startTime

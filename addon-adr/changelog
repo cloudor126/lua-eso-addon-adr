@@ -1,5 +1,6 @@
-3.27.debug
-- Temp
+3.28
+- Fixed taunt effect recognition e.g. Inner Fire timer works again.
+- Removed dependencies on ability IDs that is not consistent between game updates.
 
 3.27
 - Fixed a bug that some timer disappears when action is cast again at previous end e.g. Beast Trap should not lost timer.

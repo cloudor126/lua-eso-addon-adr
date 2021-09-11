@@ -7,10 +7,6 @@ local mAction = {} -- #Action
 local mAbility = {} -- #Ability
 local mEffect = {} -- #Effect
 
-local SPECIAL_ABILITY_IDS = {
-  TAUNT = 38541,
-}
-
 local SPECIAL_DURATION_PATCH = {
   ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
 }
@@ -400,7 +396,7 @@ end
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 1. taunt
-  if effect.ability.id == SPECIAL_ABILITY_IDS.TAUNT and self.flags.forTank then
+  if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
   -- 2. fast check already matched effects
@@ -426,7 +422,7 @@ end
 mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 1. taunt
-  if effect.ability.id==SPECIAL_ABILITY_IDS.TAUNT and self.flags.forTank then
+  if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
   -- 2. fast check already matched effects
