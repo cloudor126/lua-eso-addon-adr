@@ -598,7 +598,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   end
   -- TODO temp modify for Unnerving Boneyard skill
   if self.ability.icon:find('necromancer_004',1,true) and effect.duration>10000 then
-    df('[ADR Debug] Ignored %s(%d)<%d>@%s:%s',effect.ability.name, effect.ability.id, effect.duration, effect.unitTag,effect.ability.icon )
+--    df('[ADR Debug] Ignored %s(%d)<%d>@%s:%s',effect.ability.name, effect.ability.id, effect.duration, effect.unitTag,effect.ability.icon )
     return
   end
 

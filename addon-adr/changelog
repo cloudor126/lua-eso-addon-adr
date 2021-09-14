@@ -1,4 +1,4 @@
-3.28
+3.28a
 - Fixed taunt effect recognition e.g. Inner Fire timer works again.
 - Removed dependencies on ability IDs that is not consistent between game updates.
 
