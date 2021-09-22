@@ -1,3 +1,6 @@
+3.29
+- Brought another solution to replace the unreliable one introduced in v3.27.
+
 3.28a
 - Fixed taunt effect recognition e.g. Inner Fire timer works again.
 - Removed dependencies on ability IDs that is not consistent between game updates.
