@@ -564,8 +564,12 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   for key, var in pairs(self.effectList) do
     if not var.ignored then availableEffectCount = availableEffectCount+1 end
   end
-  if availableEffectCount==0 and oldEffect.duration > 0
-    and now-self.startTime>500 -- maybe old effect is being purged before a new one is coming, we shouldn't consider it ended
+  if availableEffectCount==0 and oldEffect.duration > 0 and -- 恰好最后一个有时间的效果消失
+    (
+    (oldEffect.startTime>= self.startTime)  -- 真的删的是自己新效果，而不是继承来的老效果，因为删除完老效果不意味着结束，可能新效果马上就来了
+    or
+    (self.oldAction and self.oldAction.fake) -- 或者虽然是老效果，但这老效果其实这是挂在一个假动作上的一个触发，现在触发了，把老效果清理结束，理所当然
+    )
   then
     self.endTime =now
   end
