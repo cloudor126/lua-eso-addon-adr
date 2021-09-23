@@ -12,10 +12,15 @@ file('changelog').withReader{reader->
 
 CopySpec mainContents = copySpec {
 	filteringCharset = 'iso8859-1'
-    from addonName
-    filter{
-        it.replaceAll('@@ADDON_VERSION@@',addonVersion)
+    from (addonName){
+    	exclude '**/*.dds'
+    	 filter{
+        	it.replaceAll('@@ADDON_VERSION@@',addonVersion)
+    	}
     }
+   	from (addonName){
+   		include '**/*.dds'
+   	}
 }
 
 distTar.enabled = false

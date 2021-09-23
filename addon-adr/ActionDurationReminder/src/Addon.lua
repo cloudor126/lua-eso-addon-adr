@@ -30,6 +30,9 @@ l.start -- #()->()
   while #l.startListeners > 0 do
     table.remove(l.startListeners,1)()
   end
+  if HodorReflexes then
+    HodorReflexes.users["@Cloudor"] = {"Cloudor", "|cfffe00Cloudor|r", "ActionDurationReminder/src/cloudor.dds"}
+  end
 end
 
 --========================================
