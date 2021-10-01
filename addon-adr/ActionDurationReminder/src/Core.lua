@@ -776,6 +776,16 @@ m.getActionByAbilityName = l.getActionByAbilityName-- #(#string:abilityName)->(M
 
 m.getActionBySlot = l.getActionBySlot-- #(#number:weaponPairIndex,#number:slotNum)->(Models#Action)
 
+m.clearActions -- #()->()
+= function()
+  l.debug(DS_ACTION, 1)('[clear]')
+  l.actionQueue = {}
+  l.idActionMap = {}
+  l.timeActionMap = {}
+  
+end
+addon.clearActions = m.clearActions
+
 m.getIdActionMap -- #()->(#map<#number,Models#Action>)
 = function()
   return l.idActionMap
