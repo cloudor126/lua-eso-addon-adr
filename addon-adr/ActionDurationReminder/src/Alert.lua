@@ -38,11 +38,11 @@ local alertSavedVarsDefaults ={
 --========================================
 --        l
 --========================================
-l.controlPool = nil
+l.controlPool = {}
 
 l.frame = nil --TopLevelWindow#TopLevelWindow
 
-l.showedControls = {} -- #map<#any, Control#Control>
+l.showedControls = {} -- #list<Control#Control>
 
 l.soundChoices = {} -- #list<#number>
 for k,v in pairs(SOUNDS) do
@@ -73,29 +73,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   end
   --
   if savedVars.alertPlaySound then PlaySound(SOUNDS[savedVars.alertSoundName]) end
-  if not l.controlPool then
-    l.controlPool = ZO_ObjectPool:New(function(pool)
-      local control = WINDOW_MANAGER:CreateTopLevelWindow()
-      local icon = control:CreateControl(nil, CT_TEXTURE)
-      icon:SetDrawLayer(DL_CONTROLS)
-      icon:SetDimensions(savedVars.alertIconSize,savedVars.alertIconSize)
-      icon:SetAnchor(LEFT)
-      control.icon = icon
-      local label = control:CreateControl(nil, CT_LABEL)
-      label:SetFont("ZoFontGameMedium")
-      label:SetColor(1,1,1)
-      label:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
-      label:SetAnchor(LEFT, icon, RIGHT, 10, 0)
-      label:SetDrawLayer(DL_TEXT)
-      control.label = label
-      return control
-    end,
-    function(control)
-      control:SetHidden(true)
-      control:ClearAnchors()
-    end)
-  end
-  local control,key = l.controlPool:AcquireObject()
+  local control = l.retrieveControl()
   local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|"..savedVars.alertFontStyle
   control.label:SetFont(fontstr)
 
@@ -105,18 +83,15 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   control:SetHidden(false)
   control.ability = ability
   control.startTime = startTime
-  local showedControls = l.showedControls
-  for k,v in pairs(showedControls) do
+  for i,v in ipairs(l.showedControls) do
     local _, _, _, _, offsetX, offsetY = v:GetAnchor(0)
     v:ClearAnchors()
     v:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, offsetX, offsetY -savedVars.alertIconSize-10)
   end
-  showedControls[key] = control
+  table.insert(l.showedControls,control)
   zo_callLater(
     function()
-      control:SetHidden(true)
-      showedControls[key] = nil
-      l.controlPool:ReleaseObject(key)
+      l.returnControl(control)
     end,
     savedVars.alertKeepSeconds*1000
   )
@@ -187,7 +162,7 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
         if action.stackCount <= 1 then -- i.e. Bound Armaments transmute when just getting an attack stack
           action.data['alert.transmuteRefId'] = currentId
           return false
-        end 
+        end
         return true
       end
     end
@@ -268,10 +243,40 @@ l.openAlertFrame -- #()->()
 end
 
 
---========================================
---        m
---========================================
 
+l.retrieveControl -- #()->(Control#Control)
+= function()
+  if #l.controlPool >0 then
+    return table.remove(l.controlPool,#l.controlPool)
+  end
+  local savedVars = l.getSavedVars()
+  local control = WINDOW_MANAGER:CreateTopLevelWindow()
+  local icon = control:CreateControl(nil, CT_TEXTURE)
+  icon:SetDrawLayer(DL_CONTROLS)
+  icon:SetDimensions(savedVars.alertIconSize,savedVars.alertIconSize)
+  icon:SetAnchor(LEFT)
+  control.icon = icon
+  local label = control:CreateControl(nil, CT_LABEL)
+  label:SetFont("ZoFontGameMedium")
+  label:SetColor(1,1,1)
+  label:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
+  label:SetAnchor(LEFT, icon, RIGHT, 10, 0)
+  label:SetDrawLayer(DL_TEXT)
+  control.label = label
+  return control
+end
+
+l.returnControl -- #(Control#Control:control)->()
+= function(control)
+  for key, var in ipairs(l.showedControls) do
+    if var == control then
+      table.remove(l.showedControls,key)
+    end
+  end
+  control:SetHidden(true)
+  control:ClearAnchors()
+  table.insert(l.controlPool, control)
+end
 
 --========================================
 --        register
