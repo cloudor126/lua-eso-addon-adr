@@ -1,3 +1,6 @@
+3.31
+- Added an option to ignore buffs that has longer duration than skill e.g. Blue Betty won't show 35 sec caused by Jorvuld set.
+
 3.30
 - Reimplemented a simple control pool to replace the previous version which might have caused mem leaks.
 

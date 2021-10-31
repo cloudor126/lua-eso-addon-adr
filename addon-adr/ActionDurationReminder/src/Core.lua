@@ -28,6 +28,7 @@ local coreSavedVarsDefaults = {
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
+  coreIgnoreLongBuffs = false,
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
@@ -98,7 +99,7 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
     if line and #line>0 then
       checked = true
       if line:match('%d+') then
-          checkOk = tonumber(line) == ability.id
+        checkOk = tonumber(line) == ability.id
       else
         checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
       end
@@ -117,7 +118,7 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
       local match = false
       if line:match('%d+') then
         local id = tonumber(line)
-          match = id == ability.id 
+        match = id == ability.id
       else
         match = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
       end
@@ -179,10 +180,10 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     end
   end
   for key, action in pairs(l.idActionMap) do
-  	if action.fake and action:matchesOldEffect(effect) then
-  	  l.debug(DS_ACTION,1)('[F]found one by old fake match:%s@%.2f', action.ability.name, action.startTime/1000)
+    if action.fake and action:matchesOldEffect(effect) then
+      l.debug(DS_ACTION,1)('[F]found one by old fake match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
-  	end
+    end
   end
   -- 2. appending
   if appending then
@@ -318,7 +319,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.stackEffect = sameNameAction.stackEffect
     sameNameAction.stackEffect = nil
     action.oldAction = sameNameAction
-    
+
     if action.duration == 0 and sameNameAction.duration >0 then
       action.inheritDuration = sameNameAction.duration
     elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
@@ -506,6 +507,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     local action = l.findActionByNewEffect(effect)
     if action then
+      if action.duration and action.duration>0
+        and effect.ability.icon:find('ability_buff_',1,true)
+        and effect.duration > action.duration
+        and l.getSavedVars().coreIgnoreLongBuffs
+      then return end
       action:saveEffect(effect)
       -- patches
       -- weird patch
@@ -539,9 +545,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       local oldEffect = action:purgeEffect(effect)
       local clearTimeRecord = true
       for key, var in ipairs(action.effectList) do
-      	if var.startTime == oldEffect.startTime then clearTimeRecord=false end
+        if var.startTime == oldEffect.startTime then clearTimeRecord=false end
       end
-      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there  
+      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake and action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then
         l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
@@ -790,17 +796,17 @@ m.clearAreaActions -- #()->()
   l.debug(DS_ACTION, 1)('[clear area]')
   local newQueue = {}
   for key, var in ipairs(l.actionQueue) do
-  	if not var.flags.forArea then table.insert(newQueue, var) end
+    if not var.flags.forArea then table.insert(newQueue, var) end
   end
   l.actionQueue = newQueue
   local newMap = {}
   for key, var in pairs(l.idActionMap) do
-  	if not var.flags.forArea then newMap[key] = var end
+    if not var.flags.forArea then newMap[key] = var end
   end
   l.idActionMap = newMap
   newMap = {}
   for key, var in pairs(l.timeActionMap) do
-  	if not var.flags.forArea then newMap[key] = var end
+    if not var.flags.forArea then newMap[key] = var end
   end
   l.timeActionMap = newMap
 end
@@ -836,7 +842,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreMultipleTargetTracking = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreMultipleTargetTracking,
-        }, {
+        },
+        {
           type = "checkbox",
           name = addon.text("Clear When Combat End"),
           getFunc = function() return l.getSavedVars().coreClearWhenCombatEnd end,
@@ -861,6 +868,14 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreMinimumDurationSeconds,
+        },
+        {
+          type = "checkbox",
+          name = addon.text("Ignore Buffs Longer Than Skill Duration"),
+          getFunc = function() return l.getSavedVars().coreIgnoreLongBuffs end,
+          setFunc = function(value) l.getSavedVars().coreIgnoreLongBuffs = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreIgnoreLongBuffs,
         },
         {
           type = "editbox",
@@ -889,6 +904,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
           default = coreSavedVarsDefaults.coreBlackKeyWords, -- default value or function that returns the default value (optional)
         -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
-        }}}
+        }
+      }
+    }
   )
 end)
