@@ -498,6 +498,8 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   = function(effect)
     local px1=0
     local px2=0
+    -- don't opt buffs
+    if effect.ability.icon:find('ability_buff_m',1,true) then return -1,-1 end
     -- opt non-player effect for dps, if not area effect
     if role==LFG_ROLE_DPS and not self.flags.forArea and not effect:isOnPlayer() then px1=2 end
     -- opt player effect for tank

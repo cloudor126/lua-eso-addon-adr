@@ -28,7 +28,6 @@ local coreSavedVarsDefaults = {
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
-  coreIgnoreLongBuffs = false,
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
@@ -202,7 +201,7 @@ end
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
   -- check if it's a buff, e.g. avoid abuse of major expedition
-  if effect.ability.icon:find('ability_buff_',1,true) then return nil end
+  if effect.ability.icon:find('ability_buff_m',1,true) then return nil end
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
@@ -507,11 +506,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     local action = l.findActionByNewEffect(effect)
     if action then
-      if action.duration and action.duration>0
-        and effect.ability.icon:find('ability_buff_',1,true)
-        and effect.duration > action.duration
-        and l.getSavedVars().coreIgnoreLongBuffs
-      then return end
       action:saveEffect(effect)
       -- patches
       -- weird patch
@@ -868,14 +862,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreMinimumDurationSeconds,
-        },
-        {
-          type = "checkbox",
-          name = addon.text("Ignore Buffs Longer Than Skill Duration"),
-          getFunc = function() return l.getSavedVars().coreIgnoreLongBuffs end,
-          setFunc = function(value) l.getSavedVars().coreIgnoreLongBuffs = value end,
-          width = "full",
-          default = coreSavedVarsDefaults.coreIgnoreLongBuffs,
         },
         {
           type = "editbox",
