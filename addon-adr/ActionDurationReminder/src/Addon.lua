@@ -5,6 +5,7 @@ local l = {} -- #L private table for local use
 local m = {l=l} -- #M public table for module use
 local NAME = 'ActionDurationReminder'
 local VERSION = '@@ADDON_VERSION@@'
+local TITLE = 'Action Duration Reminder'
 
 --========================================
 --        l
@@ -40,6 +41,7 @@ end
 --========================================
 m.name = NAME -- #string
 m.version = VERSION -- #string
+m.title = TITLE -- #string
 
 m.addAction -- #(#string:key,#()->():action)->()
 = function(key, action)

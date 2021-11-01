@@ -40,7 +40,7 @@ l.onStart -- #()->()
   if LAM2 == nil then return end
   local panelData = {
     type = 'panel',
-    name = addon.name,
+    name = addon.title or addon.name,
     displayName = "ADR Settings",
     author = "Cloudor",
     version = addon.version,
