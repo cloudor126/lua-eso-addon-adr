@@ -1,3 +1,6 @@
+3.33
+- Only lowered the priority of major and minor buffs which have difference durations than the ability default.
+
 3.32
 - Adjusted the priority of major and minor buffs in action effects. This is a better solution the the previous version.  
 - Removed the option added in previous version.
