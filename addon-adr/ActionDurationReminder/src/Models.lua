@@ -529,7 +529,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
     return majorEffect
   end
-  return effect1.endTime < effect2.endTime and effect2 or effect1 -- opt last end
+  return effect1.duration < effect2.duration and effect2 or effect1 -- opt longer duration
 end
 
 mAction.optGallopEffect -- #(#Action:self)->(#Effect)
