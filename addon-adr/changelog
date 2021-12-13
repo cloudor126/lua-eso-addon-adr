@@ -1,3 +1,6 @@
+3.34
+- Adjusted 2-stage recognition policy e.g. Banlance can be processed as a 2-stage timer skill.
+
 3.33
 - Only lowered the priority of major and minor buffs which have difference durations than the ability default.
 
