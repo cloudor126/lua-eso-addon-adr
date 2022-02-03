@@ -1,3 +1,6 @@
+3.37
+- Added more restrictions of 2-stage recognition e.g. Anti-Cavalry Caltrops should not show a '1/2' hint any more.
+
 3.36a
 - Adjusted the priority of effect which has same id with action e.g. Merciless Resolve should behave more stable than before.
 

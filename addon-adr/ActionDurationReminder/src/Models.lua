@@ -270,9 +270,10 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   if self.data.firstStageId and self.data.firstStageId == optEffect.ability.id then
     return '1/2'
   end
-  -- 1/2 by same id, same start and <4/7 duration
+  -- 1/2 by same id, same start, >1/5 and <4/7 duration
   if optEffect.ability.id==self.ability.id
     and math.abs(optEffect.startTime-self.startTime)< 500
+    and optEffect.duration * 5 > self.duration
     and optEffect.duration * 7 < self.duration*4
   then
     self.data.firstStageId = optEffect.ability.id
@@ -555,8 +556,8 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     return majorEffect
   end
   if p12~=p22 then
-    local majorEffect = p12>p22 and effect1 or effect2
-    local minorEffect = p12>p22 and effect2 or effect1
+    local majorEffect = p12>p22 and effect1 or effect2 -- #Effect
+    local minorEffect = p12>p22 and effect2 or effect1 -- #Effect
     -- ignore same start minor e.g.
     if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
     -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
