@@ -1,3 +1,6 @@
+3.35
+- Adjusted the priority of stack effect e.g. Carve can show a 12s duration for tank and healer roles.
+
 3.34b
 - Adjusted 2-stage recognition policy e.g. Banlance can be processed as a 2-stage timer skill.
 

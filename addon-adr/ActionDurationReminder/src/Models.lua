@@ -514,6 +514,8 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     if role==LFG_ROLE_TANK and effect:isOnPlayer() then px1=2 end
     -- opt player effect for healer, if not area effect, e.g. Regeneration can be applied on player or ally
     if role== LFG_ROLE_HEAL and not self.flags.forArea and effect:isOnPlayer() then px1 =2 end
+    -- opt stack effect
+    if px1<2 and self.stackEffect and effect.ability.id == self.stackEffect.ability.id then px1 = 2 end
     -- opt major effect that matches action duration
     if duration > 0 and effect.duration-duration ==0 then px2= 1 end
     -- opt long effect for healer
