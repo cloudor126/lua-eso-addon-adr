@@ -362,7 +362,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         type = "slider",
         name = text("Seconds to Show"),
         --tooltip = "",
-        min = 1, max = 5, step = 0.5,
+        min = 1, max = 18, step = 0.5,
         getFunc = function() return l.getSavedVars().alertKeepSeconds end,
         setFunc = function(value) l.getSavedVars().alertKeepSeconds = value end,
         width = "full",

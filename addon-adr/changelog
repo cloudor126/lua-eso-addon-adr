@@ -1,3 +1,6 @@
+3.38
+- Enlarged the max limit of time option of pop-up alter.
+
 3.37
 - Added more restrictions of 2-stage recognition e.g. Anti-Cavalry Caltrops should not show a '1/2' hint any more.
 
