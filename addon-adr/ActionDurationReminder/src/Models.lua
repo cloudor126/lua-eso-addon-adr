@@ -204,6 +204,25 @@ mAction.getDuration -- #(#Action:self)->(#number)
   return optEffect and optEffect.duration or self.duration or self.descriptionDuration
 end
 
+mAction.getEffectsInfo -- #(#Action:self)->(#string)
+= function(self)
+  local info = ''
+  for key, var in ipairs(self.effectList) do
+    info = info.. var.ability.id..'<'..var.duration..'>('..var.startTime..'~'..var.endTime..')'
+    if var.ignored then
+      info = info..'!ignored'
+    end
+    info = info..','
+  end
+  local oe = self:optEffect()
+  if oe then
+    info = info..'opt:'..oe.ability.id
+  else
+    info = info..'no opt effect'
+  end
+  return info
+end
+
 mAction.getEndTime -- #(#Action:self)->(#number)
 = function(self)
   local optEffect = self:optEffect() -- #Effect
@@ -509,13 +528,18 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     -- don't opt buffs which have difference durations
     if self.duration and self.duration >0 and effect.duration ~= self.duration and effect.ability.icon:find('ability_buff_m',1,true) then return -1,-1 end
     -- opt non-player effect for dps, if not area effect
-    if role==LFG_ROLE_DPS and not self.flags.forArea and not effect:isOnPlayer() then px1=2 end
+    if role==LFG_ROLE_DPS and not self.flags.forArea and not effect:isOnPlayer() and effect.duration>0 then px1=2 end
     -- opt player effect for tank
     if role==LFG_ROLE_TANK and effect:isOnPlayer() then px1=2 end
     -- opt player effect for healer, if not area effect, e.g. Regeneration can be applied on player or ally
     if role== LFG_ROLE_HEAL and not self.flags.forArea and effect:isOnPlayer() then px1 =2 end
     -- opt stack effect
-    if px1<2 and self.stackEffect and effect.ability.id == self.stackEffect.ability.id then px1 = 2 end
+    if px1<2 and effect.duration>3000 and self.stackEffect and effect.ability.id == self.stackEffect.ability.id then px1 = 3 end
+    -- opt same id effect
+    if effect.ofActionId or effect.duration== self.duration and effect.ability.id == self.ability.id then
+      effect.ofActionId = true
+      px1 = 4
+    end
     -- opt major effect that matches action duration
     if duration > 0 and effect.duration-duration ==0 then px2= 1 end
     -- opt long effect for healer
@@ -614,7 +638,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   end
   -- TODO temp modify for Unnerving Boneyard skill
   if self.ability.icon:find('necromancer_004',1,true) and effect.duration>10000 then
---    df('[ADR Debug] Ignored %s(%d)<%d>@%s:%s',effect.ability.name, effect.ability.id, effect.duration, effect.unitTag,effect.ability.icon )
+    --    df('[ADR Debug] Ignored %s(%d)<%d>@%s:%s',effect.ability.name, effect.ability.id, effect.duration, effect.unitTag,effect.ability.icon )
     return
   end
 
