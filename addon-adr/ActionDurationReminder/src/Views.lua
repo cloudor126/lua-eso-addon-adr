@@ -48,6 +48,7 @@ m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
   inst.endingSeconds = l.getSavedVars().barCooldownEndingSeconds
   inst.endingColor = l.getSavedVars().barCooldownEndingColor
   inst.color = l.getSavedVars().barCooldownColor
+  inst.alpha =  l.getSavedVars().barCooldownOpacity/100
   return setmetatable(inst, {__index=mCooldown})
 end
 
@@ -282,10 +283,7 @@ end
 
 mCooldown.setAlpha -- #(#Cooldown:self, #number:alpha)->()
 = function(self, alpha)
-  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
-  for key, var in ipairs(list) do
-    if var then var:SetAlpha(alpha) end
-  end
+  self.alpha = alpha
 end
 
 mCooldown.setColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
@@ -329,6 +327,7 @@ mCooldown.updateColor --#(#Cooldown:self, #boolean:ending)->()
   for key, var in ipairs(list) do
     if var then
       var:SetColor(unpack(ending and self.endingColor or self.color))
+      var:SetAlpha(self.alpha)
     end
   end
 end

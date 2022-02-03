@@ -1,5 +1,8 @@
+3.39
+- Fixed cool down line opacity bug.
+
 3.38
-- Enlarged the max limit of time option of pop-up alter.
+- Enlarged the max limit of time option of pop-up alert.
 
 3.37
 - Added more restrictions of 2-stage recognition e.g. Anti-Cavalry Caltrops should not show a '1/2' hint any more.
