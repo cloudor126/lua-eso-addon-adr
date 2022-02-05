@@ -430,8 +430,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
 
   -- 0. prepare
   -- ignore expedition on others
-  if iconName:find('buff_major_expedition',1,true) and unitTag~='player' then return end
-
+  if unitTag~='player' and iconName:find('buff_major_expedition',1,true) then return end
+  -- ignore burning effect
+  if not l.ignoredIds['ability_mage_062'] and iconName:find('ability_mage_062',1,true) then
+    l.ignoredIds['ability_mage_062']=true
+    l.ignoredIds[abilityId]=true
+    return
+  end
 
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player
   local startTime =  math.floor(beginTimeSec * 1000)

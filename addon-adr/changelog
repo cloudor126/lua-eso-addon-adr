@@ -1,3 +1,6 @@
+3.40
+- Ignored Burning effects e.g. timer Burning Talons won't be reset by Burning status effect again.
+
 3.39
 - Fixed cool down line opacity bug.
 
