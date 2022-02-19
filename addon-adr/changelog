@@ -1,3 +1,6 @@
+3.41
+- Added an 'Icon Only' option for popup alerts.
+
 3.40
 - Ignored Burning effects e.g. timer Burning Talons won't be reset by Burning status effect again.
 
