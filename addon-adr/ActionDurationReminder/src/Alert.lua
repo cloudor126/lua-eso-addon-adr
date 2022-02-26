@@ -100,6 +100,8 @@ end
 
 l.checkAction --#(Models#Action:action)->()
 = function(action)
+  -- check ultimate
+  if action.slotNum == 8 then return end
   -- check action alerted
   if action.data.alerted then return end
   -- check action just override without new effects
