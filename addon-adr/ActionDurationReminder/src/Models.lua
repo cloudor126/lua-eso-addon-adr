@@ -110,9 +110,10 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.weaponPairIndex = weaponPairIndex --#number
   action.weaponPairUltimate = weaponPairUltimate --#boolean
   local target = GetAbilityTargetDescription(action.ability.id)
-  local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA)
+  local radius = GetAbilityRadius(action.ability.id)
+  local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA) and (radius==0 or radius>500)
   local forGround = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_GROUND)
-  local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or target=='自己' --[[汉化组修正翻译前的补丁]]
+  local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or radius==500 or target=='自己' --[[汉化组修正翻译前的补丁]]
   local forTank = GetAbilityRoles(action.ability.id)
   ---
   --@type ActionFlags
