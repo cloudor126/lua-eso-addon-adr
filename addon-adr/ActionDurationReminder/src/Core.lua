@@ -313,7 +313,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     sameNameAction.newAction = action
     action.effectList = sameNameAction.effectList
     for key, var in ipairs(action.effectList) do
-    	var.ignored = false
+      var.ignored = false
     end
     sameNameAction.effectList = {}
     action.lastEffectTime = sameNameAction.lastEffectTime
@@ -423,7 +423,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
     l.ignoredCache:mark(key)
     if numMarks>=20 then
-      l.ignoredIds[abilityId]=true
+      l.ignoredIds[abilityId]='too many times of '.. effectName
     end
     return
   end
@@ -433,8 +433,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if unitTag~='player' and iconName:find('buff_major_expedition',1,true) then return end
   -- ignore burning effect
   if not l.ignoredIds['ability_mage_062'] and iconName:find('ability_mage_062',1,true) then
-    l.ignoredIds['ability_mage_062']=true
-    l.ignoredIds[abilityId]=true
+    l.ignoredIds['ability_mage_062']='ignored burning effect'
+    l.ignoredIds[abilityId]='ignored burning effect'
     return
   end
 
@@ -506,6 +506,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if changeType == EFFECT_RESULT_GAINED then
     if duration == 0 then
       l.debug(DS_EFFECT,1)('[]New effect without duration ignored.')
+      --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
       return
     end
     if not l.filterAbilityOk(effect.ability) then
@@ -818,7 +819,7 @@ m.debug
 = function() --#()->()
   for key, var in pairs(l.idActionMap) do
     df('%s(%d)@%d:%s',var.ability.name,var.ability.id,var.startTime,var:getEffectsInfo())
-  end
+end
 end
 addon.debug = m.debug
 
