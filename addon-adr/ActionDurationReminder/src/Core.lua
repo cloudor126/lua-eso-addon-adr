@@ -419,7 +419,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   local key = abilityId..'_'..effectName
   local numMarks = l.ignoredCache:countMark(key)
-  if numMarks>=3 then
+  if numMarks>=10 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
     l.ignoredCache:mark(key)
     if numMarks>=20 then
