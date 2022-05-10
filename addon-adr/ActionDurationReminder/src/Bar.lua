@@ -308,7 +308,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "dropdown",
           name = text("Label Font Style"),
-          choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin"},
+          choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin","outline"},
           getFunc = function() return l.getSavedVars().barLabelFontStyle end,
           setFunc = function(value) l.getSavedVars().barLabelFontStyle = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",
@@ -389,7 +389,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "dropdown",
           name = text("Stack Label Font Style"),
-          choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin"},
+          choices = {"thick-outline","soft-shadow-thick","soft-shadow-thin","outline"},
           getFunc = function() return l.getSavedVars().barStackLabelFontStyle end,
           setFunc = function(value) l.getSavedVars().barStackLabelFontStyle = value; l.updateWidgets(views.updateWidgetFont) end,
           width = "full",

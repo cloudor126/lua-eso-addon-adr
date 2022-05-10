@@ -122,7 +122,7 @@ l.checkAction --#(Models#Action:action)->()
   if action:getEndTime() - aheadTime < GetGameTimeMilliseconds() then
     action.data.alerted = true
     local showAbility = action.ability
-    if showAbility.id ~= GetSlotBoundId(action.slotNum) then
+    if showAbility.id ~= GetSlotBoundId(action.slotNum, HOTBAR_CATEGORY_PRIMARY) then
       local slotAbility = models.newAbility(0, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
       if action:matchesAbility(slotAbility) then
         slotAbility.id = action.ability.id
