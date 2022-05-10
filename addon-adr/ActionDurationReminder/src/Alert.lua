@@ -150,6 +150,12 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
 = function(action)
   -- check fakeInstant i.e. Crystal Fragment
   if action.fake and action.stackCount ==0 then return true end
+  -- check bound armaments at stack 4
+  if action.stackCount==4 and action.ability.icon:find('bound_armament',35,true)
+    and GetGameTimeMilliseconds() > action.startTime + 300 -- don't alert at the moment it being used
+  then
+    return true
+  end
   -- check transmuteInstant i.e. Assasin's Will
   if GetGameTimeMilliseconds() > action.startTime + 300 then -- switching shouldn't happen just after performing
     local oldestAction = action:getOldest()
