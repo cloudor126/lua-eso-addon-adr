@@ -511,7 +511,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
       return isEffect1Bigger and effect2 or effect1
     end
-    if longIcon:find('ability_buff_m',1,true) -- for Balance 4s healing and 30s major resolve
+    if longIcon:find('ability_buff_m',30,true) -- for Balance 4s healing and 30s major resolve
       and percent < 15
       and not shortIcon:find('ability_buff_m',30,true)
     then

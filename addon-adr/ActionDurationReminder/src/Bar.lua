@@ -17,7 +17,7 @@ local barSavedVarsDefaults
     barShowShift = true,
     barShowInQuickslot = false,
     barShiftOffsetX = 0,
-    barShiftOffsetY = 5,
+    barShiftOffsetY = 0,
     barLabelFontName = "BOLD_FONT",
     barLabelFontSize = 18,
     barLabelFontStyle = 'thick-outline',
@@ -206,7 +206,7 @@ l.openShiftBarFrame -- #()->()
   end
   l.shiftBarFrame:SetHidden(false)
   l.shiftBarFrame:ClearAnchors()
-  l.shiftBarFrame:SetAnchor(BOTTOMLEFT, slot3, TOPLEFT, l.getSavedVars().barShiftOffsetX, l.getSavedVars().barShiftOffsetY)
+  l.shiftBarFrame:SetAnchor(BOTTOMLEFT, slot3, TOPLEFT, l.getSavedVars().barShiftOffsetX, l.getSavedVars().barShiftOffsetY+1)
 end
 
 l.updateWidgets -- #(#(Views#Widget:widget)->():func)->()

@@ -215,6 +215,13 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
   local savedVars = l.getSavedVars()
   local shrink = 1
   local width,height = self.background:GetDimensions()
+  if Azurah then
+      local scale = Azurah:CheckModified('ZO_ActionBar1')
+      if scale and scale ~= 1 then
+        width = width / scale
+        height = height / scale
+      end
+    end
   width = width - l.getSavedVars().barCooldownThickness - 2*shrink
   height = height - l.getSavedVars().barCooldownThickness - 2*shrink
   -- 1. topRight
