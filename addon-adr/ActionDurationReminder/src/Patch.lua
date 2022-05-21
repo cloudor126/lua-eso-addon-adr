@@ -90,6 +90,7 @@ l.onCoreUpdate -- #()->()
     hb = ZO_PlayerAttributeHealth,
     mb = ZO_PlayerAttributeMagicka,
     sb = ZO_PlayerAttributeStamina,
+    bb = ZO_BuffDebuffTopLevelSelfContainer,
   } -- #map<#string,Control#Control>
   -- 2.1 record their original info
   for name,hud in pairs(hudTable) do
@@ -121,7 +122,7 @@ l.onCoreUpdate -- #()->()
       left = slot3:GetLeft() + offsetX,
       right = slot7:GetRight() + offsetX,
     }
-    local nameList = {'hb','mb','sb'}
+    local nameList = {'hb','mb','sb','bb'}
     table.sort(nameList, function(name1, name2)
       return hudTable[name1]:GetBottom()> hudTable[name2]:GetBottom()
     end)

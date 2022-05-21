@@ -1,3 +1,6 @@
+3.47
+- Optimzed auto-move capability to move player buff/debuff panel when shift bar and health bar is moving up.
+
 3.46
 - Updated French translation provided by lexo1000.
 - Adjusted cooldown lines to show correctly based on Azurah action bar scaling.
