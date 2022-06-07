@@ -61,7 +61,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   inst.appendIndex = appendIndex --#number
   --
   inst.visible = true
-  local slot = ZO_ActionBar_GetButton(slotNum).slot --Control#Control
+  local slot = ZO_ActionBar_GetButton(slotNum, slotNum >8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
   local slotIcon = slot:GetNamedChild("Icon")
   --  local flipCard = slot:GetNamedChild("FlipCard")
   inst.slotIcon = slotIcon --Control#Control

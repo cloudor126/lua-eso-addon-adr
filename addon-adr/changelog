@@ -1,3 +1,9 @@
+3.49
+- Fixed a problem that the first timer of Barbed Trap is disappeared. 
+
+3.48a
+- Fixed a bug related to quickslot api changes.
+
 3.47
 - Optimzed auto-move capability to move player buff/debuff panel when shift bar and health bar is moving up.
 

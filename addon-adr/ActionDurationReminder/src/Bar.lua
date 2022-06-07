@@ -103,7 +103,7 @@ l.onCoreUpdate -- #()->()
   end
   -- 3. show quickslot
   if l.getSavedVars().barShowInQuickslot then
-    local remain,duration, global = GetSlotCooldownInfo(GetCurrentQuickslot())
+    local remain,duration, global = GetSlotCooldownInfo(GetCurrentQuickslot(),HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
     if remain>0 and not global then
       if not l.quickslotWidget then
         l.quickslotWidget = views.newWidget(9, false)
