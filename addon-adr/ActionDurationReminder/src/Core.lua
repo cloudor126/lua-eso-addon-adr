@@ -349,7 +349,7 @@ end
 
 l.onActionUpdateCooldowns -- #(#number:eventCode)->()
 = function(eventCode)
-  local remain,duration = GetSlotCooldownInfo(GetCurrentQuickslot())
+  local remain,duration = GetSlotCooldownInfo(GetCurrentQuickslot(),HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
   if remain>1000 and duration>1000 and duration-remain<100 then
     l.lastQuickslotTime = GetGameTimeMilliseconds()
   end
