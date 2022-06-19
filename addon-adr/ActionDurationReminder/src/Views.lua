@@ -38,6 +38,7 @@ m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
   inst.background = background -- Control#Control
   inst.drawTier = drawTier -- #number
   inst.hidden = false
+  inst.shifted = false
   inst.duration = 0 -- #number
   inst.endTime = 0 -- #number
   inst.topRight = nil -- TextureControl#TextureControl
@@ -72,7 +73,10 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   if shifted then
     local offsetX = savedVars.barShiftOffsetX
     local offsetY = savedVars.barShiftOffsetY
-    backdrop = WINDOW_MANAGER:CreateControl(nil, slot, CT_TEXTURE)
+    backdrop = WINDOW_MANAGER:CreateControl(nil, slot, CT_TEXTURE) -- Control#Control
+    if l.getSavedVars().barShowShiftScalePercent<100 then
+      backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
+    end
     inst.backdrop = backdrop --TextureControl#TextureControl
     backdrop:SetDrawLayer(DL_BACKGROUND)
     if appendIndex then
@@ -110,6 +114,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
+  inst.cooldown.shifted = shifted
   inst.cdMark = 0
   --
   return setmetatable(inst, {__index=mWidget})
@@ -162,6 +167,14 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
   end
 end
 
+m.updateWidgetShiftScalePercent -- #(#Widget:widget)->()
+= function(widget)
+  if not widget.shifted then return end
+  if widget.backdrop then
+    widget.backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
+  end
+end
+
 m.updateWidgetStackLabelYOffset -- #(#Widget:widget)->()
 = function(widget)
   if widget.stackLabel then
@@ -201,7 +214,7 @@ mCooldown.draw -- #(#Cooldown:self, #number:duration, #number:endTime)->()
   end
 end
 
-mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
+mCooldown.drawRemain -- #(#Cooldown:self, #number:remain, #boolean:shifted)->()
 = function(self, remain)
   -- 0. check hidden
   if not l.getSavedVars().barCooldownVisible or self.duration == 0 or self.hidden or remain<=0 then
@@ -216,12 +229,19 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain)->()
   local shrink = 1
   local width,height = self.background:GetDimensions()
   if Azurah then
-      local scale = Azurah:CheckModified('ZO_ActionBar1')
-      if scale and scale ~= 1 then
-        width = width / scale
-        height = height / scale
-      end
+    local scale = Azurah:CheckModified('ZO_ActionBar1')
+    if scale and scale ~= 1 then
+      width = width / scale
+      height = height / scale
     end
+  end
+  if self.shifted then
+    local percent = l.getSavedVars().barShowShiftScalePercent
+    if percent <100 then
+      width = width *100/ percent
+      height = height * 100 / percent
+    end
+  end
   width = width - l.getSavedVars().barCooldownThickness - 2*shrink
   height = height - l.getSavedVars().barCooldownThickness - 2*shrink
   -- 1. topRight
@@ -370,24 +390,36 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
     self.background:SetTexture(action.ability.icon)
     self.background:SetHidden(false)
   end
+
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
-  local hint = string.format('%.1f', remain/1000)
-  if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
-    hint = string.format('%d', remain/1000)
-  end
-  self.label:SetText(hint)
-  self.label:SetHidden(false)
   local otherInfo = action:getStageInfo() or action:getAreaEffectCount()
-  if action.stackCount and action.stackCount > 0 then
-    self.stackLabel:SetText(action.stackCount)
-    self.stackLabel:SetHidden(false)
-  elseif otherInfo then
-    self.stackLabel:SetText(otherInfo)
-    self.stackLabel:SetHidden(false)
+  -- label
+  if l.getSavedVars().barLabelEnabled then
+    local hint = string.format('%.1f', remain/1000)
+    if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
+      hint = string.format('%d', remain/1000)
+    end
+    self.label:SetText(hint)
+    self.label:SetHidden(false)
+  else
+    self.label:SetHidden(true)
+  end
+  -- stack label
+  if l.getSavedVars().barStackLabelEnabled then
+    if action.stackCount and action.stackCount > 0 then
+      self.stackLabel:SetText(action.stackCount)
+      self.stackLabel:SetHidden(false)
+    elseif otherInfo then
+      self.stackLabel:SetText(otherInfo)
+      self.stackLabel:SetHidden(false)
+    else
+      self.stackLabel:SetHidden(true)
+    end
   else
     self.stackLabel:SetHidden(true)
   end
+  -- cooldown
   local cdMark = endTime
   if action:isUnlimited() then
     self.label:SetHidden(true)
@@ -420,7 +452,21 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   self.cooldown:setHidden(cdHidden)
 end
 
-
+mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
+= function(self, slotNum)
+  self.visible = true
+  if self.backdrop then self.backdrop:SetHidden(false) end
+  if self.background then
+    self.background:SetTexture(GetSlotTexture(slotNum,2-GetActiveWeaponPairInfo()))
+    self.background:SetHidden(false)
+  end
+  -- label
+  self.label:SetHidden(true)
+  -- stack label
+  self.stackLabel:SetHidden(true)
+  -- cooldown
+  self.cooldown:setHidden(true)
+end
 --========================================
 --        register
 --========================================
