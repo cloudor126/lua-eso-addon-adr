@@ -162,16 +162,20 @@ l.onCoreUpdate -- #()->()
   end
   -- 4.2 show fully
   if l.getSavedVars().barShowShiftFully then
-    for slotNum = 3,8 do
-      local widget = l.shiftedBarWidgetMap[slotNum]
-      if not widget then
-        widget = views.newWidget(slotNum,true)
-        widget:hide()
-        l.shiftedBarWidgetMap[slotNum] = widget
-      end
-      if not widget.visible then
-        widget:updateWithSlot(slotNum)
-        widget.backdrop:SetDimensions(50,50)
+    local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find('Oakensoul')
+      or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find('Oakensoul')
+    if not withOakensoul then
+      for slotNum = 3,8 do
+        local widget = l.shiftedBarWidgetMap[slotNum]
+        if not widget then
+          widget = views.newWidget(slotNum,true)
+          widget:hide()
+          l.shiftedBarWidgetMap[slotNum] = widget
+        end
+        if not widget.visible then
+          widget:updateWithSlot(slotNum)
+          widget.backdrop:SetDimensions(50,50)
+        end
       end
     end
   end

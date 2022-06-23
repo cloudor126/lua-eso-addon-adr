@@ -799,17 +799,17 @@ m.clearAreaActions -- #()->()
   l.debug(DS_ACTION, 1)('[clear area]')
   local newQueue = {}
   for key, var in ipairs(l.actionQueue) do
-    if not var.flags.forArea then table.insert(newQueue, var) end
+    if not var.flags.forArea and not var.flags.forGround then table.insert(newQueue, var) end
   end
   l.actionQueue = newQueue
   local newMap = {}
   for key, var in pairs(l.idActionMap) do
-    if not var.flags.forArea then newMap[key] = var end
+    if not var.flags.forArea and not var.flags.forGround then newMap[key] = var end
   end
   l.idActionMap = newMap
   newMap = {}
   for key, var in pairs(l.timeActionMap) do
-    if not var.flags.forArea then newMap[key] = var end
+    if not var.flags.forArea and not var.flags.forGround then newMap[key] = var end
   end
   l.timeActionMap = newMap
 end

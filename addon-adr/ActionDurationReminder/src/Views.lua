@@ -457,7 +457,8 @@ mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
   self.visible = true
   if self.backdrop then self.backdrop:SetHidden(false) end
   if self.background then
-    self.background:SetTexture(GetSlotTexture(slotNum,2-GetActiveWeaponPairInfo()))
+    local texture = GetSlotTexture(slotNum,2-GetActiveWeaponPairInfo())
+    if texture and texture:len()>0 then self.background:SetTexture(texture) end
     self.background:SetHidden(false)
   end
   -- label

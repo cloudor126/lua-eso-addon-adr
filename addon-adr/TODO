@@ -1,4 +1,5 @@
-replace taunt id by its icon
-customised ability duration
-add label size option
-line ending color
+
+customised ability duration modification:
+	beast trap - 2.5
+empty shift bar if some slots are not equiped
+hide shift bar if no skill equiped
