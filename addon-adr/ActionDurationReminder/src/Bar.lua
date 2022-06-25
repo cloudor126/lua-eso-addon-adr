@@ -162,8 +162,8 @@ l.onCoreUpdate -- #()->()
   end
   -- 4.2 show fully
   if l.getSavedVars().barShowShiftFully then
-    local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find('Oakensoul')
-      or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find('Oakensoul')
+    local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find('oakensoul')
+      or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find('oakensoul')
     if not withOakensoul then
       for slotNum = 3,8 do
         local widget = l.shiftedBarWidgetMap[slotNum]
