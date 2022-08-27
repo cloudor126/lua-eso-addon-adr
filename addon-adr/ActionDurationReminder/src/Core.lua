@@ -119,7 +119,8 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
         local id = tonumber(line)
         match = id == ability.id
       else
-        match = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
+        local name = zo_strformat("<<1>>", ability.name):lower()
+        match = name:find(line,1,true)
       end
       if match then
         l.idFilteringMap[ability.id] = false
@@ -200,8 +201,9 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
-  -- check if it's a buff, e.g. avoid abuse of major expedition
+  -- check if it's a buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance 
   if effect.ability.icon:find('ability_buff_m',1,true) then return nil end
+  if effect.ability.icon:find('ability_debuff_offb',1,true) then return nil end
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
