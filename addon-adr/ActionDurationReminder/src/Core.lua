@@ -214,7 +214,8 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   for slotNum = 3,8 do
     local slotBoundId = GetSlotBoundId(slotNum)
     if slotBoundId >0 then
-      if effect.ability.name:find(fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum))),1,true)
+      local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum)))
+      if (effect.ability.name:find(slotName,1,true) and slotName:find(' ',1,true))
         or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
       then
         matchSlotNum = slotNum

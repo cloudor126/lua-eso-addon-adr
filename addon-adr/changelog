@@ -1,3 +1,6 @@
+3.53
+- Optimized effect-bar matching policy to avoid showing Rally Cry timers on Rally bar slot.
+
 3.52a
 - Ignored offbalance effect to avoid a wrong timer.
 
