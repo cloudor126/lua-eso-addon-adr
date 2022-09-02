@@ -1,3 +1,6 @@
+3.54
+- Optimized action property processing to avoid cone actions lost timer e.g. Twisting Path should not disappear when changing target.
+
 3.53
 - Optimized effect-bar matching policy to avoid showing Rally Cry timers on Rally bar slot.
 

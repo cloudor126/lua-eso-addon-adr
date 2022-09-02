@@ -112,6 +112,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local target = GetAbilityTargetDescription(action.ability.id)
   local radius = GetAbilityRadius(action.ability.id)
   local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA) and (radius==0 or radius>200)
+  forArea = forArea or target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_CONE)
   local forGround = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_GROUND)
   local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or radius==500 or target=='自己' --[[汉化组修正翻译前的补丁]]
   local forTank = GetAbilityRoles(action.ability.id)
