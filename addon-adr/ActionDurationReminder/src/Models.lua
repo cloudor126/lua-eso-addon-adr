@@ -97,12 +97,12 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
   local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
   pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..').*'
-   -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..').*'
+  -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..').*'
   local numStr,n = action.description:gsub(pattern,'%2') --/script d(desc:gsub(pattern,'%2'))
   if n and n > 0 then
     action.descriptionDuration = tonumber((numStr:gsub(',','.')))*1000 --#number
   end
-  
+
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
   action.oldAction = nil --#Action
@@ -317,8 +317,16 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   -- activated stage e.g. Beast Trap and Scalding Rune
   if optEffect.activated then return '@' end
   if self.duration and self.duration>0 -- action with duration prop
-    and optEffect.startTime-self.startTime>1500 -- triggered after a delay
-    and optEffect.duration ~= self.duration -- with different activation duration
+    and (
+    (
+    -- triggered after a delay for non-ground
+    not self.flags.forGround and  optEffect.startTime-self.startTime>1500
+    )or
+    (
+    -- triggered after first ground effect
+    self.flags.forGround and optEffect.ability.id ~= self.groundFirstEffectId
+    )
+    )
     and optEffect.duration%1000==0 -- with whole seconds duration
   then
     optEffect.activated = true
@@ -611,9 +619,13 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   end
   if availableEffectCount==0 and oldEffect.duration > 0 and -- last duration effect has faded
     (
-    (oldEffect.startTime>= self.startTime)  -- the old effect SHOULD be brought by this action rather than an old one, or this might be a renew rather than end
+    -- the old effect SHOULD be brought by this action rather than an old one, or this might be a renew rather than end
+    (oldEffect.startTime>= self.startTime)
     or
-    (self.oldAction and self.oldAction.fake) -- or the old one is fake, so a real action now is triggered and we should do a purge
+    (
+    -- or the old one is fake, so a real action now is triggered and we should do a purge
+    self.oldAction and self.oldAction.fake
+    )
     )
   then
     self.endTime =now
@@ -664,6 +676,10 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     end
   end
   table.insert(self.effectList, effect)
+  -- record first ground effect id for triggering recognition
+  if #self.effectList == 1 and self.flags.forGround then
+    self.groundFirstEffectId = effect.ability.id -- #number
+  end
   return nil
 end
 

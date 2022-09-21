@@ -201,7 +201,7 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
-  -- check if it's a buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance 
+  -- check if it's a buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
   if effect.ability.icon:find('ability_buff_m',1,true) then return nil end
   if effect.ability.icon:find('ability_debuff_offb',1,true) then return nil end
   -- check if it's a potion effect
@@ -309,40 +309,42 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. queue it
   l.queueAction(action)
   -- 5. replace saved
-  local sameNameAction = l.getActionByNewAction(action)
-  if sameNameAction then
-    sameNameAction = sameNameAction:getNewest()
-    l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
-      sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
-    sameNameAction.newAction = action
-    action.effectList = sameNameAction.effectList
-    for key, var in ipairs(action.effectList) do
-      var.ignored = false
-    end
-    sameNameAction.effectList = {}
-    action.lastEffectTime = sameNameAction.lastEffectTime
-    action.stackCount = sameNameAction.stackCount
-    action.stackEffect = sameNameAction.stackEffect
-    sameNameAction.stackEffect = nil
-    action.oldAction = sameNameAction
-
-    if action.duration == 0 and sameNameAction.duration >0 then
-      action.inheritDuration = sameNameAction.duration
-    elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
-      action.inheritDuration = sameNameAction.inheritDuration
-    end
-    local abilityAccepter -- # (#Ability:relatedAbility)->()
-    = function(relatedAbility)
-      if not action.ability.name:find(relatedAbility.name,1,true) then
-        table.insert(action.relatedAbilityList, relatedAbility)
-        l.debug(DS_ACTION,1)('[aMs]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
+  if not action.flags.forGround then
+    local sameNameAction = l.getActionByNewAction(action)
+    if sameNameAction and sameNameAction.saved then
+      sameNameAction = sameNameAction:getNewest()
+      l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
+        sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
+      sameNameAction.newAction = action
+      action.effectList = sameNameAction.effectList
+      for key, var in ipairs(action.effectList) do
+        var.ignored = false
       end
+      sameNameAction.effectList = {}
+      action.lastEffectTime = sameNameAction.lastEffectTime
+      action.stackCount = sameNameAction.stackCount
+      action.stackEffect = sameNameAction.stackEffect
+      sameNameAction.stackEffect = nil
+      action.oldAction = sameNameAction
+
+      if action.duration == 0 and sameNameAction.duration >0 then
+        action.inheritDuration = sameNameAction.duration
+      elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
+        action.inheritDuration = sameNameAction.inheritDuration
+      end
+      local abilityAccepter -- # (#Ability:relatedAbility)->()
+      = function(relatedAbility)
+        if not action.ability.name:find(relatedAbility.name,1,true) then
+          table.insert(action.relatedAbilityList, relatedAbility)
+          l.debug(DS_ACTION,1)('[aMs]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
+        end
+      end
+      abilityAccepter(sameNameAction.ability)
+      for key, var in ipairs(sameNameAction.relatedAbilityList) do
+        abilityAccepter(var)
+      end
+      l.saveAction(action)
     end
-    abilityAccepter(sameNameAction.ability)
-    for key, var in ipairs(sameNameAction.relatedAbilityList) do
-      abilityAccepter(var)
-    end
-    l.saveAction(action)
   end
   -- 6. save
   if action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
@@ -750,6 +752,7 @@ l.saveAction -- #(Models#Action:action)->()
   if sameNameAction then l.idActionMap[sameNameAction.ability.id] = nil end
 
   l.idActionMap[action.ability.id] = action
+  action.saved = true
   for i, effect in ipairs(action.effectList) do
     l.timeActionMap[effect.startTime] = action
   end
