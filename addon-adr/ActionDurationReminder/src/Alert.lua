@@ -337,7 +337,16 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
             SetGameCameraUIMode(true)
           end, 10)
         end,
-        width = "full",
+        width = "half",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+      }, {
+        type = "button",
+        name = text("Reset Alert Frame"),
+        func = function()
+          l.getSavedVars().alertOffsetX = 0
+          l.getSavedVars().alertOffsetY = 0
+        end,
+        width = "half",
         disabled = function() return not l.getSavedVars().alertEnabled end,
       }, {
         type = "checkbox",

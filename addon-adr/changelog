@@ -1,3 +1,8 @@
+
+3.55
+- Adjusted alerts for multiple targets.
+- Added an alert option to reset alert frame position.
+
 3.54
 - Optimized action property processing to avoid cone actions lost timer e.g. Twisting Path should not disappear when changing target.
 
@@ -8,7 +13,7 @@
 - Ignored offbalance effect to avoid a wrong timer.
 
 3.51b
-- Adjust shift bar behavior when player wearing an oakensoul ring.
+- Adjusted shift bar behavior when player wearing an oakensoul ring.
 
 3.50a
 - Added several options to config bar label's visibility and shift bar behaviors.
