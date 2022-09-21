@@ -259,6 +259,7 @@ end
 
 l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
 = function(action)
+  if action.flags.forEnemy then return nil end -- don't replace enemy actions, so that they can be traced seperately
   local abilityName = action.ability.name
   local matcher -- #(Models#Action:a)->(#boolean)
   = function(a)
@@ -601,14 +602,15 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
 = function(eventCode)
   if not l.getSavedVars().coreMultipleTargetTracking then return end
   if not DoesUnitExist('reticleover') then return end
-  -- 1. remove all non player and non playerpet effect actions from self.idActionMap
+  -- 1. remove all enemy actions from self.idActionMap
   local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
+    l.debug(DS_TARGET,1)('processing action %s, %s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do
         ignoredEffectIds[effect.ability.id] = true
     end
-    elseif not action.flags.forGround and not action.flags.forArea and not action.flags.forSelf --[[ e.g. daedric mines ]] and not action:isOnPlayer() and not action:isOnPlayerpet() then
+    elseif action.flags.forEnemy then
       l.idActionMap[key] = nil
       l.debug(DS_TARGET,1)('[RT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
@@ -831,6 +833,12 @@ m.getIdActionMap -- #()->(#map<#number,Models#Action>)
   return l.idActionMap
 end
 addon.getIdActionMap = m.getIdActionMap
+
+m.getTimeActionMap -- #()->(#map<#number,Models#Action>)
+= function()
+  return l.timeActionMap
+end
+addon.getTimeActionMap = m.getTimeActionMap
 
 --========================================
 --        register

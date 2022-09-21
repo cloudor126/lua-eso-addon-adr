@@ -113,6 +113,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local radius = GetAbilityRadius(action.ability.id)
   local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA) and (radius==0 or radius>200)
   forArea = forArea or target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_CONE)
+  local forEnemy =  target==GetString(SI_TARGETTYPE0)
   local forGround = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_GROUND)
   local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or radius==500 or target=='自己' --[[汉化组修正翻译前的补丁]]
   local forTank = GetAbilityRoles(action.ability.id)
@@ -122,6 +123,8 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   = {
     forArea -- #boolean
     = forArea,
+    forEnemy -- #boolean
+    = forEnemy,
     forGround -- #boolean
     = forGround,
     forSelf -- #boolean
@@ -531,7 +534,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     -- don't opt buffs which have difference durations
     if self.duration and self.duration >0 and effect.duration ~= self.duration and effect.ability.icon:find('ability_buff_m',1,true) then return -1,-1 end
     -- opt non-player effect for dps, if not area effect
-    if role==LFG_ROLE_DPS and not self.flags.forArea and not effect:isOnPlayer() and effect.duration>0 then px1=2 end
+    if (role==LFG_ROLE_DPS or self.flags.forEnemy) and not self.flags.forArea and not effect:isOnPlayer() and effect.duration>0 then px1=2 end
     -- opt player effect for tank
     if role==LFG_ROLE_TANK and effect:isOnPlayer() then px1=2 end
     -- opt player effect for healer, if not area effect, e.g. Regeneration can be applied on player or ally
@@ -543,6 +546,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
       effect.ofActionId = true
       px1 = 4
     end
+
     -- opt major effect that matches action duration
     if duration > 0 and effect.duration-duration ==0 then px2= 1 end
     -- opt long effect for healer
