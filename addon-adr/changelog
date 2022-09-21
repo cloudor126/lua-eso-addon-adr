@@ -1,3 +1,6 @@
+3.57
+- Added description duration into effect validation even if the action has a duration i.e. Dark Conversion has a wrong duration info of 10s but actually should be 20s.
+
 3.56
 - Optimzed effects priority comparison to fix the Carve 3rd hit bug.
 

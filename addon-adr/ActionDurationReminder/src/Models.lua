@@ -93,15 +93,16 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
-  if not action.duration or action.duration == 0 then
-    -- look for XX seconds in description
-    local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
-    pattern = '.*('..pattern:gsub("2","(%%d+.%%d+)|r")..').*'
-    local numStr,n = action.description:gsub(pattern,'%2')
-    if n and n > 0 then
-      action.descriptionDuration = tonumber((numStr:gsub(',','.')))*1000 --#number
-    end
+
+  -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
+  local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
+  pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..').*'
+   -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..').*'
+  local numStr,n = action.description:gsub(pattern,'%2') --/script d(desc:gsub(pattern,'%2'))
+  if n and n > 0 then
+    action.descriptionDuration = tonumber((numStr:gsub(',','.')))*1000 --#number
   end
+  
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
   action.oldAction = nil --#Action
@@ -623,7 +624,12 @@ end
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
   -- ignore abnormal long duration effect
-  if self.duration and self.duration >=10000 and effect.duration > self.duration * 1.5 then return end
+  if self.duration and self.duration >=10000
+    and effect.duration > self.duration * 1.5
+    and effect.duration ~= self.descriptionDuration
+  then
+    return
+  end
   -- adjust effect for covering i.e. lightning splash
   if self.duration and self.duration > 0 and effect.duration == self.duration + 1000 then
     local existedEffect = self:optEffect() -- #Effect:effect
