@@ -144,8 +144,8 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   return action
 end
 
-m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime)->(#Effect)
-=  function(ability, unitTag, unitId, startTime, endTime)
+m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime, #number:stackCount)->(#Effect)
+=  function(ability, unitTag, unitId, startTime, endTime, stackCount)
   local effect = {} -- #Effect
   effect.ability = ability --#Ability
   effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others' -- #string player or playerpet or others
@@ -154,6 +154,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.endTime = endTime -- #number
   effect.duration = endTime-startTime -- #number
   effect.ignored = false -- #boolean
+  effect.stackCount = stackCount -- #number
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -697,7 +698,7 @@ end
 
 mEffect.isLongDuration  -- #(#Effect:self)->(#boolean)
 = function(self)
-  return self.duration > 30000
+  return self.duration > 39000
 end
 --========================================
 --        register

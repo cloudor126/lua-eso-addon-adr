@@ -1,3 +1,5 @@
+3.56
+- Optimzed effects priority comparison to fix the Carve 3rd hit bug.
 
 3.55
 - Adjusted alerts for multiple targets.

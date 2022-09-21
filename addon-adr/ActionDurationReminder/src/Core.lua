@@ -456,7 +456,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.lastEffectAction = nil
   end
   local ability = models.newAbility(abilityId, effectName, iconName)
-  local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime);
+  local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime, stackCount);
   -- 1. stack
   if stackCount > 0 then -- e.g. relentless focus
     local action = nil -- Models#Action
@@ -627,7 +627,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
       local action = l.timeActionMap[startTime]
       if action then
         local ability = models.newAbility(abilityId,buffName,iconFilename)
-        local effect = models.newEffect(ability,'none',0,startTime,startTime) -- only for match, no need to be precise timing
+        local effect = models.newEffect(ability,'none',0,startTime,startTime,0) -- only for match, no need to be precise timing
         if action:matchesOldEffect(effect) then
           l.idActionMap[action.ability.id] = action
           numRestored = numRestored+1
