@@ -546,6 +546,8 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   = function(effect)
     local px1=0
     local px2=0
+    -- don't opt buffs which are remnant from old acitons
+    if effect.startTime < self.startTime then return -1,-1 end
     -- don't opt buffs which have difference durations
     if self.duration and self.duration >0 and effect.duration ~= self.duration and effect.ability.icon:find('ability_buff_m',1,true) then return -1,-1 end
     -- opt non-player effect for dps, if not area effect

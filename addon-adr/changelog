@@ -1,3 +1,6 @@
+3.60
+- Optimized effects priority comparison for actions that won't reset all their effects i.e. healer actions Combat Prayer, Echoing Vigor, etc.
+
 3.59
 - Optimized multi-target tracking policy. Action timers for enemy type target won't be removed when looking at others, instead, a '~' hint will be used to indicate that the current timer is not for the current target.
 
