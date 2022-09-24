@@ -60,6 +60,8 @@ l.ignoredIds = {} -- #map<#number,#boolean>
 
 l.timeActionMap = {}--#map<#number,Models#Action>
 
+l.targetId = nil -- #number
+
 l.queueAction -- #(Models#Action:action)->()
 = function(action)
   l.lastAction = action
@@ -602,6 +604,7 @@ end
 
 l.onReticleTargetChanged -- #(#number:eventCode)->()
 = function(eventCode)
+  l.targetId = nil
   if not l.getSavedVars().coreMultipleTargetTracking then return end
   if not DoesUnitExist('reticleover') then return end
   -- 1. remove all enemy actions from self.idActionMap
@@ -611,10 +614,10 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do
         ignoredEffectIds[effect.ability.id] = true
-    end
+      end
     elseif action.flags.forEnemy then
-      l.idActionMap[key] = nil
-      l.debug(DS_TARGET,1)('[RT]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+      action.targetOut = true
+      l.debug(DS_TARGET,1)('[Tgt out]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
     end
   end
@@ -631,11 +634,15 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
         local ability = models.newAbility(abilityId,buffName,iconFilename)
         local effect = models.newEffect(ability,'none',0,startTime,startTime,0) -- only for match, no need to be precise timing
         if action:matchesOldEffect(effect) then
+          action.targetOut = false
           l.idActionMap[action.ability.id] = action
           numRestored = numRestored+1
-          l.debug(DS_TARGET,1)('[VT]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
+          l.debug(DS_TARGET,1)('[Tgt in]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
+          if action.flags.forEnemy and action.targetId and action.targetId>0 then
+            l.targetId = action.targetId
+          end
         else
-          l.debug(DS_TARGET,1)('[XT]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
+          l.debug(DS_TARGET,1)('[Tgt xx]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
         end
       else
         l.debug(DS_TARGET, 1)('[?T]%s(%i)@%.2f<%.2f> action not found.', buffName, abilityId, timeStarted,timeEnding-timeStarted)

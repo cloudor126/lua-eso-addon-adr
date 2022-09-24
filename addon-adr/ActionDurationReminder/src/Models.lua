@@ -83,6 +83,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
 = function(slotNum, weaponPairIndex, weaponPairUltimate)
   local action = {} -- #Action
   action.fake = false
+  action.targetOut = false
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
@@ -141,6 +142,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.effectList = {} -- #list<#Effect>
   action.stackCount = 0
   action.stackEffect = nil -- #Effect
+  action.targetId = nil --#number
   setmetatable(action,{__index=mAction})
   return action
 end
@@ -331,6 +333,9 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   then
     optEffect.activated = true
     return '@'
+  end
+  if self.targetOut then
+    return '~'
   end
   return nil
 end
@@ -676,6 +681,10 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     end
   end
   table.insert(self.effectList, effect)
+  -- record targetId for enemy actions
+  if self.flags.forEnemy and effect.unitId>0 then
+    self.targetId = effect.unitId
+  end
   -- record first ground effect id for triggering recognition
   if #self.effectList == 1 and self.flags.forGround then
     self.groundFirstEffectId = effect.ability.id -- #number
