@@ -491,6 +491,11 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
         ignored = true
       end
     end
+    -- filter old effects at new action beginning
+    if effect.startTime < self.startTime and GetGameTimeMilliseconds()-self.startTime< 500 then
+      ignored = true
+    end
+    
     if ignored then
     -- do nothing
     elseif not optEffect then
