@@ -1,3 +1,6 @@
+3.61
+- Ignored stack count obtained right after cast i.e. Stone Giant now only shows the Stagger stack count. 
+
 3.60
 - Optimized effects priority comparison for actions that won't reset all their effects i.e. healer actions Combat Prayer, Echoing Vigor, etc.
 

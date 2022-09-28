@@ -696,23 +696,22 @@ end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
-  if not self.stackEffect or self.stackEffect.ability.id == effect.ability.id then
-    self.stackCount = stackCount
-    self.stackEffect = effect
-    return true
-  end
-  local role = GetSelectedLFGRole()
-  if LFG_ROLE_DPS == role then
-    if not effect:isOnPlayer() then
-      self.stackCount = stackCount
-      self.stackEffect = effect
-      return true
+  local canAdd = false
+  if not self.stackEffect then
+    canAdd = true
+    -- filter sudden big stack at action beginning
+    if GetGameTimeMilliseconds()-self.startTime < 1000 and stackCount>=2 then
+      canAdd = false
     end
-  elseif effect:isOnPlayer() then
+  elseif self.stackEffect.ability.id == effect.ability.id then
+    canAdd = true
+  end
+  if canAdd then
     self.stackCount = stackCount
     self.stackEffect = effect
     return true
   end
+
   return false
 end
 

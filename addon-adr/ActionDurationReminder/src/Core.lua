@@ -261,7 +261,6 @@ end
 
 l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
 = function(action)
-  if action.flags.forEnemy then return nil end -- don't replace enemy actions, so that they can be traced seperately
   local abilityName = action.ability.name
   local matcher -- #(Models#Action:a)->(#boolean)
   = function(a)
@@ -283,7 +282,17 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     end
   end
   for id, a in pairs(l.idActionMap) do
-    if matcher(a) then return a end
+    if matcher(a) then
+      if a.flags.forArea and action.flags.forEnemy then
+        -- fix the flags changed from area to enemy
+        action.flags.forArea = true
+        action.flags.forEnemy = false
+      end
+      -- don't replace enemy actions, so that they can be traced seperately
+      if action.flags.forEnemy then return nil end
+
+      return a
+    end
   end
   return nil
 end
@@ -614,7 +623,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do
         ignoredEffectIds[effect.ability.id] = true
-      end
+    end
     elseif action.flags.forEnemy then
       action.targetOut = true
       l.debug(DS_TARGET,1)('[Tgt out]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
