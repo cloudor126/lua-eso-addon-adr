@@ -1,3 +1,6 @@
+3.63
+- Filtered ground actions that have not got effects yet i.e. Scalding Rune should not get a timer before confirmation.  
+
 3.62
 - Ignored remnant effects at the begining of a re-cast which had caused wierd number problems when casting aoe actions repeatedly.
 

@@ -358,7 +358,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     end
   end
   -- 6. save
-  if action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
+  if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect 
+  and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
     -- 6.x save short without effects
     l.saveAction(action)
   end
