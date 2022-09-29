@@ -495,7 +495,7 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
     if effect.startTime < self.startTime and GetGameTimeMilliseconds()-self.startTime< 500 then
       ignored = true
     end
-    
+
     if ignored then
     -- do nothing
     elseif not optEffect then
@@ -705,11 +705,15 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if not self.stackEffect then
     canAdd = true
     -- filter sudden big stack at action beginning
-    if stackCount>=2 then
+    if stackCount>=2
+      and not self.fake -- fake actions are always newly created and without an old stack effect
+    then
       canAdd = false
     end
   elseif self.stackEffect.ability.id == effect.ability.id then
     canAdd = true
+    --  else
+    --    df('old id is %d, new is %d', self.stackEffect.ability.id, effect.ability.id)
   end
   if canAdd then
     self.stackCount = stackCount

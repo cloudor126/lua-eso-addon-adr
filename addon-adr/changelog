@@ -1,3 +1,6 @@
+3.65
+- Adjusted the same policy in v3.64 to let it be compatible with triggered timers i.e. Seething Fury for Molten Whip.
+
 3.64
 - Adjusted the policy added in v3.61 to always ignore new stack count not from 1 in spite of when it happens.
 
