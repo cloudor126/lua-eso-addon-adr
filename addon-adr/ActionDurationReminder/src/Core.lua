@@ -23,6 +23,7 @@ local DS_ALL = "all" -- debug switch for all
 --@type CoreSavedVars
 local coreSavedVarsDefaults = {
   coreMultipleTargetTracking = true,
+  coreMultipleTargetTrackingWithoutClearing = true,
   coreSecondsBeforeFade = 5,
   coreMinimumDurationSeconds = 2.5,
   coreKeyWords = '',
@@ -358,8 +359,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     end
   end
   -- 6. save
-  if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect 
-  and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
+  if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect
+    and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
     -- 6.x save short without effects
     l.saveAction(action)
   end
@@ -627,6 +628,9 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
     end
     elseif action.flags.forEnemy then
       action.targetOut = true
+      if not l.getSavedVars().coreMultipleTargetTrackingWithoutClearing then
+        l.idActionMap[key] = nil
+      end
       l.debug(DS_TARGET,1)('[Tgt out]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
         action:getDuration()/1000, action:getFlagsInfo())
     end
@@ -884,6 +888,15 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreMultipleTargetTracking = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreMultipleTargetTracking,
+        },
+        {
+          type = "checkbox",
+          name = addon.text("Multiple Target Tracking Without Clearing"),
+          getFunc = function() return l.getSavedVars().coreMultipleTargetTrackingWithoutClearing end,
+          setFunc = function(value) l.getSavedVars().coreMultipleTargetTrackingWithoutClearing = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreMultipleTargetTrackingWithoutClearing,
+          disabled = function() return not l.getSavedVars().coreMultipleTargetTracking end,
         },
         {
           type = "checkbox",

@@ -1,3 +1,7 @@
+3.66
+- Added an option to choose whether to clean up the timer when the target has been changed to another.
+- Changed the symbol added in v3.59 from '~' to '#'.
+
 3.65
 - Adjusted the same policy in v3.64 to let it be compatible with triggered timers i.e. Seething Fury for Molten Whip.
 

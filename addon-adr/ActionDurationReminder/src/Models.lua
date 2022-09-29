@@ -335,7 +335,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '@'
   end
   if self.targetOut then
-    return '~'
+    return '#'
   end
   return nil
 end
