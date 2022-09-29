@@ -1,3 +1,6 @@
+3.64
+- Adjusted the policy added in v3.61 to always ignore new stack count not from 1 in spite of when it happens.
+
 3.63
 - Filtered ground actions that have not got effects yet i.e. Scalding Rune should not get a timer before confirmation.  
 

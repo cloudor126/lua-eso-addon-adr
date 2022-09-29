@@ -705,7 +705,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if not self.stackEffect then
     canAdd = true
     -- filter sudden big stack at action beginning
-    if GetGameTimeMilliseconds()-self.startTime < 1000 and stackCount>=2 then
+    if stackCount>=2 then
       canAdd = false
     end
   elseif self.stackEffect.ability.id == effect.ability.id then
