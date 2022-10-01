@@ -289,6 +289,10 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
         action.flags.forArea = true
         action.flags.forEnemy = false
       end
+      if a.ability.id ~= action.ability.id then
+        -- this a kind of mutable skill for target i.e. werewolf Brutal Pounce <-> Brutal Carnage
+        return a
+      end
       -- don't replace enemy actions, so that they can be traced seperately
       if action.flags.forEnemy then return nil end
 
