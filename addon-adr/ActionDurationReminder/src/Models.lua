@@ -492,7 +492,8 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
       end
     end
     -- filter old effects at new action beginning
-    if effect.startTime < self.startTime and GetGameTimeMilliseconds()-self.startTime< 500 then
+    if effect.startTime+1000 -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc
+     < self.startTime and GetGameTimeMilliseconds()-self.startTime< 500 then
       ignored = true
     end
 
