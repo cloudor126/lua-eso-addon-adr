@@ -2,14 +2,26 @@
 --        vars
 --========================================
 local addon = ActionDurationReminder -- Addon#M
-local m = {} -- #M
+local l = {} -- #L
+local m = {l=l} -- #M
 local mAction = {} -- #Action
 local mAbility = {} -- #Ability
 local mEffect = {} -- #Effect
 
+-- /script ActionDurationReminder.debugLevels.model=2
+-- /script ActionDurationReminder.debugLevels.all=2
+
+local DS_MODEL = "model" -- debug switch for model
+local DS_ALL = "all" -- debug switch for all
+
+
+
 local SPECIAL_DURATION_PATCH = {
   ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
 }
+
+
+
 
 local fRefinePath -- #(#string:path)->(#string)
 = function(path)
@@ -37,6 +49,20 @@ local fStripBracket -- #(#string:origin,#boolean:zh)->(#string)
     return origin:gsub("^%s*([^<]+)%s*<.*$","%1",1)
   else
     return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
+  end
+end
+
+--========================================
+--        l
+--========================================
+l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
+=function(switch, level)
+  return function(format, ...)
+    if (addon.debugLevels[switch] and addon.debugLevels[switch]>=level) or
+      (addon.debugLevels[DS_ALL] and addon.debugLevels[DS_ALL]>=level)
+    then
+      d(os.date()..'>', string.format(format, ...))
+    end
   end
 end
 
@@ -243,11 +269,13 @@ end
 
 mAction.getFlagsInfo -- #(#Action:self)->(#string)
 = function(self)
-  return string.format('forArea:%s,forGround:%s,forSelf:%s,forTank:%s',
+  return string.format('forArea:%s,forGround:%s,forSelf:%s,forTank:%s,forEnemy:%s',
     tostring(self.flags.forArea),
     tostring(self.flags.forGround),
     tostring(self.flags.forSelf),
-    tostring(self.flags.forTank))
+    tostring(self.flags.forTank),
+    tostring(self.flags.forEnemy)
+    )
 end
 
 mAction.getNewest -- #(#Action:self)->(#Action)
@@ -373,6 +401,8 @@ mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
   return self.duration==0 and optEffect and optEffect.duration==0 and self.stackCount>0
+    -- should not remove newly created covering action
+    or (self.oldAction and not optEffect and #self.effectList>0 and GetGameTimeMilliseconds()-self.startTime<1000)
 end
 
 mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#boolean)
@@ -471,6 +501,10 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
       return true
     end
   end
+  -- 3 stack effect
+  if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and (self.stackEffect.unitId== effect.unitId or effect.unitId==0) then
+    return true
+  end
   return false
 end
 
@@ -492,8 +526,8 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
       end
     end
     -- filter old effects at new action beginning
-    if effect.startTime+1000 -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc
-     < self.startTime and GetGameTimeMilliseconds()-self.startTime< 500 then
+    if effect.startTime+1000 < self.startTime -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc may have happened in 1000ms
+      and GetGameTimeMilliseconds()-self.startTime< 500 then
       ignored = true
     end
 
@@ -620,10 +654,16 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local oldEffect = effect -- #Effect
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
+      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d ", e.ability:toLogString(), e.duration/1000,e.stackCount)
       table.remove(self.effectList,i)
       oldEffect = e -- we need duration info to end action
       break
     end
+  end
+  if not oldEffect and self.stackEffect
+    and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
+    oldEffect = self.stackEffect
+    self.stackEffect = nil
   end
   local now = GetGameTimeMilliseconds()
   local availableEffectCount = 0
@@ -641,13 +681,17 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
     )
   then
-    self.endTime =now
+    self.endTime = now
   end
   return oldEffect
 end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
+  -- ignore pure stack effect
+  if effect.stackCount>0 and effect.duration==0 then
+    return
+  end
   -- ignore abnormal long duration effect
   if self.duration and self.duration >=10000
     and effect.duration > self.duration * 1.5
@@ -702,12 +746,17 @@ end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
+  l.debug(DS_MODEL,1)('[m.us]before %s@%.2f stackCount set to %d, %d effect(s) existed',self.ability:toLogString(), self.startTime, stackCount, #self.effectList);
+  for key, var in ipairs(self.effectList) do
+    l.debug(DS_MODEL,1)('--- %s with duration %d, stackCount is %d', var.ability:toLogString(), var.duration, var.stackCount);
+  end
   local canAdd = false
   if not self.stackEffect then
     canAdd = true
     -- filter sudden big stack at action beginning
-    if stackCount>=2
-      and not self.fake -- fake actions are always newly created and without an old stack effect
+    if stackCount>=2 -- filter sudden stack like Stone Giant
+      and GetGameTimeMilliseconds()-self.startTime<500 -- can add after started a while
+      and not self.fake -- fake actions can add stack directly
     then
       canAdd = false
     end

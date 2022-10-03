@@ -1,3 +1,6 @@
+3.69
+- Imporved overiding actions matching policy i.e. Grim Focus and its morphs now can be traced properly.
+
 3.68
 - Improved enemy target action matching policy for mutable skills i.e. effects of werewolf Brutal Pounce and Brutal Carnage should be merged to show together.
 

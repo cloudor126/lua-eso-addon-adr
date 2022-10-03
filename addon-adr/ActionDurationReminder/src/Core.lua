@@ -294,11 +294,18 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
         return a
       end
       -- don't replace enemy actions, so that they can be traced seperately
-      if action.flags.forEnemy then return nil end
-
+      if action.flags.forEnemy then
+        if not a.flags.forEnemy then
+          -- also replace flags, i.e. Assassin Will targets enemy but previous Grim Focus targets self
+          action.flags = a.flags
+        else
+          return nil
+        end
+      end
       return a
     end
   end
+  l.debug(DS_ACTION,1)('[aM:none]')
   return nil
 end
 
@@ -326,7 +333,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   l.queueAction(action)
   -- 5. replace saved
   if not action.flags.forGround then
-    local sameNameAction = l.getActionByNewAction(action)
+    local sameNameAction = l.getActionByNewAction(action) -- Models#Action
     if sameNameAction and sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
       l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
@@ -490,8 +497,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       l.timeActionMap[oldEffect.startTime] = nil
       if stackInfoUpdated then
         l.debug(DS_ACTION,1)('[cs] purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
-        if action:getEndTime() <= now+20 and action:getStartTime()>now-500 then  -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
-          l.debug(DS_ACTION,1)('[P]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime())
+        if action:getEndTime() <= now+20 and action:getStartTime()>now-500   -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
+          and not action.oldAction -- check those with old action i.e. Assassin Will replacing Merciless Resolve
+        then
+          l.debug(DS_ACTION,1)('[P]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
           l.removeAction(action)
         end
       else
@@ -730,7 +739,8 @@ l.refineActions -- #()->()
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
     if endTime < (action.fake and now or endLimit) then
-      l.debug(DS_ACTION,1)('[dr]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
+      l.debug(DS_ACTION,1)('[dr]%s@%.2f~%.2f, endTime:%d, endLimit:%d', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000,
+        endTime, endLimit)
       l.removeAction(action)
       local gallopEffect = action:optGallopEffect()
       if gallopEffect and gallopEffect.endTime > now then l.gallopAction = action end
@@ -789,8 +799,12 @@ l.saveAction -- #(Models#Action:action)->()
     end
     return count
   end
-  l.debug(DS_ACTION,1)('[s]%s@%.2f,idActionMap(%i),timeActionMap(%i)', action.ability:toLogString(), action.startTime/1000,
-    len(l.idActionMap),len(l.timeActionMap))
+  l.debug(DS_ACTION,1)('[s]%s@%.2f,idActionMap(%i),timeActionMap(%i),#effectList:%d', action.ability:toLogString(), action.startTime/1000,
+    len(l.idActionMap),len(l.timeActionMap), #action.effectList)
+  for key, effect in ipairs(action.effectList) do
+    l.debug(DS_ACTION,1)('[+--e:]%s, %.2f~%.2f<%d>, stack:%d, unitId:%d', effect.ability:toLogString(),effect.startTime/1000, effect.endTime/1000,
+      effect.duration/1000, effect.stackCount, effect.unitId)
+  end
 end
 
 l.getActionBySlot --#(#number:weaponPairIndex, #number:slotNum)->(Models#Action)
