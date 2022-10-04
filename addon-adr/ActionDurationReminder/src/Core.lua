@@ -289,18 +289,18 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
         action.flags.forArea = true
         action.flags.forEnemy = false
       end
+      -- also replace flags, i.e. Assassin Will targets enemy but previous Grim Focus targets self
+      if not a.flags.forEnemy and action.flags.forEnemy then
+        action.flags = a.flags
+      end
+
+      -- this a kind of mutable skill for target i.e. werewolf Brutal Pounce <-> Brutal Carnage
       if a.ability.id ~= action.ability.id then
-        -- this a kind of mutable skill for target i.e. werewolf Brutal Pounce <-> Brutal Carnage
         return a
       end
       -- don't replace enemy actions, so that they can be traced seperately
       if action.flags.forEnemy then
-        if not a.flags.forEnemy then
-          -- also replace flags, i.e. Assassin Will targets enemy but previous Grim Focus targets self
-          action.flags = a.flags
-        else
-          return nil
-        end
+        return nil
       end
       return a
     end
@@ -336,8 +336,9 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
     if sameNameAction and sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
-      l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>', sameNameAction.ability:toLogString(),
-        sameNameAction.startTime/1000,  action:getFlagsInfo(), action:getStartTime()/1000, action:getEndTime()/1000)
+      l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>, \nnewFlags:\n%s', sameNameAction.ability:toLogString(),
+        sameNameAction.startTime/1000,  sameNameAction:getFlagsInfo(),
+        sameNameAction:getStartTime()/1000, sameNameAction:getEndTime()/1000, action:getFlagsInfo())
       sameNameAction.newAction = action
       action.effectList = sameNameAction.effectList
       for key, var in ipairs(action.effectList) do

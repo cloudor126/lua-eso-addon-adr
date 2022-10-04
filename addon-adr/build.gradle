@@ -70,6 +70,7 @@ task upload {
             '-F', "compatible=$addonCompatible",
             '-F', "changelog=$changelog",
             '-F', "\"updatefile=@${distZip.archiveFile.get().asFile.absolutePath}\"",
+            //'--resolve', 'api.esoui.com:443:104.25.180.72',
             'https://api.esoui.com/addons/update']
                    .execute()
         proc.consumeProcessOutput(System.out, System.err)
