@@ -275,7 +275,7 @@ mAction.getFlagsInfo -- #(#Action:self)->(#string)
     tostring(self.flags.forSelf),
     tostring(self.flags.forTank),
     tostring(self.flags.forEnemy)
-    )
+  )
 end
 
 mAction.getNewest -- #(#Action:self)->(#Action)
@@ -466,8 +466,15 @@ end
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 1. taunt
-  if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
-    return true
+  if effect.ability.icon:find('quest_shield_001',18,true) then
+    -- a tank skill can taunt
+    if self.flags.forTank then 
+      return true
+    end
+    -- Frost Clench can taunt
+    if self.ability.icon:find('destructionstaff_005_a',18,true) then
+      return true
+    end
   end
   -- 2. fast check already matched effects
   local strict = effect.startTime > self.startTime + self.castTime + 2000
