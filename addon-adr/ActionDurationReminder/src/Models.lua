@@ -145,6 +145,9 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   local forGround = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_GROUND)
   local forSelf = target== GetString(SI_ABILITY_TOOLTIP_RANGE_SELF) or radius==500 or target=='自己' --[[汉化组修正翻译前的补丁]]
   local forTank = GetAbilityRoles(action.ability.id)
+    -- Frost Clench can taunt
+    or action.ability.icon:find('destructionstaff_005_a',18,true)
+
   ---
   --@type ActionFlags
   action.flags
@@ -465,16 +468,9 @@ end
 
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
-  -- 1. taunt
-  if effect.ability.icon:find('quest_shield_001',18,true) then
-    -- a tank skill can taunt
-    if self.flags.forTank then 
-      return true
-    end
-    -- Frost Clench can taunt
-    if self.ability.icon:find('destructionstaff_005_a',18,true) then
-      return true
-    end
+  -- 1. tank skills can taunt
+  if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
+    return true
   end
   -- 2. fast check already matched effects
   local strict = effect.startTime > self.startTime + self.castTime + 2000

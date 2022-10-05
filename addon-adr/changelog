@@ -1,5 +1,5 @@
-3.70
-- Added matching policy for Taunt with Frost Clench.
+3.70a
+- Patched Frost Clench to be marked as a tank-role skill thus taunt effect can be traced by this skill.
 
 3.69a
 - Imporved overiding actions matching policy i.e. Grim Focus and its morphs now can be traced properly.
