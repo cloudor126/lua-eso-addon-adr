@@ -81,7 +81,11 @@ l.onCoreUpdate -- #()->()
     local widget = l.mainBarWidgetMap[slotNum]
     local abilityId = GetSlotBoundId(slotNum)
     local action = core.getActionBySlot(weaponPairIndex,slotNum)
-    if action and not action:matchesAbilityName(GetSlotName(slotNum)) then action = nil end -- check this position action
+    if action
+      -- check this position action
+      and not action:matchesAbilityIcon(GetSlotTexture(slotNum))
+      and not action:matchesAbilityName(GetSlotName(slotNum))
+    then action = nil end
     if not action then action = core.getActionByAbilityId(abilityId) end
     if action then
       action.flags.isShifted = false

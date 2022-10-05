@@ -71,6 +71,7 @@ end
 --========================================
 m.cacheOfActionMatchingEffect = {} -- #map<#string:#boolean>
 m.cacheOfActionMatchingAbilityName = {} -- #map<#string:#boolean>
+m.cacheOfActionMatchingAbilityIcon = {} -- #map<#string:#boolean>
 m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
 = function(id, name, icon)
   local ability = {} -- #Ability
@@ -425,6 +426,36 @@ mAction.matchesAbilityId -- #(#Action:self,#string:abilityId)->(#boolean)
   for key, var in ipairs(self.relatedAbilityList) do
     if var.id == abilityId then return true end
   end
+end
+
+mAction.matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:strict)->(#boolean)
+= function(self, abilityIcon, strict)
+  local key = self.ability.id..'/'..abilityIcon..'/'..(strict and 'y' or 'n')
+  local value = m.cacheOfActionMatchingAbilityIcon[key]
+  if value~=nil then return value end
+  value = self:_matchesAbilityIcon(abilityIcon,strict)
+  m.cacheOfActionMatchingAbilityIcon[key] = value
+  return value
+end
+mAction._matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:strict)->(#boolean)
+= function(self, abilityIcon, strict)
+  local stripIcon -- #(#string:icon)->(#string)
+  = function(icon)
+    return icon:gsub("^(.+%d+).+","%1",1)
+  end
+  local m -- #(#Ability:a)->(#boolean)
+  = function(a)
+    return (a.icon and abilityIcon:find(stripIcon(a.icon),1,true))
+      or (a.icon2 and abilityIcon:find(stripIcon(a.icon2),1, true))
+  end
+  if m(self.ability) then
+    return true
+  end
+  -- i.e. Merciless Resolve can match Assissin's Will action by its related ability list
+  for key, var in ipairs(self.relatedAbilityList) do
+    if m(var) then return true end
+  end
+  return false
 end
 
 mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
