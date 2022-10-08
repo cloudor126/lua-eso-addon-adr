@@ -1,3 +1,6 @@
+3.72
+- Added a secondary stack label at topleft corner i.e. Stone Giant now has both stagger count hint and debris count hint.
+
 3.71
 - Optimized bar matching policy to be bug-tolerant with German translation in necro Stalking Blastbones.
 (When skeleton is up, there's an extra 'r' in the german slot name) 

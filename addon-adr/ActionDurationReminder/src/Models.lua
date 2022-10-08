@@ -171,7 +171,9 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.data = {} -- #table to store data in
   action.effectList = {} -- #list<#Effect>
   action.stackCount = 0
+  action.stackCount2 = 0
   action.stackEffect = nil -- #Effect
+  action.stackEffect2 = nil -- #Effect
   action.targetId = nil --#number
   setmetatable(action,{__index=mAction})
   return action
@@ -539,6 +541,9 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and (self.stackEffect.unitId== effect.unitId or effect.unitId==0) then
     return true
   end
+  if self.stackEffect2 and self.stackEffect2.ability.id == effect.ability.id and (self.stackEffect2.unitId== effect.unitId or effect.unitId==0) then
+    return true
+  end
   return false
 end
 
@@ -694,10 +699,13 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
       break
     end
   end
-  if not oldEffect and self.stackEffect
-    and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
+  if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
     oldEffect = self.stackEffect
     self.stackEffect = nil
+  end
+  if self.stackEffect2 and self.stackEffect2.ability.id == effect.ability.id and self.stackEffect2.unitId==effect.unitId then
+    oldEffect = self.stackEffect2
+    self.stackEffect2 = nil
   end
   local now = GetGameTimeMilliseconds()
   local availableEffectCount = 0
@@ -722,7 +730,7 @@ end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
-  -- ignore pure stack effect
+  -- ignore pure stack effect, they should have been saved using updateStackInfo
   if effect.stackCount>0 and effect.duration==0 then
     return
   end
@@ -784,24 +792,32 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   for key, var in ipairs(self.effectList) do
     l.debug(DS_MODEL,1)('--- %s with duration %d, stackCount is %d', var.ability:toLogString(), var.duration, var.stackCount);
   end
-  local canAdd = false
+  local addType = 0
   if not self.stackEffect then
-    canAdd = true
+    addType = 1
     -- filter sudden big stack at action beginning
     if stackCount>=2 -- filter sudden stack like Stone Giant
-      and GetGameTimeMilliseconds()-self.startTime<500 -- can add after started a while
-      and not self.fake -- fake actions can add stack directly
+      and GetGameTimeMilliseconds()-self.startTime<500 -- in the beginning
+      and not self.fake -- not for fake actions
     then
-      canAdd = false
+      addType = 2
+      if self.stackEffect2 and self.stackEffect2.ability.id~= effect.ability.id then
+        addType = 0
+        l.debug(DS_MODEL,1)('[m.us.f] old stackEffect2 %s existed, ingore new one. ',self.stackEffect2.ability:toLogString());
+      end
     end
   elseif self.stackEffect.ability.id == effect.ability.id then
-    canAdd = true
-    --  else
-    --    df('old id is %d, new is %d', self.stackEffect.ability.id, effect.ability.id)
+    addType = 1
+  elseif not self.stackEffect2 or self.stackEffect2.ability.id == effect.ability.id then
+    addType = 2
   end
-  if canAdd then
+  if addType == 1 then
     self.stackCount = stackCount
     self.stackEffect = effect
+    return true
+  elseif addType == 2 then
+    self.stackCount2 = stackCount
+    self.stackEffect2 = effect
     return true
   end
 

@@ -113,6 +113,15 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
+  local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
+  inst.stackLabel2 = stackLabel2 --LabelControl#LabelControl
+  stackLabel2:SetFont(l.getStackLabelFont())
+  stackLabel2:SetColor(1,1,1)
+  stackLabel2:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+  stackLabel2:SetVerticalAlignment(TEXT_ALIGN_TOP)
+  stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+  stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 2, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
+  
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cooldown.shifted = shifted
   inst.cdMark = 0
@@ -140,6 +149,7 @@ m.updateWidgetFont -- #(#Widget:widget)->()
 = function(widget)
   if widget.label then widget.label:SetFont(l.getLabelFont()) end
   if widget.stackLabel then widget.stackLabel:SetFont(l.getStackLabelFont()) end
+  if widget.stackLabel2 then widget.stackLabel2:SetFont(l.getStackLabelFont()) end
 end
 
 m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
@@ -180,6 +190,11 @@ m.updateWidgetStackLabelYOffset -- #(#Widget:widget)->()
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()
     widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0,
+      widget.shifted and (- l.getSavedVars().barStackLabelYOffsetInShift - 5) or (- l.getSavedVars().barStackLabelYOffset - 5))
+  end
+  if widget.stackLabel2 then
+    widget.stackLabel2:ClearAnchors()
+    widget.stackLabel2:SetAnchor(TOPLEFT, widget.stackLabel2:GetParent(), TOPLEFT, 2,
       widget.shifted and (- l.getSavedVars().barStackLabelYOffsetInShift - 5) or (- l.getSavedVars().barStackLabelYOffset - 5))
   end
 end
@@ -368,6 +383,7 @@ mWidget.hide  -- #(#Widget:self)->()
   if self.background then self.background:SetHidden(true) end
   self.label:SetHidden(true)
   self.stackLabel:SetHidden(true)
+  self.stackLabel2:SetHidden(true)
   self.cooldown:setHidden(true)
   self.visible = false
 end
@@ -407,6 +423,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   end
   -- stack label
   if l.getSavedVars().barStackLabelEnabled then
+    -- stackLabel
     if action.stackCount and action.stackCount > 0 then
       self.stackLabel:SetText(action.stackCount)
       self.stackLabel:SetHidden(false)
@@ -416,8 +433,16 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
     else
       self.stackLabel:SetHidden(true)
     end
+    -- stackLabel2
+    if action.stackCount2 and action.stackCount2 > 0 then
+      self.stackLabel2:SetText(action.stackCount2)
+      self.stackLabel2:SetHidden(false)
+    else
+      self.stackLabel2:SetHidden(true)
+    end
   else
     self.stackLabel:SetHidden(true)
+    self.stackLabel2:SetHidden(true)
   end
   -- cooldown
   local cdMark = endTime
@@ -468,6 +493,7 @@ mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
   self.label:SetHidden(true)
   -- stack label
   self.stackLabel:SetHidden(true)
+  self.stackLabel2:SetHidden(true)
   -- cooldown
   self.cooldown:setHidden(true)
 end
