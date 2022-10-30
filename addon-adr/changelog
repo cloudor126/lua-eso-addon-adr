@@ -1,3 +1,6 @@
+3.73
+- Pathed alert keyword filtering list to also support ability id like keyword filtering in core module.
+
 3.72
 - Added a secondary stack label at topleft corner i.e. Stone Giant now has both stagger count hint and debris count hint.
 
