@@ -12,6 +12,7 @@ local m = {l=l} -- #M
 -- /script ActionDurationReminder.debugLevels.action=2
 -- /script ActionDurationReminder.debugLevels.effect=2
 -- /script ActionDurationReminder.debugLevels.target=2
+-- /script ActionDurationReminder.debugLevels.all=3
 -- /script ActionDurationReminder.debugLevels.all=2
 
 local DS_ACTION = "action" -- debug switch for action
@@ -410,13 +411,18 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     powerType
   )
   for key, action in pairs(l.actionQueue) do
-    if action.ability.id == abilityId and now-action.startTime<2000
+    if not action.saved
+      and (action.ability.id == abilityId or action.ability.name == abilityName)
       and action.duration > l.getSavedVars().coreMinimumDurationSeconds
-      and action.flags.forArea
+      and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround )
     then
       action.startTime = now
       action.endTime = now+action.duration
       l.saveAction(action)
+      if action.flags.forGround then
+        -- record this to mark next effect as activated one
+        action.groundFirstEffectId = -1
+      end
     end
   end
 end

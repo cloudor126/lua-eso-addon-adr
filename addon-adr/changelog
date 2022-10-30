@@ -1,3 +1,6 @@
+3.74
+- Improved ground action starting recognition i.e. Lightweight Beast Trap can be counted even when not triggered.
+
 3.73
 - Pathed alert keyword filtering list to also support ability id like keyword filtering in core module.
 

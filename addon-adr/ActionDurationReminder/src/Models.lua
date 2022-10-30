@@ -780,7 +780,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     self.targetId = effect.unitId
   end
   -- record first ground effect id for triggering recognition
-  if #self.effectList == 1 and self.flags.forGround then
+  if #self.effectList == 1 and self.flags.forGround and self.groundFirstEffectId~=-1 then
     self.groundFirstEffectId = effect.ability.id -- #number
   end
   return nil
