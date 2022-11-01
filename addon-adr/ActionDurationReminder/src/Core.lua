@@ -393,8 +393,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
-  if result ~= 2240 and result ~= 2245 then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
-  if l.idActionMap[abilityId] then return end
+  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
   local now = GetGameTimeMilliseconds()
   l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
     abilityName,
@@ -418,12 +417,11 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     then
       action.startTime = now
       action.endTime = now+action.duration
-      l.saveAction(action)
       if action.flags.forGround then
         -- record this to mark next effect as activated one
         action.groundFirstEffectId = -1
       end
-    end
+      l.saveAction(action)    end
   end
 end
 

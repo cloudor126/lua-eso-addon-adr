@@ -1,3 +1,6 @@
+3.75
+- Added some restrictions for ground action trigerring i.e. Caltrops and Winter's Revenge won't show trigerring mark again. 
+
 3.74
 - Improved ground action starting recognition i.e. Lightweight Beast Trap can be counted even when not triggered.
 

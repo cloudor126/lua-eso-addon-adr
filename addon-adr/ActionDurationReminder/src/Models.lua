@@ -359,8 +359,9 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     not self.flags.forGround and  optEffect.startTime-self.startTime>1500
     )or
     (
-    -- triggered after first ground effect
+    -- triggered after first ground effect and delay
     self.flags.forGround and optEffect.ability.id ~= self.groundFirstEffectId
+    and  optEffect.startTime-self.startTime>900
     )
     )
     and optEffect.duration%1000==0 -- with whole seconds duration
@@ -780,7 +781,8 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     self.targetId = effect.unitId
   end
   -- record first ground effect id for triggering recognition
-  if #self.effectList == 1 and self.flags.forGround and self.groundFirstEffectId~=-1 then
+  if #self.effectList == 1 and self.flags.forGround 
+    and (self.groundFirstEffectId~=-1 or self.ability.id==effect.ability.id)then
     self.groundFirstEffectId = effect.ability.id -- #number
   end
   return nil
