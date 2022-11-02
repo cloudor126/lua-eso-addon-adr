@@ -32,6 +32,7 @@ put("Patterns of Black List in line","技能黑名单(关键字或ID，每个一
 put("Patterns of White List in line","技能白名单(关键字或ID，每个一行)")
 put("Popup Alert","弹出警示")
 put("Remove When Cast Again","再次施放技能时移除")
+put("Reset Alert Frame","重置警示位置")
 put("Seconds of Ignorable Short Timers","可以忽略的短计时秒数")
 put("Seconds to Keep Timers After Timeout","计时超时后保留的秒数")
 put("Seconds to Show","显示保持的秒数")
