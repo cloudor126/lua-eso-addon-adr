@@ -284,6 +284,17 @@ mAction.getFlagsInfo -- #(#Action:self)->(#string)
   )
 end
 
+mAction.getMaxOriginEffectDuration -- #(#Action:self)->(#number)
+= function(self)
+  local max = self.duration -- #number
+  for key, var in ipairs(self.effectList) do
+    if math.abs(var.startTime - self.startTime)<500 then
+      max = math.max(max,var.duration)
+    end
+  end
+  return max
+end
+
 mAction.getNewest -- #(#Action:self)->(#Action)
 = function(self)
   local walker = self
@@ -322,6 +333,13 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     self.data.firstStageId = optEffect.ability.id
     return '1/2'
   end
+  -- 1/2 by same start, same duration but with another long buff
+  if math.abs(optEffect.startTime-self.startTime)< 500
+    and optEffect.duration== self.duration
+    and optEffect.duration * 3 < self:getMaxOriginEffectDuration() * 2 then
+    self.data.firstStageId = optEffect.ability.id
+    return '1/2'
+  end
   -- 1/2 by normal effect with long duration effect present
   local longDurationEffect = self:peekLongDurationEffect() -- #Effect
   if self.flags.forArea
@@ -332,22 +350,36 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '1/2'
   end
   if self.data.firstStageId and self.data.firstStageId ~= optEffect.ability.id then
-    -- 2/2 by same end
-    if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
-      -- 40%~80% duration
-      if optEffect.duration*5 > self.duration *2 and
-        optEffect.duration*5 < self.duration *4 then
+    -- 2/2 by cache
+    if self.data.secondStageId == optEffect.ability.id then
+      return '2/2'
+    end
+    if not self.data.secondStageId then
+      -- 2/2 by same end
+      if math.abs(optEffect.endTime-self.startTime-self.duration)<700 then
+        -- 40%~80% duration
+        if optEffect.duration*5 > self.duration *2 and
+          optEffect.duration*5 < self.duration *4 then
+          self.data.secondStageId = optEffect.ability.id
+          return '2/2'
+        end
+      end
+      -- 2/2 by normal effect with firstStagedId and without long duration effect present
+      if self.flags.forArea and not longDurationEffect
+      then
+        self.data.secondStageId = optEffect.ability.id
         return '2/2'
       end
-    end
-    -- 2/2 by normal effect with firstStagedId and without long duration effect present
-    if self.flags.forArea and not longDurationEffect
-    then
-      return '2/2'
-    end
-    -- 2/2 by non-action duration, e.g. Pierce Armor with Master 1H-1S
-    if self.duration == 0 then
-      return '2/2'
+      -- 2/2 by non-action duration, e.g. Pierce Armor with Master 1H-1S
+      if self.duration == 0 then
+        self.data.secondStageId = optEffect.ability.id
+        return '2/2'
+      end
+      -- 2/2 by duration longer than action's e.g. 5s Resolving Vigor has a 20s Minor Resolve 
+      if self.duration< optEffect.duration then
+        self.data.secondStageId = optEffect.ability.id
+        return '2/2'
+      end
     end
   end
   -- activated stage e.g. Beast Trap and Scalding Rune
@@ -653,9 +685,12 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   local p11,p12 = getPriority(effect1)
   local p21,p22 = getPriority(effect2)
   if p11~=p21 then
-    local majorEffect = p11>p21 and effect1 or effect2
-    local minorEffect = p11>p21 and effect2 or effect1
-    minorEffect.ignored = true -- widen its scope if major fades earlier
+    local majorEffect = p11>p21 and effect1 or effect2 -- #Effect
+    local minorEffect = p11>p21 and effect2 or effect1 -- #Effect
+    -- we ignore minor effect unless they start at the beginning
+    if math.abs(minorEffect.startTime - self.startTime) > 300 then
+      minorEffect.ignored = true
+    end
     return majorEffect
   end
   if p12~=p22 then
@@ -781,7 +816,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     self.targetId = effect.unitId
   end
   -- record first ground effect id for triggering recognition
-  if #self.effectList == 1 and self.flags.forGround 
+  if #self.effectList == 1 and self.flags.forGround
     and (self.groundFirstEffectId~=-1 or self.ability.id==effect.ability.id)then
     self.groundFirstEffectId = effect.ability.id -- #number
   end

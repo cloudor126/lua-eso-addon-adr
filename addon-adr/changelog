@@ -1,3 +1,7 @@
+3.76
+- Reenabled minor buffs to let more abilities show a 2-stage timer i.e. Bound Aegis and Resolving Vigor can show '1/2' and '2/2' hints. 
+(Users can disable this feature by configuring ability blacklist.)
+
 3.75c
 - Added some restrictions for ground action trigerring i.e. Caltrops and Winter's Revenge won't show trigerring mark again. 
 

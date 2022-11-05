@@ -205,8 +205,8 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
-  -- check if it's a buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
-  if effect.ability.icon:find('ability_buff_m',1,true) then return nil end
+  -- check if it's a major buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
+  if effect.ability.icon:find('ability_buff_ma',1,true) then return nil end
   if effect.ability.icon:find('ability_debuff_offb',1,true) then return nil end
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
