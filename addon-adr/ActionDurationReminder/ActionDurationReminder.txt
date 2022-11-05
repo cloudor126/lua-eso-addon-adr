@@ -3,7 +3,7 @@
 ## Version: @@ADDON_VERSION@@
 ## Description: Remind you time to refresh your actions.
 ## APIVersion: 101036 101037
-## AddOnVersion: 30760
+## AddOnVersion: @@ADDON_VERSION_NO@@
 ## DependsOn: LibAddonMenu-2.0>=34
 ## OptionalDependsOn: ScootworksCombat 
 ## SavedVariables: ADRSV

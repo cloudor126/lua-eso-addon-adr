@@ -375,7 +375,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
         self.data.secondStageId = optEffect.ability.id
         return '2/2'
       end
-      -- 2/2 by duration longer than action's e.g. 5s Resolving Vigor has a 20s Minor Resolve 
+      -- 2/2 by duration longer than action's e.g. 5s Resolving Vigor has a 20s Minor Resolve
       if self.duration< optEffect.duration then
         self.data.secondStageId = optEffect.ability.id
         return '2/2'
@@ -770,6 +770,12 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   if effect.stackCount>0 and effect.duration==0 then
     return
   end
+  -- ignore debuff longer than default duration
+  if self.duration and effect.duration>self.duration
+    and effect.ability.icon:find('ability_debuff_',1,true)
+  then
+    return
+  end
   -- ignore abnormal long duration effect
   if self.duration and self.duration >=10000
     and effect.duration > self.duration * 1.5
@@ -797,9 +803,8 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     end
     effect.endTime = effect.startTime + effect.duration
   end
-  -- TODO temp modify for Unnerving Boneyard skill
+  -- modified for Unnerving Boneyard skill
   if self.ability.icon:find('necromancer_004',1,true) and effect.duration>10000 then
-    --    df('[ADR Debug] Ignored %s(%d)<%d>@%s:%s',effect.ability.name, effect.ability.id, effect.duration, effect.unitTag,effect.ability.icon )
     return
   end
 

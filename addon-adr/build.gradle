@@ -6,21 +6,33 @@ ext.addonName = "ActionDurationReminder"
 ext.addonId = 1536
 ext.addonCompatible = '8.2.5'
 file('changelog').withReader{reader->
-    def m = reader.readLine() =~ /\d+(\.\w+)+/
-    ext.addonVersion = m? m[0][0] : 'SNAPSHOT'
+    def m = reader.readLine() =~ /(\d+)(\.\w+)+/
+    if(m){
+        def ver = m[0][0]
+        ext.addonVersion = ver
+        ver = ver.replaceAll('a','.1').replaceAll('b','.2').replaceAll('c','.3')
+        def verNo = m[0][1].padLeft(2,'0')
+        def mm = ver=~ /\.(\w+)/
+            verNo += mm[0][1].padLeft(3,'0')
+            verNo += mm.size() ==2? mm[1][1] :''
+        ext.addonVersionNumber = verNo.padRight(6,'0')
+    }else{
+        ext.addonVersion = 'SNAPSHOT'
+        ext.addonVersionNumber = '000000'
+    }
 }
 
 CopySpec mainContents = copySpec {
-	filteringCharset = 'iso8859-1'
+    filteringCharset = 'iso8859-1'
     from (addonName){
-    	exclude '**/*.dds'
-    	 filter{
-        	it.replaceAll('@@ADDON_VERSION@@',addonVersion)
-    	}
+        exclude '**/*.dds'
+         filter{
+            it.replaceAll('@@ADDON_VERSION@@',addonVersion).replaceAll('@@ADDON_VERSION_NO@@',addonVersionNumber)
+        }
     }
-   	from (addonName){
-   		include '**/*.dds'
-   	}
+    from (addonName){
+        include '**/*.dds'
+    }
 }
 
 distTar.enabled = false

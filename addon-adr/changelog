@@ -1,3 +1,6 @@
+3.77
+- Disabled debuffs longer than action default duration i.e. Minor Breach would not be tracked with templar's Power of the Light.
+
 3.76
 - Reenabled minor buffs to let more abilities show a 2-stage timer i.e. Bound Aegis and Resolving Vigor can show '1/2' and '2/2' hints. 
 (Users can disable this feature by configuring ability blacklist.)
