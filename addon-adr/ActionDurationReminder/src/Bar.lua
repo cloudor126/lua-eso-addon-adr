@@ -292,7 +292,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           type = "slider",
           name = text("Shift Bar Scale(%)"),
           --tooltip = "",
-          min = 40, max = 200, step = 10,
+          min = 40, max = 100, step = 10,
           getFunc = function() return l.getSavedVars().barShowShiftScalePercent end,
           setFunc = function(value) l.getSavedVars().barShowShiftScalePercent = value ; l.updateWidgets(views.updateWidgetShiftScalePercent) end, -- TODO
           width = "full",
