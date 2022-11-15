@@ -1,3 +1,6 @@
+3.78
+- Prevented action to popup alert when it still has another longer counter but with a lower priority. 
+
 3.77
 - Disabled debuffs longer than action default duration i.e. Minor Breach would not be tracked with templar's Power of the Light.
 

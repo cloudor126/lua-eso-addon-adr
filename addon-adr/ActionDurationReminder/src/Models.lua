@@ -273,6 +273,20 @@ mAction.getEndTime -- #(#Action:self)->(#number)
   return self.startTime
 end
 
+mAction.getFullEndTime -- #(#Action:self)->(#number)
+= function(self)
+  local endTime = 0;
+  for key, var in ipairs(self.effectList) do
+    if not var.ignored then
+      endTime = math.max(endTime,var.endTime)
+    end
+  end
+  if endTime >0 then return endTime end
+  if self.endTime>0 then return self.endTime end
+  if self.descriptionDuration and self.descriptionDuration>0 then return self.startTime+self.descriptionDuration end
+  return self.startTime
+end
+
 mAction.getFlagsInfo -- #(#Action:self)->(#string)
 = function(self)
   return string.format('forArea:%s,forGround:%s,forSelf:%s,forTank:%s,forEnemy:%s',

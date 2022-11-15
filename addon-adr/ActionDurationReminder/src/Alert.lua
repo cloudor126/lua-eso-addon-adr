@@ -116,7 +116,7 @@ l.checkAction --#(Models#Action:action)->()
   -- check action alerted
   if action.data.alerted then return end
   -- check action just override without new effects
-  if action:getEndTime()-action.startTime < 3000 then return end
+  if action:getFullEndTime()-action.startTime < 3000 then return end
   if action:getStageInfo() == '1/2' then return end
 
   --
@@ -130,7 +130,7 @@ l.checkAction --#(Models#Action:action)->()
     aheadTime = action:getDuration()
   end
   if onlyShowAfterTimeout then aheadTime = 0 end
-  if action:getEndTime() - aheadTime < GetGameTimeMilliseconds() then
+  if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
     action.data.alerted = true
     local showAbility = action.ability
     if showAbility.id ~= GetSlotBoundId(action.slotNum, HOTBAR_CATEGORY_PRIMARY) then
