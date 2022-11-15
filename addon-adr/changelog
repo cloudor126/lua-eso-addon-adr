@@ -1,3 +1,7 @@
+3.79
+- Allowed debuff timers to track if they are no more than the skill's duration.
+- Added an option to choose whether ignore debuff timers if they are longer than the skill's duration (default:true).
+
 3.78
 - Prevented action to popup alert when it still has another longer counter but with a lower priority. 
 

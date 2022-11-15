@@ -189,6 +189,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.endTime = endTime -- #number
   effect.duration = endTime-startTime -- #number
   effect.ignored = false -- #boolean
+  effect.ignorableDebuff = false -- #boolean
   effect.stackCount = stackCount -- #number
   setmetatable(effect,{__index=mEffect})
   return effect
@@ -267,7 +268,13 @@ end
 mAction.getEndTime -- #(#Action:self)->(#number)
 = function(self)
   local optEffect = self:optEffect() -- #Effect
-  if optEffect then return optEffect.endTime end
+  if optEffect then
+    if optEffect.ignorableDebuff and optEffect.endTime> self.endTime and self.endTime>GetGameTimeMilliseconds() then
+      self.data.firstStageId = self.ability.id
+      return self.endTime
+    end
+    return optEffect.endTime
+  end
   if self.endTime>0 then return self.endTime end
   if self.descriptionDuration and self.descriptionDuration>0 then return self.startTime+self.descriptionDuration end
   return self.startTime
@@ -335,7 +342,9 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return nil
   end
   -- 1/2 by firstStageId cache
-  if self.data.firstStageId and self.data.firstStageId == optEffect.ability.id then
+  if self.data.firstStageId and (self.data.firstStageId == optEffect.ability.id
+    -- staged by default duration and a longer debuff
+    or optEffect.ignorableDebuff and self.data.firstStageId==self.ability.id and GetGameTimeMilliseconds()<self.endTime) then
     return '1/2'
   end
   -- 1/2 by same id, same start, >1/5 and <4/7 duration
@@ -780,16 +789,19 @@ end
 
 mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 = function(self, effect)
+  if effect.drop then return end
   -- ignore pure stack effect, they should have been saved using updateStackInfo
   if effect.stackCount>0 and effect.duration==0 then
     return
   end
-  -- ignore debuff longer than default duration
-  if self.duration and effect.duration>self.duration
+
+  -- debuff longer than default duration BUT: people think debuf is usefly i.e. Mass Hysteria
+  if self.duration and self.duration >0 and effect.duration>self.duration
     and effect.ability.icon:find('ability_debuff_',1,true)
   then
-    return
+    effect.ignorableDebuff = true
   end
+
   -- ignore abnormal long duration effect
   if self.duration and self.duration >=10000
     and effect.duration > self.duration * 1.5

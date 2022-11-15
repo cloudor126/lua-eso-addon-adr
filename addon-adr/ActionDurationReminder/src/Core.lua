@@ -27,6 +27,7 @@ local coreSavedVarsDefaults = {
   coreMultipleTargetTrackingWithoutClearing = true,
   coreSecondsBeforeFade = 5,
   coreMinimumDurationSeconds = 2.5,
+  coreIgnoreLongDebuff = true,
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
@@ -552,6 +553,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     local action = l.findActionByNewEffect(effect)
     if action then
+      -- filter debuff if longer than default duration
+      if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
+        and effect.ability.icon:find('ability_debuff_',1,true)
+      then
+        effect.drop = true
+      end
       action:saveEffect(effect)
       -- patches
       -- weird patch
@@ -946,6 +953,14 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreMinimumDurationSeconds,
+        },
+        {
+          type = "checkbox",
+          name = addon.text("Ignore Debuff Timers If Longer Than Skill's"),
+          getFunc = function() return l.getSavedVars().coreIgnoreLongDebuff end,
+          setFunc = function(value) l.getSavedVars().coreIgnoreLongDebuff = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreIgnoreLongDebuff,
         },
         {
           type = "editbox",
