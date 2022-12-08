@@ -164,9 +164,11 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
       l.debug(DS_ACTION,1)('[F?]not found one by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
-  -- try slotted actions
-  local action = l.findBarActionByNewEffect(effect, stacking)
-  if action then return action end
+  -- try slotted actions for non minor buff effects
+  if not effect.ability.icon:find('ability_buff_mi',1,true) then
+    local action = l.findBarActionByNewEffect(effect, stacking)
+    if action then return action end
+  end
   -- not found
   l.debug(DS_ACTION,1)('[?]not found in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
     l.lastEffectAction and l.lastEffectAction.ability.name or 'nil')
