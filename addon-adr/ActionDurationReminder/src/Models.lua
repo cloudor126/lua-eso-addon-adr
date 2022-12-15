@@ -267,7 +267,9 @@ end
 
 mAction.getEndTime -- #(#Action:self)->(#number)
 = function(self)
-  local optEffect = self:optEffect() -- #Effect
+  local optEffect,reason = self:optEffect() -- #Effect
+  reason = reason or 'nil'
+  local now = GetGameTimeMilliseconds()
   if optEffect then
     if optEffect.ignorableDebuff and optEffect.endTime> self.endTime and self.endTime>GetGameTimeMilliseconds() then
       self.data.firstStageId = self.ability.id
@@ -603,26 +605,30 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return false
 end
 
-mAction.optEffect -- #(#Action:self)->(#Effect)
+mAction.optEffect -- #(#Action:self)->(#Effect,#string)
 = function(self)
   local optEffect = nil --#Effect
+  local reason = ''
   for i, effect in ipairs(self.effectList) do
     local ignored = effect.ignored
     -- filter Major Gallop if not mount
     if effect.ability.icon:find("major_gallop",1,true) then
-      if IsMounted() then return effect end
+      if IsMounted() then return effect,'gallop' end
+      reason = reason..'ignored gallop,'
       ignored = true
     end
     -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
     if self.duration > 0 and self.startTime+self.duration-300 <= effect.startTime then
       -- only ignore if this duration is not equal to action duration e.g. warden's Subterrian Assault
       if self.duration ~= effect.duration then
+        reason = reason..'ignored following duration,'
         ignored = true
       end
     end
     -- filter old effects at new action beginning
     if effect.startTime+1000 < self.startTime -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc may have happened in 1000ms
-      and GetGameTimeMilliseconds()-self.startTime< 500 then
+      and GetGameTimeMilliseconds()-self.startTime< 300 then
+      reason = reason..'ignored previous effect temporaly,'
       ignored = true
     end
 
@@ -630,28 +636,29 @@ mAction.optEffect -- #(#Action:self)->(#Effect)
     -- do nothing
     elseif not optEffect then
       optEffect = effect
+      reason = reason..'only one'
     else
-      optEffect = self:optEffectOf(optEffect,effect)
+      optEffect,reason = self:optEffectOf(optEffect,effect)
     end
   end
-  return optEffect
+  return optEffect,reason
 end
 
-mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect)
+mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect,#string)
 = function(self,effect1, effect2)
   -- override long duration
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
-    return effect1:isLongDuration() and effect2 or effect1 -- opt normal duration
+    return effect1:isLongDuration() and effect2 or effect1, "normal prior to long" -- opt normal duration
   end
   -- check 1/2 phase
   if self.data.firstStageId then
-    if self.data.firstStageId == effect1.ability.id then return effect1 end
-    if self.data.firstStageId == effect2.ability.id then return effect2 end
+    if self.data.firstStageId == effect1.ability.id then return effect1,"first stage" end
+    if self.data.firstStageId == effect2.ability.id then return effect2,"first stage" end
   end
   if math.abs(effect1.startTime-effect2.startTime)<500 then
     local isEffect1Bigger = effect1.duration>effect2.duration
     local longEffect = isEffect1Bigger and effect1 or effect2 -- #Effect
-    if self.stackEffect == longEffect then return longEffect end
+    if self.stackEffect == longEffect then return longEffect,'stack effect' end
     local shortDur = isEffect1Bigger and effect2.duration or effect1.duration
     local longDur = isEffect1Bigger and effect1.duration or effect2.duration
     local percent = shortDur*100/longDur
@@ -663,14 +670,14 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
       and not shortIcon:find('expedition',30,true) -- reject expedition buffs as 1/2 stage
     then
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
-      return isEffect1Bigger and effect2 or effect1
+      return isEffect1Bigger and effect2 or effect1,"first stage"
     end
     if longIcon:find('ability_buff_m',30,true) -- for Balance 4s healing and 30s major resolve
       and percent < 15
       and not shortIcon:find('ability_buff_m',30,true)
     then
       self.data.firstStageId = isEffect1Bigger and effect2.ability.id or effect1.ability.id
-      return isEffect1Bigger and effect2 or effect1
+      return isEffect1Bigger and effect2 or effect1, "prior to major/minor buffs"
     end
   end
   -- check priority
@@ -681,8 +688,10 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   = function(effect)
     local px1=0
     local px2=0
-    -- don't opt buffs which are remnant from old acitons
-    if effect.startTime < self.startTime then return -1,-1 end
+    -- don't opt buffs which are remnant from old acitons unless it has same duration with action e.g. Bound Armaments
+    if effect.startTime < self.startTime and effect.duration~=self.duration and effect.duration~=self.inheritDuration then
+      return -1,-1
+    end
     -- don't opt buffs which have difference durations
     if self.duration and self.duration >0 and effect.duration ~= self.duration and effect.ability.icon:find('ability_buff_m',1,true) then return -1,-1 end
     -- opt non-player effect for dps, if not area effect
@@ -692,7 +701,7 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     -- opt player effect for healer, if not area effect, e.g. Regeneration can be applied on player or ally
     if role== LFG_ROLE_HEAL and not self.flags.forArea and effect:isOnPlayer() then px1 =2 end
     -- opt stack effect
-    if px1<2 and effect.duration>3000 and self.stackEffect and effect.ability.id == self.stackEffect.ability.id then px1 = 3 end
+    if px1<2 and effect.duration>=math.max(self.duration,self.inheritDuration) and self.stackEffect and effect.ability.id == self.stackEffect.ability.id then px1 = 3 end
     -- opt same id effect
     if effect.ofActionId or effect.duration== self.duration and effect.ability.id == self.ability.id then
       effect.ofActionId = true
@@ -712,20 +721,24 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     local minorEffect = p11>p21 and effect2 or effect1 -- #Effect
     -- we ignore minor effect unless they start at the beginning
     if math.abs(minorEffect.startTime - self.startTime) > 300 then
+      l.debug(DS_MODEL,1)("[m.ignore] %s<%d>(%d), px1:%d(%d) ",minorEffect.ability.name, minorEffect.duration,
+        minorEffect.ability.id, math.min(p11,p21), math.max(p11,p21))
       minorEffect.ignored = true
     end
-    return majorEffect
+    return majorEffect,"px1"
   end
   if p12~=p22 then
     local majorEffect = p12>p22 and effect1 or effect2 -- #Effect
     local minorEffect = p12>p22 and effect2 or effect1 -- #Effect
     -- ignore same start minor e.g.
-    if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then minorEffect.ignored = true end
-    -- ignore long overriden minor e.g. Bound Armaments 40s major effect duration override 10s light/heavy attack effect
-    if GetGameTimeMilliseconds() - minorEffect.startTime > 500 then minorEffect.ignored = true end
-    return majorEffect
+    if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then
+      l.debug(DS_MODEL,1)("[m.ignore] %s<%d>(%d), px2:%d(%d) ",minorEffect.ability.name, minorEffect.duration,
+        minorEffect.ability.id, math.min(p12,p22),math.max(p12,p22))
+      minorEffect.ignored = true
+    end
+    return majorEffect,"px2"
   end
-  return effect1.duration < effect2.duration and effect2 or effect1 -- opt longer duration
+  return effect1.duration < effect2.duration and effect2 or effect1,"longer" -- opt longer duration
 end
 
 mAction.optGallopEffect -- #(#Action:self)->(#Effect)

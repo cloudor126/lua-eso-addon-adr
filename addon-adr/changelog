@@ -1,3 +1,6 @@
+3.81
+- Optimized effects priority comparison for Bound Armaments.
+
 3.80
 - Optimized bar matching policy to filter minor buffs i.e. performing Biting Jabs should not trigger Ring of Reservation.
 
