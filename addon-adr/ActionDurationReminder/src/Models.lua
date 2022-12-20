@@ -578,7 +578,14 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end
   end
   -- 3. check ability match
-  if self:matchesAbility(effect.ability, strict) then return true end
+  if self:matchesAbility(effect.ability, strict) then
+    -- 3.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
+    local bad = false
+    if effect.duration%1000>0 and self.duration >0 and effect.duration/1000*1000~= self.duration then
+      bad = true
+    end
+    if not bad then return true end
+  end
   --
   return false
 end

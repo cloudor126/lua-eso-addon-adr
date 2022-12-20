@@ -1,3 +1,6 @@
+3.82
+- Optimized effects filtering i.e. Merciless Charge from MA weapon won't be counted after dot duration.
+
 3.81
 - Optimized effects priority comparison for Bound Armaments.
 
