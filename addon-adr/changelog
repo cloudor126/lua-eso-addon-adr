@@ -1,3 +1,6 @@
+3.83
+- Optimized effect processing valve to filter spam effects.
+
 3.82a
 - Optimized effects filtering i.e. Merciless Charge from MA weapon won't be counted after dot duration.
 

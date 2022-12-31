@@ -57,7 +57,7 @@ l.lastEffectAction = nil -- Models#Action
 
 l.lastQuickslotTime = 0 -- #number
 
-l.ignoredCache = utils.newRecentCache(5)
+l.ignoredCache = utils.newRecentCache(5000, 10)
 
 l.ignoredIds = {} -- #map<#number,#boolean>
 
@@ -456,11 +456,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     return
   end
   local key = abilityId..'_'..effectName
-  local numMarks = l.ignoredCache:countMark(key)
-  if numMarks>=10 then
+  local numMarks = l.ignoredCache:mark(key)
+  if numMarks>=5 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
-    l.ignoredCache:mark(key)
-    if numMarks>=20 then
+    if numMarks>=10 then
       l.ignoredIds[abilityId]='too many times of '.. effectName
     end
     return
@@ -517,8 +516,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     else
       action = l.findActionByNewEffect(effect, true)
       if not action then
-        l.debug(DS_EFFECT,1)('[]New stack effect action not found.'..l.ignoredCache:countMark(key))
         l.ignoredCache:mark(key)
+        l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
         return
       end
       if not l.filterAbilityOk(effect.ability) then
@@ -668,7 +667,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
       statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('reticleover', i)
-    if not ignoredEffectIds[abilityId] and castByPlayer and not l.ignoredIds[abilityId] and l.ignoredCache:countMark(abilityId..'_'..buffName)<3 then
+    if castByPlayer and not ignoredEffectIds[abilityId] and not l.ignoredIds[abilityId] and l.ignoredCache:mark(abilityId..'_'..buffName)<10 then
       local startTime =  math.floor(timeStarted * 1000)
       local action = l.timeActionMap[startTime]
       if action then
