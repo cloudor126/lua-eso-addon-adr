@@ -1,3 +1,6 @@
+3.84
+- Added an option in core section to log tracked effects in chat(useful to get effects' id).
+
 3.83
 - Optimized effect processing valve to filter spam effects.
 

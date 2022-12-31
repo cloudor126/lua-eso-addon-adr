@@ -31,6 +31,7 @@ local coreSavedVarsDefaults = {
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
+  coreLogTrackedEffectsInChat = false,
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
@@ -530,6 +531,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         effect.endTime = action.endTime
       end
       local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
+      if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
+        df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
+      end
       action:saveEffect(effect)
       if stackInfoUpdated then
         l.debug(DS_ACTION,1)('[us] updated stack info %s (%.2f~%.2f)', action.ability:toLogString(), action:getStartTime(), action.endTime)
@@ -559,6 +563,9 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         and effect.ability.icon:find('ability_debuff_',1,true)
       then
         effect.drop = true
+      end
+      if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
+        df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
       end
       action:saveEffect(effect)
       -- patches
@@ -949,7 +956,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         {
           type = "slider",
           name = addon.text("Seconds of Ignorable Short Timers"),
-          min = 1, max = 5, step = 0.5,
+          min = 1, max = 10, step = 0.5,
           getFunc = function() return l.getSavedVars().coreMinimumDurationSeconds end,
           setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
           width = "full",
@@ -962,6 +969,14 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreIgnoreLongDebuff = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreIgnoreLongDebuff,
+        },
+        {
+          type = "checkbox",
+          name = addon.text("Log Tracked Effects In Chat"),
+          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
+          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
         },
         {
           type = "editbox",
