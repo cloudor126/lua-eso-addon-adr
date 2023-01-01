@@ -458,9 +458,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   local key = abilityId..'_'..effectName
   local numMarks = l.ignoredCache:mark(key)
-  if numMarks>=5 then
+--  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
+  if numMarks>=15 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
-    if numMarks>=10 then
+    if numMarks>=20 then
       l.ignoredIds[abilityId]='too many times of '.. effectName
     end
     return
