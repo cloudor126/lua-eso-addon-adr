@@ -582,8 +582,8 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     -- 3.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
     local bad = false
     if effect.duration%1000>0 and self.duration >0
-      and math.floor(effect.duration/1000)*1000~= self.duration
       and effect.ability.name ~= self.ability.name
+      and math.round(effect.duration/1000)~= math.round(self.duration/1000)
     then
       bad = true
     end

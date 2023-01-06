@@ -1,3 +1,6 @@
+3.85
+- Improved the judgment condition of effect filtering in v3.82 thus fixed a bug not showing Igneous Weapons timers.
+
 3.84a
 - Added an option in core section to log tracked effects in chat(useful to get effects' id).
 
