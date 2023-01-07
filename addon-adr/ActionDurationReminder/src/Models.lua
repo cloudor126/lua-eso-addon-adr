@@ -583,7 +583,7 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     local bad = false
     if effect.duration%1000>0 and self.duration >0
       and effect.ability.name ~= self.ability.name
-      and math.round(effect.duration/1000)~= math.round(self.duration/1000)
+      and math.floor(effect.duration/1000+0.5)~= math.floor(self.duration/1000+0.5)
     then
       bad = true
     end
