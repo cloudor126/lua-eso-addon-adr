@@ -1,3 +1,6 @@
+3.86
+- Improved policy to handle a large number of same ability effect events.
+
 3.85a
 - Improved the judgment condition of effect filtering in v3.82 thus fixed a bug not showing Igneous Weapons timers.
 

@@ -24,7 +24,18 @@ end
 --========================================
 --        mRecentCache
 --========================================
-mRecentCache.mark -- #(#RecentCache:self, #any:key)->(#number)
+mRecentCache.get -- #(#RecentCache:self, #any:key)->(#number)
+= function(self, key)
+  self:roll()
+  local result = 0
+  for index=1, self.num do
+    local slot = self.data[index]
+    if slot and slot[key] then result = result + slot[key] end
+  end
+  return result
+end
+
+mRecentCache.mark -- #(#RecentCache:self, #any:key)->()
 = function(self, key)
   self:roll()
   self.data[1] = self.data[1] or {}
@@ -34,12 +45,6 @@ mRecentCache.mark -- #(#RecentCache:self, #any:key)->(#number)
   else
     slot[key] = 1
   end
-  local result = 0
-  for index=1, self.num do
-    local slot = self.data[index]
-    if slot and slot[key] then result = result + slot[key] end
-  end
-  return result
 end
 
 mRecentCache.roll -- #(#RecentCache:self)->()

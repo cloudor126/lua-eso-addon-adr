@@ -58,7 +58,7 @@ l.lastEffectAction = nil -- Models#Action
 
 l.lastQuickslotTime = 0 -- #number
 
-l.ignoredCache = utils.newRecentCache(5000, 10)
+l.ignoredCache = utils.newRecentCache(1000, 10)
 
 l.ignoredIds = {} -- #map<#number,#boolean>
 
@@ -457,16 +457,14 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId)
     return
   end
-  local key = abilityId..'_'..effectName
-  local numMarks = l.ignoredCache:mark(key)
+  local key = abilityId..'_'..effectName..'_'..changeType
+  local numMarks = l.ignoredCache:get(key)
 --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
-  if numMarks>=15 then
+  if numMarks>=4 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
-    if numMarks>=20 then
-      l.ignoredIds[abilityId]='too many times of '.. effectName
-    end
     return
   end
+  l.ignoredCache:mark(key)
 
   -- 0. prepare
   -- ignore expedition on others
@@ -676,7 +674,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
       statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('reticleover', i)
-    if castByPlayer and not ignoredEffectIds[abilityId] and not l.ignoredIds[abilityId] and l.ignoredCache:mark(abilityId..'_'..buffName)<10 then
+    if castByPlayer and not ignoredEffectIds[abilityId] and not l.ignoredIds[abilityId] then
       local startTime =  math.floor(timeStarted * 1000)
       local action = l.timeActionMap[startTime]
       if action then
