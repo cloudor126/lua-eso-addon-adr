@@ -457,7 +457,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId)
     return
   end
-  local key = abilityId..'_'..effectName..'_'..changeType
+  local key = ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
   local numMarks = l.ignoredCache:get(key)
 --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=4 then
