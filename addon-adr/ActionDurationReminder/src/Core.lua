@@ -73,7 +73,7 @@ l.queueAction -- #(Models#Action:action)->()
   newQueue[1] = action
   local now = GetGameTimeMilliseconds()
   for key, a in ipairs(l.actionQueue) do
-    if not a.newAction and now < action.startTime+l.getSavedVars().coreSecondsBeforeFade*1000 then
+    if not a.newAction and now < a.startTime+l.getSavedVars().coreSecondsBeforeFade*1000 then
       table.insert(newQueue,a)
     end
   end
