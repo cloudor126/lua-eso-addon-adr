@@ -216,7 +216,8 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
-  local checkDescription =  effect.ability.name:find(" ",1,true)
+  -- or we are using chinese lang
+  local checkDescription =  effect.ability.name:find(" ",1,true) or GetCVar("language.2")=='zh' 
   checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
