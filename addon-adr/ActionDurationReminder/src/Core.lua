@@ -217,7 +217,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
   -- or we are using chinese lang
-  local checkDescription =  effect.ability.name:find(" ",1,true) or GetCVar("language.2")=='zh' 
+  local checkDescription =  effect.ability.name:find(" ",1,true) or GetCVar("language.2")=='zh'
   checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
@@ -283,7 +283,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     if action.weaponPairIndex == a.weaponPairIndex and action.slotNum == a.slotNum
-      and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true)
+      and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true) -- TODO test chinese version
     then
       l.debug(DS_ACTION,1)('[aM:slot]')
       return true
@@ -347,9 +347,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         sameNameAction.startTime/1000,  sameNameAction:getFlagsInfo(),
         sameNameAction:getStartTime()/1000, sameNameAction:getEndTime()/1000, action:getFlagsInfo())
       sameNameAction.newAction = action
-      action.effectList = sameNameAction.effectList
-      for key, var in ipairs(action.effectList) do
-        var.ignored = false
+      action.effectList = {}
+      for key, var in ipairs(sameNameAction.effectList) do
+        if var.endTime> action.startTime+500 then
+          var.ignored = false
+          table.insert(action.effectList,var)
+        end
       end
       sameNameAction.effectList = {}
       action.lastEffectTime = sameNameAction.lastEffectTime
@@ -460,7 +463,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   local key = ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
   local numMarks = l.ignoredCache:get(key)
---  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
+  --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=4 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
     return
@@ -760,7 +763,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
     if endTime < (action.fake and now or endLimit) then
-      l.debug(DS_ACTION,1)('[dr]%s@%.2f~%.2f, endTime:%d, endLimit:%d', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000,
+      l.debug(DS_ACTION,1)('[dr]%s, endTime:%d < endLimit:%d', action:toLogString(),
         endTime, endLimit)
       l.removeAction(action)
       local gallopEffect = action:optGallopEffect()
@@ -820,11 +823,10 @@ l.saveAction -- #(Models#Action:action)->()
     end
     return count
   end
-  l.debug(DS_ACTION,1)('[s]%s@%.2f,idActionMap(%i),timeActionMap(%i),#effectList:%d', action.ability:toLogString(), action.startTime/1000,
+  l.debug(DS_ACTION,1)('[s]%s,idActionMap(%i),timeActionMap(%i),#effectList:%d', action:toLogString(),
     len(l.idActionMap),len(l.timeActionMap), #action.effectList)
   for key, effect in ipairs(action.effectList) do
-    l.debug(DS_ACTION,1)('[+--e:]%s, %.2f~%.2f<%d>, stack:%d, unitId:%d', effect.ability:toLogString(),effect.startTime/1000, effect.endTime/1000,
-      effect.duration/1000, effect.stackCount, effect.unitId)
+    l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
   end
 end
 

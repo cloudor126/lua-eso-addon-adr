@@ -105,11 +105,16 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   return ability
 end
 
-
+local seed = 0
+local nextSeed = function()
+  seed = seed+1
+  return seed
+end
 m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUltimate)->(#Action)
 = function(slotNum, weaponPairIndex, weaponPairUltimate)
   local action = {} -- #Action
   action.fake = false
+  action.sn = nextSeed() --#number
   action.targetOut = false
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
@@ -265,12 +270,15 @@ mAction.getEffectsInfo -- #(#Action:self)->(#string)
   return info
 end
 
-mAction.getEndTime -- #(#Action:self)->(#number)
-= function(self)
+mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
+= function(self, debugging)
   local optEffect,reason = self:optEffect() -- #Effect
   reason = reason or 'nil'
   local now = GetGameTimeMilliseconds()
   if optEffect then
+    if debugging and optEffect.endTime-self.endTime<1000 then
+      self:optEffect(true)
+    end
     if optEffect.ignorableDebuff and optEffect.endTime> self.endTime and self.endTime>GetGameTimeMilliseconds() then
       self.data.firstStageId = self.ability.id
       return self.endTime
@@ -615,8 +623,8 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return false
 end
 
-mAction.optEffect -- #(#Action:self)->(#Effect,#string)
-= function(self)
+mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
+= function(self, debugging)
   local optEffect = nil --#Effect
   local reason = ''
   for i, effect in ipairs(self.effectList) do
@@ -648,7 +656,13 @@ mAction.optEffect -- #(#Action:self)->(#Effect,#string)
       optEffect = effect
       reason = reason..'only one'
     else
+      if debugging then
+        df('[DBG] Comparing %s with %s', optEffect:toLogString(), effect:toLogString())
+      end
       optEffect,reason = self:optEffectOf(optEffect,effect)
+      if debugging then
+        df('[DBG] Opt %s', optEffect:toLogString())
+      end
     end
   end
   return optEffect,reason
@@ -748,7 +762,10 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     end
     return majorEffect,"px2"
   end
-  return effect1.duration < effect2.duration and effect2 or effect1,"longer" -- opt longer duration
+  if effect1.duration~=effect2.duration then
+    return effect1.duration < effect2.duration and effect2 or effect1,"longer" -- opt longer duration
+  end
+  return effect1.endTime < effect2.endTime and effect2 or effect1,"later" -- opt longer duration
 end
 
 mAction.optGallopEffect -- #(#Action:self)->(#Effect)
@@ -877,6 +894,11 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   return nil
 end
 
+mAction.toLogString --#(#Action:self)->(#string)
+= function(self)
+  return string.format("%s$%d@%.2f~%.2f", self.ability:toLogString(),self.sn, self.startTime/1000, self:getEndTime()/1000)
+end
+
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
   l.debug(DS_MODEL,1)('[m.us]before %s@%.2f stackCount set to %d, %d effect(s) existed',self.ability:toLogString(), self.startTime, stackCount, #self.effectList);
@@ -931,6 +953,12 @@ end
 mEffect.isLongDuration  -- #(#Effect:self)->(#boolean)
 = function(self)
   return self.duration > 39000
+end
+
+mEffect.toLogString --#(#Effect:self)->(#string)
+= function(self)
+  return string.format("%s, %.2f~%.2f<%d>, stack:%d, unitId:%d %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
+      self.duration/1000, self.stackCount, self.unitId, self.ignored and ' [ignored]' or '')
 end
 --========================================
 --        register

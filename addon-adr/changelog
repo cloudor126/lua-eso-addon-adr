@@ -1,3 +1,6 @@
+3.88
+- Fixed a no-tracking bug when ESO failed to emit effects' fading events e.g. Mystic Orb and Wall of Element would not be lost by that reason.
+
 3.87
 - Fixed a matching and filtering condition for Chinese client. e.g. Molten Whip's stack can be tracked when other 
 (zh:针对中文客户端修正了一个匹配过滤条件.例如龙骑鞭子的叠层计数器可以正常追踪了。)
