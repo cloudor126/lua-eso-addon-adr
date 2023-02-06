@@ -609,7 +609,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake and action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then
-        l.debug(DS_ACTION,1)('[over]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
+        l.debug(DS_ACTION,1)('[trg]%s', action:toLogString())
         l.removeAction(action)
       end
       return

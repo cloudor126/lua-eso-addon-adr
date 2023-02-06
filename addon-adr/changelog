@@ -1,4 +1,4 @@
-3.88
+3.88a
 - Fixed a no-tracking bug when ESO failed to emit effects' fading events e.g. Mystic Orb and Wall of Element would not be lost by that reason.
 
 3.87

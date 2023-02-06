@@ -627,7 +627,9 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
 = function(self, debugging)
   local optEffect = nil --#Effect
   local reason = ''
+  local now = GetGameTimeMilliseconds()
   for i, effect in ipairs(self.effectList) do
+    effect.ignored = effect.ignored or now > effect.endTime
     local ignored = effect.ignored
     -- filter Major Gallop if not mount
     if effect.ability.icon:find("major_gallop",1,true) then
@@ -645,7 +647,7 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
     end
     -- filter old effects at new action beginning
     if effect.startTime+1000 < self.startTime -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc may have happened in 1000ms
-      and GetGameTimeMilliseconds()-self.startTime< 300 then
+      and now-self.startTime< 300 then
       reason = reason..'ignored previous effect temporaly,'
       ignored = true
     end
@@ -896,7 +898,8 @@ end
 
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
-  return string.format("%s$%d@%.2f~%.2f", self.ability:toLogString(),self.sn, self.startTime/1000, self:getEndTime()/1000)
+  return string.format("$%d-%s@%.2f~%.2f<%.2f>",self.sn, self.ability:toLogString(), self.startTime/1000, 
+    self:getEndTime()/1000, self:getDuration()/1000)
 end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
