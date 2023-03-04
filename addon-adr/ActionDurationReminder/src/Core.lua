@@ -213,6 +213,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   -- check if it's a major buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
   if effect.ability.icon:find('ability_buff_ma',1,true) then return nil end
   if effect.ability.icon:find('ability_debuff_offb',1,true) then return nil end
+  if effect.ability.icon:find('ability_rogue_030',1,true) then return nil end -- poison
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
@@ -394,6 +395,21 @@ l.onActionUpdateCooldowns -- #(#number:eventCode)->()
   if remain>1000 and duration>1000 and duration-remain<100 then
     l.lastQuickslotTime = GetGameTimeMilliseconds()
   end
+end
+
+local flags = {}
+l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
+--#string:abilityName,#number:abilityGraphic,#number:abilityActionSlotType,#string:sourceName,
+--#number:sourceType,#string:targetName,#number:targetType,#number:hitValue,#number:powerType,
+--#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
+= function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
+  targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
+  if result == ACTION_RESULT_DIED_XP then
+    for key, var in pairs(l.idActionMap) do
+      var:purgeEffectByTargetUnitId(targetUnitId)
+    end
+  end
+  
 end
 
 l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError,
@@ -721,6 +737,7 @@ l.onStart -- #()->()
   end)
 
 
+  EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_COMBAT_EVENT, l.onCombatEvent  )
   EVENT_MANAGER:RegisterForEvent(addon.name..'_fromPlayer', EVENT_COMBAT_EVENT, l.onCombatEventFromPlayer  )
   EVENT_MANAGER:AddFilterForEvent(addon.name..'_fromPlayer', EVENT_COMBAT_EVENT, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_RETICLE_TARGET_CHANGED, l.onReticleTargetChanged  )

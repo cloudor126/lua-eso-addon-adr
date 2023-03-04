@@ -789,6 +789,24 @@ mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
   return nil
 end
 
+mAction.purgeEffectByTargetUnitId  -- #(#Action:self,#Effect:effect)->()
+= function(self, targetUnitId)
+  local purgedEffect = nil -- #Effect
+  for key, var in ipairs(self.effectList) do
+  	if var.unitId == targetUnitId then
+  	 purgedEffect = self:purgeEffect(var)
+  	end
+  end
+  if self.flags.forEnemy and purgedEffect then
+    -- also purge
+    for key, var in ipairs(self.effectList) do
+    	if math.abs(var.startTime-purgedEffect.startTime)<100 then
+    	 self:purgeEffect(var)
+    	end
+    end
+  end
+end
+
 mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
 = function(self, effect)
   local oldEffect = effect -- #Effect
@@ -811,7 +829,15 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   local availableEffectCount = 0
   for key, var in pairs(self.effectList) do
-    if not var.ignored then availableEffectCount = availableEffectCount+1 end
+    if not var.ignored then
+      local ok = true
+      if self.flags.forEnemy and oldEffect and math.abs(oldEffect.startTime-var.startTime)<100 then
+        ok = false -- should not count this non-target effect as a reason to keep tracking
+      end
+      if ok then 
+        availableEffectCount = availableEffectCount+1
+      end 
+    end
   end
   if availableEffectCount==0 and oldEffect.duration > 0 and -- last duration effect has faded
     (
