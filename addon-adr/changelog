@@ -1,3 +1,7 @@
+3.90
+- Fixed a matching priority problem for stack count update event e.g. Grim Focus timer won't be reset by stack update.
+- Improved stack tracking when timer started e.g. Grim Focus timer can start with a stack number if there was a stack.
+
 3.89
 - Fixed a mismatching problem for Chinese language client. e.g. Venomous Claw timer won't be triggered by poison status effect.
 (zh:针对中文客户端修正了一个错误匹配的问题，例如毒爪的计时不应该被中毒状态效果所触发。)

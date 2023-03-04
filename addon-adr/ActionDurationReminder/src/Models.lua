@@ -930,7 +930,7 @@ end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
-  l.debug(DS_MODEL,1)('[m.us]before %s@%.2f stackCount set to %d, %d effect(s) existed',self.ability:toLogString(), self.startTime, stackCount, #self.effectList);
+  l.debug(DS_MODEL,1)('[m.us]before %s stackCount set to %d, %d effect(s) existed',self:toLogString(), stackCount, #self.effectList);
   for key, var in ipairs(self.effectList) do
     l.debug(DS_MODEL,1)('--- %s with duration %d, stackCount is %d', var.ability:toLogString(), var.duration, var.stackCount);
   end
