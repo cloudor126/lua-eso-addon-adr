@@ -187,7 +187,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   return nil
 end
 
-l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Action)
+l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Action, #boolean)
 = function(effect, appending)
   -- 1. find that existed
   for i = 1,#l.actionQueue do
@@ -210,7 +210,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
       local action = l.actionQueue[i]
       if action:matchesNewEffect(effect) then
         l.debug(DS_ACTION,1)('[F]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
-        return action
+        return action,true
       end
     end
   end
@@ -592,7 +592,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
         and effect.ability.icon:find('ability_debuff_',1,true)
       then
-        effect.drop = true
+        l.debug(DS_ACTION,1)('[!] ignore long debuff %s for %s',effect:toLogString(), action:toLogString())
+        for key, effect in ipairs(action.effectList) do
+          l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
+        end
+        return
       end
       if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
         df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
@@ -616,7 +620,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
               local effect = models.newEffect(ability,'player',0,startTime,startTime,stackCount)
               if action:matchesNewEffect(effect) then
                 -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
-                if action.duration and action.duration > 0 then 
+                if action.duration and action.duration > 0 then
                   effect.startTime = action.startTime
                   effect.duration = action.duration
                   effect.endTime = action.endTime
@@ -644,11 +648,23 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
-    local action = l.findActionByOldEffect(effect, effect.duration>0)
+    local action,isNew = l.findActionByOldEffect(effect, effect.duration>0)
     if action then
-      local old = action:saveEffect(effect)
-      local weird = not old and effect.duration == 0
-      if not weird then l.saveAction(action) end
+      if isNew and l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
+        and effect.ability.icon:find('ability_debuff_',1,true)
+      then
+        l.debug(DS_ACTION,1)('[!] ignore newly update long debuff %s for %s',effect:toLogString(), action:toLogString())
+        for key, effect in ipairs(action.effectList) do
+          l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
+        end
+        return
+      end
+      if isNew and effect.duration==0 then
+        l.debug(DS_ACTION,1)('[!] ignore 0ms newly update effect %s for %s',effect:toLogString(), action:toLogString())
+        return
+      end
+      action:saveEffect(effect)
+      l.saveAction(action)
       return
     end
     return

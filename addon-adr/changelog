@@ -1,3 +1,6 @@
+3.91
+- Improved effect filtering on their updating events e.g. Power Of The Light can be configured to swith off the debuff timer now.
+
 3.90
 - Fixed a matching priority problem for stack count update event e.g. Grim Focus timer won't be reset by stack update.
 - Improved stack tracking when timer started e.g. Grim Focus timer can start with a stack number if there was a stack.
