@@ -648,6 +648,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
+    if not l.filterAbilityOk(effect.ability) then
+      l.debug(DS_EFFECT,1)('[]Update effect filtered.')
+      return
+    end
     local action,isNew = l.findActionByOldEffect(effect, effect.duration>0)
     if action then
       if isNew and l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
@@ -991,6 +995,16 @@ end)
 
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
   settings.addMenuOptions(
+        {
+          type = "checkbox",
+          name = addon.text("Log Tracked Effects In Chat"),
+          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
+          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
+        }
+  )
+  settings.addMenuOptions(
     {
       type = "submenu",
       name = addon.text("Core"),
@@ -1045,14 +1059,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           setFunc = function(value) l.getSavedVars().coreIgnoreLongDebuff = value end,
           width = "full",
           default = coreSavedVarsDefaults.coreIgnoreLongDebuff,
-        },
-        {
-          type = "checkbox",
-          name = addon.text("Log Tracked Effects In Chat"),
-          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
-          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
-          width = "full",
-          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
         },
         {
           type = "editbox",
