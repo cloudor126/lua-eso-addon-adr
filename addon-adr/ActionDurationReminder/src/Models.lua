@@ -20,9 +20,6 @@ local SPECIAL_DURATION_PATCH = {
   ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
 }
 
-
-
-
 local fRefinePath -- #(#string:path)->(#string)
 = function(path)
   if not path then return path end
@@ -129,11 +126,21 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
 
   -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
   local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
-  pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..').*'
-  -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..').*'
-  local numStr,n = action.description:gsub(pattern,'%2') --/script d(desc:gsub(pattern,'%2'))
-  if n and n > 0 then
-    action.descriptionDuration = tonumber((numStr:gsub(',','.')))*1000 --#number
+  pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..')'
+  -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..')'
+  local offset = 1
+  local num = 0
+  while true do
+    local i,j,seg,numStr = action.description:find(pattern,offset)
+    if not i then break end
+    offset = j
+    local n =  tonumber((numStr:gsub(',','.')))*1000
+    if num ==0 or n<30000 and n>num then -- only overide if n<30s and n > num e.g. in DK's Deep Breath description there are 2 sec and 2.5 sec segments 
+      num = n
+    end
+  end
+  if num > 0 then
+    action.descriptionDuration = num --#number
   end
 
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number

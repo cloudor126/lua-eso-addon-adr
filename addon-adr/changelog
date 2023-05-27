@@ -1,3 +1,6 @@
+3.92
+- Improved duration extraction from ability description e.g. the 2.5s duration is preferred in Deep Breath. 
+
 3.91a
 - Improved effect filtering on their updating events e.g. Power Of The Light can be configured to swith off the debuff timer now.
 
