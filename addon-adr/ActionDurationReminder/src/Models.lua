@@ -207,32 +207,77 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   return effect
 end
 
+local function matchFunc(s1, s2)
+	if s1=='' or s2=='' then return false end
+	if s1 == s2 then return true end
+	if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
+	return false
+end
+
+-- bStrict => {id1 + idOffset * id2 { ret } }
+local matchesMemo = {}
+matchesMemo[false] = {}
+matchesMemo[true] = {}
+
+local idOffset = 100000000
+
+local function getIdHash(inId1, inId2)
+	return inId1 + (idOffset * inId2)
+end
+
+local function memoizeMatch(idHash, bStrict, result)
+	matchesMemo[bStrict or false][idHash] = result
+end
+
 --========================================
 --        mAbility
 --========================================
 mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean)
 = function(self, other, strict)
-  local matches = function(s1,s2) -- #(#string:s1,#string:s2)->(#boolean)
-    if s1=='' or s2=='' then return false end
-    if s1 == s2 then return true end
-    if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
-    return false
-  end
-  if self.id==other.id then return true end
-  if fMatchIconPath(self.icon, other.icon) then return true end
-  if other.icon2  then
-    if  fMatchIconPath(self.icon, other.icon2) then return true end
-  end
-  if matches(self.name , other.name) then return true end
-  if self.progressionName and matches(self.progressionName, other.name) then return true end
-  if not strict
-    and not addon.isSimpleWord(other.name) -- do not match a one word name in description
-    and self.description
-  then
-    if matches(self.description, other.name) then return true end
-    if self.description:find(other.name:gsub(" "," %%w+ %%w+ ")) then return true end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
-  end
-  return false
+	local idHash = getIdHash(self.id, other.id or 0)
+	local stringMatchRes = matchesMemo[strict or false][idHash]
+	if stringMatchRes ~= nil then
+		return stringMatchRes
+	end
+	
+	if self.id==other.id then
+		memoizeMatch(idHash, strict, true)
+		return true
+	end
+	if fMatchIconPath(self.icon, other.icon) then
+		memoizeMatch(idHash, strict, true)
+		return true 
+	end
+	if other.icon2  then
+		if fMatchIconPath(self.icon, other.icon2) then 
+			memoizeMatch(idHash, strict, true)
+			return true
+		end
+	end
+	if matchFunc(self.name , other.name) then 
+		memoizeMatch(idHash, strict, true)
+		return true
+	end
+	if self.progressionName and matchFunc(self.progressionName, other.name) then 
+		memoizeMatch(idHash, strict, true)
+		return true 
+	end
+	if not strict
+	and not addon.isSimpleWord(other.name) -- do not match a one word name in description
+	and self.description
+	then
+		if matchFunc(self.description, other.name) then
+			memoizeMatch(idHash, strict, true)
+			return true 
+		end
+		if self.description:find(other.name:gsub(" "," %%w+ %%w+ ")) then 
+			memoizeMatch(idHash, strict, true)
+			return true 
+		end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
+	end
+	
+	memoizeMatch(idHash, strict, false)
+	return false
 end
 
 mAbility.toLogString --#(#Ability:self)->(#string)
