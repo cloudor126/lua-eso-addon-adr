@@ -1,3 +1,6 @@
+3.93
+- Fixed a performance issue caused by string searches. Thanks to BoltActionBalrog.
+
 3.92
 - Improved duration extraction from ability description e.g. the 2.5s duration is preferred in Deep Breath. 
 
