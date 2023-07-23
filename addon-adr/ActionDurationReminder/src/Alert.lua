@@ -126,15 +126,16 @@ l.checkAction --#(Models#Action:action)->()
   local markTime = action.startTime
   if onlyShowAfterTimeout then
     aheadTime = 0
-  elseif l.isActionInstant(action) then
+  elseif instant then
     aheadTime = action:getDuration()
   end
   if onlyShowAfterTimeout then aheadTime = 0 end
   if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
     action.data.alerted = true
     local showAbility = action.ability
-    if showAbility.id ~= GetSlotBoundId(action.slotNum, HOTBAR_CATEGORY_PRIMARY) then
-      local slotAbility = models.newAbility(0, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+    local mutantId = GetSlotBoundId(action.slotNum, action.weaponPairIndex) --#number
+    if showAbility.id ~= mutantId then
+      local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
       if action:matchesAbility(slotAbility) then
         slotAbility.id = action.ability.id
         showAbility = slotAbility
@@ -170,12 +171,14 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
   -- check transmuteInstant i.e. Assasin's Will
   if GetGameTimeMilliseconds() > action.startTime + 300 then -- switching shouldn't happen just after performing
     local oldestAction = action:getOldest()
-    if oldestAction:matchesAbility(models.newAbility(0,GetSlotName(oldestAction.slotNum),'')) then
+    local currentId = GetSlotBoundId(oldestAction.slotNum)
+    local currentAbility = models.newAbility(currentId,GetSlotName(oldestAction.slotNum),'')
+    if oldestAction:matchesAbility(currentAbility) then
+      -- record currentId in action data
       if not action.data['alert.transmuteRefChecked'] then
         action.data['alert.transmuteRefChecked'] = true
-        action.data['alert.transmuteRefId'] = GetSlotBoundId(oldestAction.slotNum)
+        action.data['alert.transmuteRefId'] = currentId
       end
-      local currentId = GetSlotBoundId(oldestAction.slotNum)
       if oldestAction.ability.id ~= currentId
         and action.data['alert.transmuteRefId'] ~= currentId
       then

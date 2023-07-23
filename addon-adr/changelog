@@ -1,3 +1,6 @@
+3.94
+- Fixed an issue where a pop-up alert message incorrectly displayed skill infomation from current bar.
+
 3.93
 - Fixed a performance issue caused by string searches. Thanks to BoltActionBalrog.
 
