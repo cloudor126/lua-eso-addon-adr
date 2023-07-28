@@ -118,6 +118,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
+  action.channelTime = channeled and channelTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
   if action.duration<1000 then action.duration = 0 end

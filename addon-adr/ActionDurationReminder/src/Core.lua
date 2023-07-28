@@ -333,8 +333,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
   local action = models.newAction(slotNum,GetActiveWeaponPairInfo(), false)
-  l.debug(DS_ACTION,1)('[a]%s@%.2f+%i++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
-    action.startTime/1000, action.castTime, GetLatency()/1000, action:getFlagsInfo(),
+  l.debug(DS_ACTION,1)('[a]%s@%.2f+%.1f++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
+    action.startTime/1000, action.castTime/1000, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
   if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
     or action.ability.icon:find('dark_haze',1,true) -- rune cage
@@ -350,7 +350,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. queue it
   l.queueAction(action)
   -- 5. replace saved
-  if not action.flags.forGround then
+  if not action.flags.forGround and action.channelTime==0 then -- ground and channel action should not inherit old action effects
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
     if sameNameAction and sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
@@ -393,7 +393,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
   -- 6. save
   if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect
-    and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds then
+    and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds*1000 then
     -- 6.x save short without effects
     l.saveAction(action)
   end
@@ -414,9 +414,34 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
+  local now = GetGameTimeMilliseconds()
+--  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+--    abilityName,
+--    abilityId,
+--    now/1000,
+--    abilityGraphic,
+--    sourceName,
+--    sourceType,
+--    sourceUnitId,
+--    targetName,
+--    targetType,
+--    targetUnitId,
+--    abilityActionSlotType,
+--    damageType,
+--    overflow,
+--    result,
+--    powerType,
+--    hitValue
+--  )
   if result == ACTION_RESULT_DIED_XP then
     for key, var in pairs(l.idActionMap) do
       var:purgeEffectByTargetUnitId(targetUnitId)
+    end
+  end
+  if result == ACTION_RESULT_EFFECT_FADED then
+    local action = l.idActionMap[abilityId]
+    if action and action.channelUnitType == targetType and action.channelUnitId == targetUnitId then
+      action.endTime = now
     end
   end
 
@@ -428,35 +453,52 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
-  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end -- ACTION_RESULT_EFFECT_GAINED and ACTION_RESULT_EFFECT_GAINED_DURATION
+  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end 
   local now = GetGameTimeMilliseconds()
-  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] for %s(%i), abilityActionSlotType:%d, targetType:%d, damageType:%d, overflow:%d,result:%d,powerType:%d',
+  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
     abilityName,
     abilityId,
     now/1000,
     abilityGraphic,
+    sourceName,
+    sourceType,
+    sourceUnitId,
     targetName,
+    targetType,
     targetUnitId,
     abilityActionSlotType,
-    targetType,
     damageType,
     overflow,
     result,
-    powerType
+    powerType,
+    hitValue
   )
+    
   for key, action in pairs(l.actionQueue) do
     if not action.saved
       and (action.ability.id == abilityId or action.ability.name == abilityName)
-      and action.duration > l.getSavedVars().coreMinimumDurationSeconds
-      and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround )
     then
-      action.startTime = now
-      action.endTime = now+action.duration
-      if action.flags.forGround then
-        -- record this to mark next effect as activated one
-        action.groundFirstEffectId = -1
+      local duration = action.duration
+      -- use descript duration if action has channel time i.e. Arcanist FateCarver, 
+      if result == ACTION_RESULT_EFFECT_GAINED_DURATION and duration == 0 and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
+        and sourceType==targetType and sourceUnitId == targetUnitId
+      then
+        duration = hitValue
+        action.channelUnitType = targetType
+        action.channelUnitId = targetUnitId
       end
-      l.saveAction(action)    end
+      --
+      if  duration > l.getSavedVars().coreMinimumDurationSeconds*1000
+        and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround ) then
+        action.startTime = now
+        action.endTime = now+duration
+        if action.flags.forGround then
+          -- record this to mark next effect as activated one
+          action.groundFirstEffectId = -1
+        end
+        l.saveAction(action)
+      end
+    end
   end
 end
 
@@ -995,14 +1037,14 @@ end)
 
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
   settings.addMenuOptions(
-        {
-          type = "checkbox",
-          name = addon.text("Log Tracked Effects In Chat"),
-          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
-          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
-          width = "full",
-          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
-        }
+    {
+      type = "checkbox",
+      name = addon.text("Log Tracked Effects In Chat"),
+      getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
+      setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
+      width = "full",
+      default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
+    }
   )
   settings.addMenuOptions(
     {
