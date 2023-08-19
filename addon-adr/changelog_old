@@ -1,4 +1,72 @@
 
+3.65
+- Adjusted the same policy in v3.64 to let it be compatible with triggered timers i.e. Seething Fury for Molten Whip.
+
+3.64
+- Adjusted the policy added in v3.61 to always ignore new stack count not from 1 in spite of when it happens.
+
+3.63
+- Filtered ground actions that have not got effects yet i.e. Scalding Rune should not get a timer before confirmation.  
+
+3.62
+- Ignored remnant effects at the begining of a re-cast which had caused wierd number problems when casting aoe actions repeatedly.
+
+3.61
+- Ignored stack count obtained right after cast i.e. Stone Giant now only shows the Stagger stack count. 
+
+3.60
+- Optimized effects priority comparison for actions that won't reset all their effects i.e. healer actions Combat Prayer, Echoing Vigor, etc.
+
+3.59
+- Optimized multi-target tracking policy. Action timers for enemy type target won't be removed when looking at others, instead, a '~' hint will be used to indicate that the current timer is not for the current target.
+
+3.58
+- Adjusted trigger activation recognition policies to re-enabled the activation hint for Barbed Trap.
+
+3.57
+- Added description duration into effect validation even if the action has a duration i.e. Dark Conversion has a wrong duration info of 10s but actually should be 20s.
+
+3.56
+- Optimzed effects priority comparison to fix the Carve 3rd hit bug.
+
+3.55
+- Adjusted alerts for multiple targets.
+- Added an alert option to reset alert frame position.
+
+3.54
+- Optimized action property processing to avoid cone actions lost timer e.g. Twisting Path should not disappear when changing target.
+
+3.53
+- Optimized effect-bar matching policy to avoid showing Rally Cry timers on Rally bar slot.
+
+3.52a
+- Ignored offbalance effect to avoid a wrong timer.
+
+3.51b
+- Adjusted shift bar behavior when player wearing an oakensoul ring.
+
+3.50a
+- Added several options to config bar label's visibility and shift bar behaviors.
+
+3.49
+- Fixed a problem that the first timer of Barbed Trap is disappeared. 
+
+3.48a
+- Fixed a bug related to quickslot api changes.
+
+3.47
+- Optimzed auto-move capability to move player buff/debuff panel when shift bar and health bar is moving up.
+
+3.46
+- Updated French translation provided by lexo1000.
+- Adjusted cooldown lines to show correctly based on Azurah action bar scaling.
+
+3.45
+- Added "outline" in font style options.
+
+3.44
+- Optimized popup alert for sorcerer's Bound Armaments when its stack count reaches 4.
+
 3.43a
 - Adjusted some debug contents.
 

@@ -415,24 +415,24 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
---  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
---    abilityName,
---    abilityId,
---    now/1000,
---    abilityGraphic,
---    sourceName,
---    sourceType,
---    sourceUnitId,
---    targetName,
---    targetType,
---    targetUnitId,
---    abilityActionSlotType,
---    damageType,
---    overflow,
---    result,
---    powerType,
---    hitValue
---  )
+  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+    abilityName,
+    abilityId,
+    now/1000,
+    abilityGraphic,
+    sourceName,
+    sourceType,
+    sourceUnitId,
+    targetName,
+    targetType,
+    targetUnitId,
+    abilityActionSlotType,
+    damageType,
+    overflow,
+    result,
+    powerType,
+    hitValue
+  )
   if result == ACTION_RESULT_DIED_XP then
     for key, var in pairs(l.idActionMap) do
       var:purgeEffectByTargetUnitId(targetUnitId)
@@ -455,24 +455,24 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end 
   local now = GetGameTimeMilliseconds()
-  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
-    abilityName,
-    abilityId,
-    now/1000,
-    abilityGraphic,
-    sourceName,
-    sourceType,
-    sourceUnitId,
-    targetName,
-    targetType,
-    targetUnitId,
-    abilityActionSlotType,
-    damageType,
-    overflow,
-    result,
-    powerType,
-    hitValue
-  )
+--  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+--    abilityName,
+--    abilityId,
+--    now/1000,
+--    abilityGraphic,
+--    sourceName,
+--    sourceType,
+--    sourceUnitId,
+--    targetName,
+--    targetType,
+--    targetUnitId,
+--    abilityActionSlotType,
+--    damageType,
+--    overflow,
+--    result,
+--    powerType,
+--    hitValue
+--  )
     
   for key, action in pairs(l.actionQueue) do
     if not action.saved
@@ -630,11 +630,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     local action = l.findActionByNewEffect(effect)
     if action then
-      -- filter debuff if longer than default duration
+      -- filter debuff if a bit longer than default duration
       if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
         and effect.ability.icon:find('ability_debuff_',1,true)
+        and effect.duration < 15000 -- some longer debuff is useful, i.e. Rune of Edric Horror has a 20sec duration need to be tracked
       then
-        l.debug(DS_ACTION,1)('[!] ignore long debuff %s for %s',effect:toLogString(), action:toLogString())
+        l.debug(DS_ACTION,1)('[!] ignore a bit longer debuff %s for %s',effect:toLogString(), action:toLogString())
         for key, effect in ipairs(action.effectList) do
           l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
         end
