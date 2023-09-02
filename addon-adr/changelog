@@ -1,3 +1,6 @@
+3.97
+- Added support for non-duration stack counts i.e. newly updated Grim Focus and its morphs are now supported.
+
 3.96
 - Re-enabled timer for debuff durations longer than action's duration and also 15 seconds i.e. Rune of The Colorless Pool can track debuff timer now.
 

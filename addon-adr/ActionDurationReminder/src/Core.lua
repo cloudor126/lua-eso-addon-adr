@@ -232,20 +232,27 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
-  for slotNum = 3,8 do
-    local slotBoundId = GetSlotBoundId(slotNum)
-    if slotBoundId >0 then
-      local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum)))
-      if (effect.ability.name:find(slotName,1,true) and slotName:find(' ',1,true))
-        or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
-      then
-        matchSlotNum = slotNum
-        break
+  local matchWpIndex = nil
+  local currentWpIndex = GetActiveWeaponPairInfo() -- 1 or 2
+  local indices = {currentWpIndex, 3-currentWpIndex}
+  for i=1, 2 do
+    local wpIndex = indices[i]
+    for slotNum = 3,8 do
+      local slotBoundId = GetSlotBoundId(slotNum,wpIndex-1)
+      if slotBoundId >0 then
+        local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, wpIndex-1)))
+        if (effect.ability.name:find(slotName,1,true) and slotName:find(' ',1,true))
+          or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
+        then
+          matchSlotNum = slotNum
+          matchWpIndex = wpIndex
+          break
+        end
       end
     end
   end
   if matchSlotNum then
-    local action = models.newAction(matchSlotNum,GetActiveWeaponPairInfo(), false)
+    local action = models.newAction(matchSlotNum,matchWpIndex, false)
     action.fake = true
     l.debug(DS_ACTION,1)('[F]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     return action
@@ -453,33 +460,33 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
-  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end 
+  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
   local now = GetGameTimeMilliseconds()
---  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
---    abilityName,
---    abilityId,
---    now/1000,
---    abilityGraphic,
---    sourceName,
---    sourceType,
---    sourceUnitId,
---    targetName,
---    targetType,
---    targetUnitId,
---    abilityActionSlotType,
---    damageType,
---    overflow,
---    result,
---    powerType,
---    hitValue
---  )
-    
+  --  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+  --    abilityName,
+  --    abilityId,
+  --    now/1000,
+  --    abilityGraphic,
+  --    sourceName,
+  --    sourceType,
+  --    sourceUnitId,
+  --    targetName,
+  --    targetType,
+  --    targetUnitId,
+  --    abilityActionSlotType,
+  --    damageType,
+  --    overflow,
+  --    result,
+  --    powerType,
+  --    hitValue
+  --  )
+
   for key, action in pairs(l.actionQueue) do
     if not action.saved
       and (action.ability.id == abilityId or action.ability.name == abilityName)
     then
       local duration = action.duration
-      -- use descript duration if action has channel time i.e. Arcanist FateCarver, 
+      -- use descript duration if action has channel time i.e. Arcanist FateCarver,
       if result == ACTION_RESULT_EFFECT_GAINED_DURATION and duration == 0 and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
         and sourceType==targetType and sourceUnitId == targetUnitId
       then
@@ -882,7 +889,9 @@ l.refineActions -- #()->()
   local endLimit = now - l.getSavedVars().coreSecondsBeforeFade * 1000
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
-    if endTime < (action.fake and now or endLimit) then
+    if action.stackCount==0 -- i.e. Grim Focus triggered by weapon attack
+      and endTime < (action.fake and now or endLimit)
+    then
       l.debug(DS_ACTION,1)('[dr]%s, endTime:%d < endLimit:%d', action:toLogString(),
         endTime, endLimit)
       l.removeAction(action)

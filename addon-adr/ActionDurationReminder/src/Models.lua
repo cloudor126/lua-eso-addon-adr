@@ -114,7 +114,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.sn = nextSeed() --#number
   action.targetOut = false
   action.slotNum = slotNum --#number
-  action.ability = m.newAbility(GetSlotBoundId(slotNum),GetSlotName(slotNum),GetSlotTexture(slotNum)) -- #Ability
+  action.ability = m.newAbility(GetSlotBoundId(slotNum, weaponPairIndex-1),GetSlotName(slotNum, weaponPairIndex-1),GetSlotTexture(slotNum, weaponPairIndex-1)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
@@ -142,6 +142,19 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   end
   if num > 0 then
     action.descriptionDuration = num --#number
+  end
+  -- find number for stack times
+  action.descriptionNums = {} -- #map<#number, #boolean>
+  pattern = '.-([%.,%d]*%d+).r' 
+  offset=1
+  while true do
+    local i,j,numStr = action.description:find(pattern,offset)
+    if not i then break end
+    offset = j
+    local n =  tonumber((numStr:gsub(',','.')))*1000
+    if n%1000==0 then
+      action.descriptionNums[n/1000] = true
+    end
   end
 
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
@@ -977,8 +990,8 @@ end
 
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
-  return string.format("$%d-%s@%.2f~%.2f<%.2f>",self.sn, self.ability:toLogString(), self.startTime/1000, 
-    self:getEndTime()/1000, self:getDuration()/1000)
+  return string.format("$%d-%s@%.2f~%.2f<%.2f>%s",self.sn, self.ability:toLogString(), self.startTime/1000, 
+    self:getEndTime()/1000, self:getDuration()/1000, self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount))
 end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
@@ -1009,6 +1022,8 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if addType == 1 then
     self.stackCount = stackCount
     self.stackEffect = effect
+    self.stackCountMatch = false -- #boolean
+    self.stackCountMatch = stackCount>=3 and #self.effectList==0 and self.descriptionNums[stackCount]
     return true
   elseif addType == 2 then
     self.stackCount2 = stackCount

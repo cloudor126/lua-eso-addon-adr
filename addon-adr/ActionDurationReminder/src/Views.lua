@@ -411,7 +411,11 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local remain = math.max(endTime-now,0)
   local otherInfo = action:getStageInfo() or action:getAreaEffectCount()
   -- label
-  if l.getSavedVars().barLabelEnabled then
+  local stackCountOnly = false
+  if #action.effectList==0 and action.stackCount > 0 then
+    stackCountOnly = true -- i.e. Grim Focus
+  end
+  if l.getSavedVars().barLabelEnabled and not stackCountOnly then
     local hint = string.format('%.1f', remain/1000)
     if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
       hint = string.format('%d', remain/1000)
@@ -425,7 +429,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   if l.getSavedVars().barStackLabelEnabled then
     -- stackLabel
     if action.stackCount and action.stackCount > 0 then
-      self.stackLabel:SetText(action.stackCount)
+      local stackText = string.format(action.stackCountMatch and '%d^' or '%d',action.stackCount)
+      self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
     elseif otherInfo then
       self.stackLabel:SetText(otherInfo)
