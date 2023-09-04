@@ -151,9 +151,10 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
     local i,j,numStr = action.description:find(pattern,offset)
     if not i then break end
     offset = j
-    local n =  tonumber((numStr:gsub(',','.')))*1000
-    if n%1000==0 then
-      action.descriptionNums[n/1000] = true
+    local n =  tonumber((numStr:gsub(',','.')))
+    if not n then break end
+    if (n*1000)%1000==0 then
+      action.descriptionNums[n] = true
     end
   end
 
