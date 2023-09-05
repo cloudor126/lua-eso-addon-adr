@@ -939,7 +939,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 
   -- ignore abnormal long duration effect
   if self.duration and self.duration >=10000
-    and effect.duration > self.duration * 1.5
+    and effect.duration > self.duration * 3  -- changed from 1.5 to 3 because of Everlasting Sweep could extend the duration based enemies hit
     and effect.duration ~= self.descriptionDuration
   then
     return
