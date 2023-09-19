@@ -133,7 +133,7 @@ l.checkAction --#(Models#Action:action)->()
   if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
     action.data.alerted = true
     local showAbility = action.ability
-    local mutantId = GetSlotBoundId(action.slotNum, action.weaponPairIndex) --#number
+    local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
     if showAbility.id ~= mutantId then
       local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
       if action:matchesAbility(slotAbility) then

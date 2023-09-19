@@ -107,14 +107,14 @@ local nextSeed = function()
   seed = seed+1
   return seed
 end
-m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUltimate)->(#Action)
-= function(slotNum, weaponPairIndex, weaponPairUltimate)
+m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
+= function(slotNum, hotbarCategory)
   local action = {} -- #Action
   action.fake = false
   action.sn = nextSeed() --#number
   action.targetOut = false
   action.slotNum = slotNum --#number
-  action.ability = m.newAbility(GetSlotBoundId(slotNum, weaponPairIndex-1),GetSlotName(slotNum, weaponPairIndex-1),GetSlotTexture(slotNum, weaponPairIndex-1)) -- #Ability
+  action.ability = m.newAbility(GetSlotBoundId(slotNum, hotbarCategory),GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
@@ -163,8 +163,7 @@ m.newAction -- #(#number:slotNum,#number:weaponPairIndex,#boolean:weaponPairUlti
   action.oldAction = nil --#Action
   action.newAction = nil --#Action
 
-  action.weaponPairIndex = weaponPairIndex --#number
-  action.weaponPairUltimate = weaponPairUltimate --#boolean
+  action.hotbarCategory = hotbarCategory --#number
   local target = GetAbilityTargetDescription(action.ability.id)
   local radius = GetAbilityRadius(action.ability.id)
   local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA) and (radius==0 or radius>200)

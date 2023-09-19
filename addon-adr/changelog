@@ -1,3 +1,6 @@
+3.100
+- Fixed a bug about hotbar category info i.e. werewolf skills can be tracked now.
+
 3.99
 - Improved an effect filtering policy i.e. Barbed Trap's timer can continue to track its Minor Force buf after target dies.
 

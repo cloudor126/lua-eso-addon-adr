@@ -232,27 +232,27 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
-  local matchWpIndex = nil
-  local currentWpIndex = GetActiveWeaponPairInfo() -- 1 or 2
-  local indices = {currentWpIndex, 3-currentWpIndex}
-  for i=1, 2 do
-    local wpIndex = indices[i]
+  local matchHotbarCategory = nil
+  local currentHotbarCategory = GetActiveHotbarCategory()
+  local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
+  for i=1, 3 do
+    local hotbarCategory = indices[i]
     for slotNum = 3,8 do
-      local slotBoundId = GetSlotBoundId(slotNum,wpIndex-1)
+      local slotBoundId = GetSlotBoundId(slotNum,hotbarCategory)
       if slotBoundId >0 then
-        local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, wpIndex-1)))
+        local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
         if (effect.ability.name:find(slotName,1,true) and slotName:find(' ',1,true))
           or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
         then
           matchSlotNum = slotNum
-          matchWpIndex = wpIndex
+          matchHotbarCategory = hotbarCategory
           break
         end
       end
     end
   end
   if matchSlotNum then
-    local action = models.newAction(matchSlotNum,matchWpIndex, false)
+    local action = models.newAction(matchSlotNum,matchHotbarCategory)
     action.fake = true
     l.debug(DS_ACTION,1)('[F]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     return action
@@ -300,7 +300,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     end
     if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-    if action.weaponPairIndex == a.weaponPairIndex and action.slotNum == a.slotNum
+    if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
       and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true) -- TODO test chinese version
     then
       l.debug(DS_ACTION,1)('[aM:slot]')
@@ -339,7 +339,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
-  local action = models.newAction(slotNum,GetActiveWeaponPairInfo(), false)
+  local action = models.newAction(slotNum,GetActiveHotbarCategory())
   l.debug(DS_ACTION,1)('[a]%s@%.2f+%.1f++%.2f\n%s\n<%.2f~%.2f>', action.ability:toLogString(),
     action.startTime/1000, action.castTime/1000, GetLatency()/1000, action:getFlagsInfo(),
     action:getStartTime()/1000, action:getEndTime()/1000)
@@ -959,10 +959,10 @@ l.saveAction -- #(Models#Action:action)->()
   end
 end
 
-l.getActionBySlot --#(#number:weaponPairIndex, #number:slotNum)->(Models#Action)
-= function(weaponPairIndex, slotNum)
+l.getActionBySlot --#(#number:hotbarCategory, #number:slotNum)->(Models#Action)
+= function(hotbarCategory, slotNum)
   for key, var in pairs(l.idActionMap) do
-    if var.weaponPairIndex == weaponPairIndex and var.slotNum == slotNum then
+    if var.hotbarCategory == hotbarCategory and var.slotNum == slotNum then
       return var
     end
   end
@@ -982,7 +982,7 @@ m.getActionByAbilityId = l.getActionByAbilityId -- #(#number:abilityId)->(Models
 
 m.getActionByAbilityName = l.getActionByAbilityName-- #(#string:abilityName)->(Models#Action)
 
-m.getActionBySlot = l.getActionBySlot-- #(#number:weaponPairIndex,#number:slotNum)->(Models#Action)
+m.getActionBySlot = l.getActionBySlot-- #(#number:hotbarCategory,#number:slotNum)->(Models#Action)
 
 m.clearActions -- #()->()
 = function()

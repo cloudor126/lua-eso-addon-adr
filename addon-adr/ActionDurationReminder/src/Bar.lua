@@ -75,12 +75,12 @@ l.onCoreUpdate -- #()->()
   if not l.getSavedVars().barEnabled then return end
   local now = GetGameTimeMilliseconds()
   local showedActionMap = {} --#map<#number,Models#Action>
-  local weaponPairIndex = GetActiveWeaponPairInfo()
+  local hotbarCategory = GetActiveHotbarCategory()
   -- 1. show in action bar widgets
   for slotNum = 3,8 do
     local widget = l.mainBarWidgetMap[slotNum]
-    local abilityId = GetSlotBoundId(slotNum)
-    local action = core.getActionBySlot(weaponPairIndex,slotNum)
+    local abilityId = GetSlotBoundId(slotNum,hotbarCategory)
+    local action = core.getActionBySlot(hotbarCategory,slotNum)
     if action
       -- check this position action
       and not action:matchesAbilityIcon(GetSlotTexture(slotNum))
@@ -117,7 +117,7 @@ l.onCoreUpdate -- #()->()
         l.quickslotWidget = views.newWidget(9, false)
       end
       if not l.quickslotFakeAction then
-        l.quickslotFakeAction = models.newAction(3,1,false)
+        l.quickslotFakeAction = models.newAction(3,0)
       end
       l.quickslotFakeAction.startTime = now+remain-duration
       l.quickslotFakeAction.duration = duration
@@ -146,7 +146,6 @@ l.onCoreUpdate -- #()->()
       local id = toShowIdList[i]
       local action = toShowActionMap[id]
       local slotNum = action.slotNum
-      --    local inAppend = core.getWeaponPairInfo().ultimate and ( action.weaponPairIndex ~= core.getWeaponPairInfo().index) or action.weaponPairUltimate
       local inAppend = false
       local widget = l.shiftedBarWidgetMap[slotNum]
       if inAppend or (widget and widget.visible) then
