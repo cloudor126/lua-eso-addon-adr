@@ -1,3 +1,6 @@
+3.101
+- Adjusted a filter to enable effects that is longer than the skill's duration if it is matched in description i.e. "Major Cowardice" can be tracked via Mass Hysteria.
+
 3.100
 - Fixed a bug about hotbar category info i.e. werewolf skills can be tracked now.
 

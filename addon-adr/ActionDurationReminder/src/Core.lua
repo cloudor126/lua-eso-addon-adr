@@ -640,6 +640,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       -- filter debuff if a bit longer than default duration
       if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
         and effect.ability.icon:find('ability_debuff_',1,true)
+        and not action.descriptionNums[effect.duration/1000]
         and effect.duration < 15000 -- some longer debuff is useful, i.e. Rune of Edric Horror has a 20sec duration need to be tracked
       then
         l.debug(DS_ACTION,1)('[!] ignore a bit longer debuff %s for %s',effect:toLogString(), action:toLogString())
