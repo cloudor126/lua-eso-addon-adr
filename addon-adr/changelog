@@ -1,3 +1,6 @@
+3.99
+- Improved an effect filtering policy i.e. Barbed Trap's timer can continue to track its Minor Force buf after target dies.
+
 3.98
 - Raised the threshold value for extended duration i.e. Everlasting Sweep can be properly tracked now.
 

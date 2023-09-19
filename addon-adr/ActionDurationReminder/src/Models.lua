@@ -812,12 +812,6 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
   if p11~=p21 then
     local majorEffect = p11>p21 and effect1 or effect2 -- #Effect
     local minorEffect = p11>p21 and effect2 or effect1 -- #Effect
-    -- we ignore minor effect unless they start at the beginning
-    if math.abs(minorEffect.startTime - self.startTime) > 300 then
-      l.debug(DS_MODEL,1)("[m.ignore] %s<%d>(%d), px1:%d(%d) ",minorEffect.ability.name, minorEffect.duration,
-        minorEffect.ability.id, math.min(p11,p21), math.max(p11,p21))
-      minorEffect.ignored = true
-    end
     return majorEffect,"px1"
   end
   if p12~=p22 then
@@ -879,7 +873,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local oldEffect = effect -- #Effect
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
-      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d ", e.ability:toLogString(), e.duration/1000,e.stackCount)
+      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e.ability:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
       table.remove(self.effectList,i)
       oldEffect = e -- we need duration info to end action
       break
@@ -903,7 +897,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
       end
       if ok then 
         availableEffectCount = availableEffectCount+1
-      end 
+      end
     end
   end
   if availableEffectCount==0 and oldEffect.duration > 0 and -- last duration effect has faded
