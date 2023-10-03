@@ -73,7 +73,7 @@ l.queueAction -- #(Models#Action:action)->()
   newQueue[1] = action
   local now = GetGameTimeMilliseconds()
   for key, a in ipairs(l.actionQueue) do
-    if not a.newAction and now < a.startTime+l.getSavedVars().coreSecondsBeforeFade*1000 then
+    if not a.newAction and now < 3 * 1000 then
       table.insert(newQueue,a)
     end
   end
@@ -228,7 +228,8 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   if effect.startTime - l.lastQuickslotTime < 100 then return nil end
   -- check if it's a one word name effect e.g. burning, chilling, concussion
   -- or we are using chinese lang
-  local checkDescription =  effect.ability.name:find(" ",1,true) or GetCVar("language.2")=='zh'
+  local isZh = GetCVar("language.2")=='zh'
+  local checkDescription =  effect.ability.name:find(" ",1,true) or isZh
   checkDescription = checkDescription and (stacking or effect.duration >= 5000)
   --
   local matchSlotNum = nil
@@ -241,7 +242,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
       local slotBoundId = GetSlotBoundId(slotNum,hotbarCategory)
       if slotBoundId >0 then
         local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
-        if (effect.ability.name:find(slotName,1,true) and slotName:find(' ',1,true))
+        if (effect.ability.name== slotName)
           or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
         then
           matchSlotNum = slotNum

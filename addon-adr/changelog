@@ -1,3 +1,7 @@
+3.103
+- Fixed a queue maintainance parameter and a name matching policy.
+（zh:解决中文环境中设置超时保留秒数为0时，无法在第二时间匹配技能描述缺失技能名称的计时bug，例如窝登的飞鸟，恰好远距离施展存在计时延迟，恰好中间插入了其他技能，恰好在设置中保留秒数为0，恰好中文翻译的技能描述中并没有该技能名称，则会导致计时不显示。所涉及的两个问题都已经解决。）
+
 3.102
 - Improved a cache key generation method and ignored Azure Blight Seed effect which may caused raid lag.
 
