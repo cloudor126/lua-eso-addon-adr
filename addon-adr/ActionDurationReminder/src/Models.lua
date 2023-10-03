@@ -870,8 +870,23 @@ end
 mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
 = function(self, effect)
   local oldEffect = effect -- #Effect
+  local now = GetGameTimeMilliseconds()
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
+      -- earlier than expected
+      if now+1000 < e.endTime then
+        -- sometimes, effects such as Minor Breach are purged and added when major action effect ends, so we should saved that for a little while
+        if not effect.purgingTime then
+          effect.purgingTime = now
+          -- do it later
+          zo_callLater(function() self:purgeEffect(effect) end, 50)
+          l.debug(DS_MODEL,1)("[m.purging] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e.ability:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
+          return e
+        elseif e.saveTime and e.saveTime > effect.purgingTime then
+          l.debug(DS_MODEL,1)("[m.purge-renewed] %s", e.ability:toLogString())
+          return e
+        end
+      end
       l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e.ability:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
       table.remove(self.effectList,i)
       oldEffect = e -- we need duration info to end action
@@ -886,17 +901,24 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     oldEffect = self.stackEffect2
     self.stackEffect2 = nil
   end
-  local now = GetGameTimeMilliseconds()
   local availableEffectCount = 0
+  local reason = ''
   for key, var in pairs(self.effectList) do
     if not var.ignored then
       local ok = true
-      if self.flags.forEnemy and oldEffect and math.abs(oldEffect.startTime-var.startTime)<100 then
-        ok = false -- should not count this non-target effect as a reason to keep tracking
+      if self.flags.forEnemy and oldEffect
+         and var.ability.id~=oldEffect.ability.id -- count if the oldEffect is renewed
+         and var.unitId~=oldEffect.unitId -- count if this effect has same unit id
+         and math.abs(oldEffect.startTime-var.startTime)<100 -- count if this effect comes at a different time
+        then
+        ok = false
+        reason = reason .. string.format('%s has same start time as purged one and is not counted\n',var.ability.name)
       end
       if ok then 
         availableEffectCount = availableEffectCount+1
       end
+    else
+      reason = reason.. string.format('%s is ignored and not counted\n',var.ability.name)
     end
   end
   if availableEffectCount==0 and oldEffect.duration > 0 and -- last duration effect has faded
@@ -910,6 +932,7 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
     )
   then
+    l.debug(DS_MODEL,1)("[m.purge end] %s, reason:\n%s\n", self:toLogString(), reason)
     self.endTime = now
   end
   return oldEffect
@@ -965,7 +988,11 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   self.lastEffectTime = effect.startTime
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
-      self.effectList[i] = effect
+      local now = GetGameTimeMilliseconds()
+      if math.abs(e.endTime-effect.endTime)>1000 then
+        self.effectList[i] = effect
+      end
+      self.effectList[i].saveTime = now -- #number
       return e
     end
   end
