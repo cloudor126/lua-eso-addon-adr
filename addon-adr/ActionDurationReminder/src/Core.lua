@@ -533,14 +533,14 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   )
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
-    l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId)
+    l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
     return
   end
-  local key = ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
+  local key =(changeType == EFFECT_RESULT_UPDATED) and  ('%d:%s:update'):format(abilityId,effectName) or ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
   local numMarks = l.ignoredCache:get(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=4 then
-    l.debug(DS_ACTION,1)('[] '..key..' ignored by cache'..numMarks)
+    l.debug(DS_ACTION,1)('[] '..key..' ignored by cache counted '..numMarks)
     return
   end
   l.ignoredCache:mark(key)
@@ -552,6 +552,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if not l.ignoredIds['ability_mage_062'] and iconName:find('ability_mage_062',1,true) then
     l.ignoredIds['ability_mage_062']='ignored burning effect'
     l.ignoredIds[abilityId]='ignored burning effect'
+    return
+  end
+  -- ignore blight seed
+  if not l.ignoredIds['ability_mage_039'] and iconName:find('ability_mage_039',1,true) then
+    l.ignoredIds['ability_mage_039']='ignored blight seed'
+    l.ignoredIds[abilityId]='ignored blight seed'
     return
   end
 

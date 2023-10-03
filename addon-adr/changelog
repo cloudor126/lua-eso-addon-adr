@@ -1,3 +1,6 @@
+3.102
+- Improved a cache key generation method and ignored Azure Blight Seed effect which may caused raid lag.
+
 3.101
 - Adjusted a filter to enable effects that is longer than the skill's duration if it is matched in description i.e. "Major Cowardice" can be tracked via Mass Hysteria.
 
