@@ -1,3 +1,6 @@
+3.106
+- Impoved the policy introduced in v3.104 which may cause timer lost when abilities are re-performed.
+
 3.105
 - Added Arcanist Crux into filtered list so that crux durantion won't be mixed into ability durations.
 

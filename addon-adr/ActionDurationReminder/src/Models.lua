@@ -873,21 +873,22 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
-      -- earlier than expected
-      if now+1000 < e.endTime then
+      -- purging earlier than expected (i.e. Minor Breach cut by POL) 
+      -- or the new action just inherited some old effects that is being cut now 
+      if  e.endTime > now+1000 or e.startTime< self.startTime then
         -- sometimes, effects such as Minor Breach are purged and added when major action effect ends, so we should saved that for a little while
         if not effect.purgingTime then
           effect.purgingTime = now
           -- do it later
           zo_callLater(function() self:purgeEffect(effect) end, 50)
-          l.debug(DS_MODEL,1)("[m.purging] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e.ability:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
+          l.debug(DS_MODEL,1)("[m.purging] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
           return e
-        elseif e.saveTime and e.saveTime > effect.purgingTime then
-          l.debug(DS_MODEL,1)("[m.purge-renewed] %s", e.ability:toLogString())
+        elseif e.saveTime and e.saveTime >= effect.purgingTime then
+          l.debug(DS_MODEL,1)("[m.purge-renewed] %s",  e:toLogString())
           return e
         end
       end
-      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e.ability:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
+      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
       table.remove(self.effectList,i)
       oldEffect = e -- we need duration info to end action
       break
@@ -907,12 +908,12 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     if not var.ignored then
       local ok = true
       if self.flags.forEnemy and oldEffect
-         and var.ability.id~=oldEffect.ability.id -- count if the oldEffect is renewed
+         and var.ability.id~=oldEffect.ability.id -- count if this effect has same id
          and var.unitId~=oldEffect.unitId -- count if this effect has same unit id
          and math.abs(oldEffect.startTime-var.startTime)<100 -- count if this effect comes at a different time
         then
         ok = false
-        reason = reason .. string.format('%s has same start time as purged one and is not counted\n',var.ability.name)
+        reason = reason .. string.format('not counted as available:%s\n',var:toLogString())
       end
       if ok then 
         availableEffectCount = availableEffectCount+1

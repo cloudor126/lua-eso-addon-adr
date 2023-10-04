@@ -337,6 +337,7 @@ end
 
 l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
 = function(eventCode,slotNum)
+  ADR_ACTION_TIME = GetGameTimeMilliseconds()
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
@@ -553,10 +554,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     ['ability_mage_062']='burning effect',
     ['ability_mage_039']='blight seed',
     ['arcanist_crux']='arcanist crux',
-  } 
+    ['death_recap_bleed_dot']='bleed dot',
+  }
   for key, var in pairs(ignoredIdsConfig) do
-  	if not l.ignoredIds[key] and iconName:find(key,1,true) then
-  	  local info = 'ignored '..var --#string
+    if not l.ignoredIds[key] and iconName:find(key,1,true) then
+      local info = 'ignored '..var --#string
       l.ignoredIds[key]=info
       l.ignoredIds[abilityId]=info
       return
@@ -648,7 +650,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       -- filter debuff if a bit longer than default duration
       if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
         and effect.ability.icon:find('ability_debuff_',1,true)
---        and not action.descriptionNums[effect.duration/1000] -- This line should be commented out because it conflicts with option *coreIgnoreLongDebuff* 
+        --        and not action.descriptionNums[effect.duration/1000] -- This line should be commented out because it conflicts with option *coreIgnoreLongDebuff*
         and effect.duration < 15000 -- some longer debuff is useful, i.e. Rune of Edric Horror has a 20sec duration need to be tracked
       then
         l.debug(DS_ACTION,1)('[!] ignore a bit longer debuff %s for %s',effect:toLogString(), action:toLogString())
@@ -741,7 +743,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       for key, var in ipairs(action.effectList) do
         if var.startTime == oldEffect.startTime then clearTimeRecord=false end
       end
-      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still there
+      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still exist
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake and action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then
         l.debug(DS_ACTION,1)('[trg]%s', action:toLogString())
