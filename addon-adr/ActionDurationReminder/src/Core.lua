@@ -549,17 +549,18 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- 0. prepare
   -- ignore expedition on others
   if unitTag~='player' and iconName:find('buff_major_expedition',1,true) then return end
-  -- ignore burning effect
-  if not l.ignoredIds['ability_mage_062'] and iconName:find('ability_mage_062',1,true) then
-    l.ignoredIds['ability_mage_062']='ignored burning effect'
-    l.ignoredIds[abilityId]='ignored burning effect'
-    return
-  end
-  -- ignore blight seed
-  if not l.ignoredIds['ability_mage_039'] and iconName:find('ability_mage_039',1,true) then
-    l.ignoredIds['ability_mage_039']='ignored blight seed'
-    l.ignoredIds[abilityId]='ignored blight seed'
-    return
+  local ignoredIdsConfig ={
+    ['ability_mage_062']='burning effect',
+    ['ability_mage_039']='blight seed',
+    ['arcanist_crux']='arcanist crux',
+  } 
+  for key, var in pairs(ignoredIdsConfig) do
+  	if not l.ignoredIds[key] and iconName:find(key,1,true) then
+  	  local info = 'ignored '..var --#string
+      l.ignoredIds[key]=info
+      l.ignoredIds[abilityId]=info
+      return
+    end
   end
 
   if unitTag and string.find(unitTag, 'group') then return end -- ignore effects on group members especially those same as player

@@ -1,3 +1,6 @@
+3.105
+- Added Arcanist Crux into filtered list so that crux durantion won't be mixed into ability durations.
+
 3.104a
 - Improved a tracking policy to handle effect's halting and renewing i.e. Minor Breach won't be lost when templar's Power of Light sometimes breaks its duration.
 
