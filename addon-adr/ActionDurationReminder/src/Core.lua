@@ -337,7 +337,6 @@ end
 
 l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
 = function(eventCode,slotNum)
-  ADR_ACTION_TIME = GetGameTimeMilliseconds()
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
