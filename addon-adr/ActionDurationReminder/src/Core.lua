@@ -83,12 +83,16 @@ end
 l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
 =function(switch, level)
   return function(format, ...)
-    if (m.debugLevels[switch] and m.debugLevels[switch]>=level) or
-      (m.debugLevels[DS_ALL] and m.debugLevels[DS_ALL]>=level)
-    then
+    if l.debugEnabled(switch,level) then
       d(os.date()..'>', string.format(format, ...))
     end
   end
+end
+
+l.debugEnabled -- #(#string:switch,#number:level)->(#boolean)
+= function(switch, level)
+  return (m.debugLevels[switch] and m.debugLevels[switch]>=level) or
+    (m.debugLevels[DS_ALL] and m.debugLevels[DS_ALL]>=level)
 end
 
 l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
@@ -160,10 +164,10 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i] --Models#Action
     if action:matchesNewEffect(effect) then
-      l.debug(DS_ACTION,1)('[F]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      l.debug(DS_ACTION,1)('[F]found one of queue by new match:%s', action:toLogString())
       return action
     else
-      l.debug(DS_ACTION,1)('[F?]not found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      l.debug(DS_ACTION,1)('[F?]not found one of queue by new match:%s', action:toLogString())
     end
   end
   -- try saved actions
@@ -962,10 +966,13 @@ l.saveAction -- #(Models#Action:action)->()
     end
     return count
   end
-  l.debug(DS_ACTION,1)('[s]%s,idActionMap(%i),timeActionMap(%i),#effectList:%d', action:toLogString(),
-    len(l.idActionMap),len(l.timeActionMap), #action.effectList)
-  for key, effect in ipairs(action.effectList) do
-    l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
+  if l.debugEnabled(DS_ACTION,1) then
+    local effectListLog = ''
+    for key, effect in ipairs(action.effectList) do
+      effectListLog= effectListLog ..'\n [+--e:]'.. effect:toLogString()
+    end
+    l.debug(DS_ACTION,1)('[s]%s,idActionMap(%i),timeActionMap(%i),#effectList:%d%s', action:toLogString(),
+      len(l.idActionMap),len(l.timeActionMap), #action.effectList, effectListLog)
   end
 end
 

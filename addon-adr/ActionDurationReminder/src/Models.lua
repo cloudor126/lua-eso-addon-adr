@@ -55,12 +55,16 @@ end
 l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
 =function(switch, level)
   return function(format, ...)
-    if (addon.debugLevels[switch] and addon.debugLevels[switch]>=level) or
-      (addon.debugLevels[DS_ALL] and addon.debugLevels[DS_ALL]>=level)
-    then
+    if l.debugEnabled(switch,level) then
       d(os.date()..'>', string.format(format, ...))
     end
   end
+end
+
+l.debugEnabled -- #(#string:switch,#number:level)->(#boolean)
+= function(switch, level)
+  return (addon.debugLevels[switch] and addon.debugLevels[switch]>=level) or
+    (addon.debugLevels[DS_ALL] and addon.debugLevels[DS_ALL]>=level)
 end
 
 --========================================
@@ -124,9 +128,11 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
+  action.effectEndTimes = {} --#list<#number>
 
   -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
   local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
+  if GetCVar("language.2")=='zh' then pattern = '2秒' end
   pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..')'
   -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..')'
   local offset = 1
@@ -136,7 +142,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
     if not i then break end
     offset = j
     local n =  tonumber((numStr:gsub(',','.')))*1000
-    if num ==0 or n<30000 and n>num then -- only overide if n<30s and n > num e.g. in DK's Deep Breath description there are 2 sec and 2.5 sec segments 
+    if num ==0 or n<30000 and n>num then -- only overide if n<30s and n > num e.g. in DK's Deep Breath description there are 2 sec and 2.5 sec segments
       num = n
     end
   end
@@ -145,7 +151,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   end
   -- find number for stack times
   action.descriptionNums = {} -- #map<#number, #boolean>
-  pattern = '.-([%.,%d]*%d+).r' 
+  pattern = '.-([%.,%d]*%d+).r'
   offset=1
   while true do
     local i,j,numStr = action.description:find(pattern,offset)
@@ -222,10 +228,10 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
 end
 
 local function matchFunc(s1, s2)
-	if s1=='' or s2=='' then return false end
-	if s1 == s2 then return true end
-	if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
-	return false
+  if s1=='' or s2=='' then return false end
+  if s1 == s2 then return true end
+  if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
+  return false
 end
 
 -- bStrict => {id1 + idOffset * id2 { ret } }
@@ -236,11 +242,11 @@ matchesMemo[true] = {}
 local idOffset = 100000000
 
 local function getIdHash(inId1, inId2)
-	return inId1 + (idOffset * inId2)
+  return inId1 + (idOffset * inId2)
 end
 
 local function memoizeMatch(idHash, bStrict, result)
-	matchesMemo[bStrict or false][idHash] = result
+  matchesMemo[bStrict or false][idHash] = result
 end
 
 --========================================
@@ -248,50 +254,50 @@ end
 --========================================
 mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean)
 = function(self, other, strict)
-	local idHash = getIdHash(self.id, other.id or 0)
-	local stringMatchRes = matchesMemo[strict or false][idHash]
-	if stringMatchRes ~= nil then
-		return stringMatchRes
-	end
-	
-	if self.id==other.id then
-		memoizeMatch(idHash, strict, true)
-		return true
-	end
-	if fMatchIconPath(self.icon, other.icon) then
-		memoizeMatch(idHash, strict, true)
-		return true 
-	end
-	if other.icon2  then
-		if fMatchIconPath(self.icon, other.icon2) then 
-			memoizeMatch(idHash, strict, true)
-			return true
-		end
-	end
-	if matchFunc(self.name , other.name) then 
-		memoizeMatch(idHash, strict, true)
-		return true
-	end
-	if self.progressionName and matchFunc(self.progressionName, other.name) then 
-		memoizeMatch(idHash, strict, true)
-		return true 
-	end
-	if not strict
-	and not addon.isSimpleWord(other.name) -- do not match a one word name in description
-	and self.description
-	then
-		if matchFunc(self.description, other.name) then
-			memoizeMatch(idHash, strict, true)
-			return true 
-		end
-		if self.description:find(other.name:gsub(" "," %%w+ %%w+ ")) then 
-			memoizeMatch(idHash, strict, true)
-			return true 
-		end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
-	end
-	
-	memoizeMatch(idHash, strict, false)
-	return false
+  local idHash = getIdHash(self.id, other.id or 0)
+  local stringMatchRes = matchesMemo[strict or false][idHash]
+  if stringMatchRes ~= nil then
+    return stringMatchRes
+  end
+
+  if self.id==other.id then
+    memoizeMatch(idHash, strict, true)
+    return true
+  end
+  if fMatchIconPath(self.icon, other.icon) then
+    memoizeMatch(idHash, strict, true)
+    return true
+  end
+  if other.icon2  then
+    if fMatchIconPath(self.icon, other.icon2) then
+      memoizeMatch(idHash, strict, true)
+      return true
+    end
+  end
+  if matchFunc(self.name , other.name) then
+    memoizeMatch(idHash, strict, true)
+    return true
+  end
+  if self.progressionName and matchFunc(self.progressionName, other.name) then
+    memoizeMatch(idHash, strict, true)
+    return true
+  end
+  if not strict
+    and not addon.isSimpleWord(other.name) -- do not match a one word name in description
+    and self.description
+  then
+    if matchFunc(self.description, other.name) then
+      memoizeMatch(idHash, strict, true)
+      return true
+    end
+    if self.description:find(other.name:gsub(" "," %%w+ %%w+ ")) then
+      memoizeMatch(idHash, strict, true)
+      return true
+    end -- i.e. match major sorcery in critical surge description: major brutality and sorcery
+  end
+
+  memoizeMatch(idHash, strict, false)
+  return false
 end
 
 mAbility.toLogString --#(#Ability:self)->(#string)
@@ -352,6 +358,11 @@ mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
     return optEffect.endTime
   end
   if self.endTime>0 then return self.endTime end
+  local maxEffectEndTime = 0
+  for key, var in ipairs(self.effectEndTimes) do
+    if var > maxEffectEndTime then maxEffectEndTime = var end
+  end
+  if maxEffectEndTime > 0 then return maxEffectEndTime end
   if self.descriptionDuration and self.descriptionDuration>0 then return self.startTime+self.descriptionDuration end
   return self.startTime
 end
@@ -503,6 +514,12 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   if self.targetOut then
     return '#'
   end
+  -- tail effect
+  local duration = self.duration or 0
+  if duration == 0 then duration = self.descriptionDuration or 0 end
+  if duration > 0 and self:getEndTime() > self.startTime + duration+1000 then
+    return '>'
+  end
   return nil
 end
 
@@ -638,24 +655,28 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     return true
   end
   -- 2. fast check already matched effects
-  local strict = effect.startTime > self.startTime + self.castTime + 2000
-  if strict and self.duration > 0 then -- try to accept continued effect
-    if effect.startTime > self.endTime and effect.startTime < self.endTime + 500 then
-      strict = false
-  end
-  end
-  strict = strict or (effect.duration>0 and effect.duration<4000) -- Render Flesh has a 4 second Minor Defile
   for i, var in ipairs(self.effectList) do
     local e = var --#Effect
     if effect.ability.id == e.ability.id then return true end
-    -- already some recent and dalayed effect counted
-    if e.startTime>=self.startTime and effect.startTime > e.startTime then strict = true end
   end
+  
+  -- 3.0 if it is following effectTimeEnds, it might be matched by description
+  local strict = effect.startTime > self.startTime + self.castTime + 2000
+  if strict then -- try to accept continued effect
+    local matchEffectsEnd = false
+    for key, var in ipairs(self.effectEndTimes) do
+      if math.abs(effect.startTime-var) < 500 then
+        strict = false
+      end
+    end
+  end
+  strict = strict or (effect.duration>0 and effect.duration<4000) -- Render Flesh has a 4 second Minor Defile
+
   -- 3. check ability match
   if self:matchesAbility(effect.ability, strict) then
     -- 3.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
     local bad = false
-    if effect.duration%1000>0 and self.duration >0
+    if strict and effect.duration%1000>0 and self.duration >0
       and effect.ability.name ~= self.ability.name
       and math.floor(effect.duration/1000+0.5)~= math.floor(self.duration/1000+0.5)
     then
@@ -853,16 +874,16 @@ mAction.purgeEffectByTargetUnitId  -- #(#Action:self,#Effect:effect)->()
 = function(self, targetUnitId)
   local purgedEffect = nil -- #Effect
   for key, var in ipairs(self.effectList) do
-  	if var.unitId == targetUnitId then
-  	 purgedEffect = self:purgeEffect(var)
-  	end
+    if var.unitId == targetUnitId then
+      purgedEffect = self:purgeEffect(var)
+    end
   end
   if self.flags.forEnemy and purgedEffect then
     -- also purge
     for key, var in ipairs(self.effectList) do
-    	if math.abs(var.startTime-purgedEffect.startTime)<100 then
-    	 self:purgeEffect(var)
-    	end
+      if math.abs(var.startTime-purgedEffect.startTime)<100 then
+        self:purgeEffect(var)
+      end
     end
   end
 end
@@ -873,23 +894,30 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
-      -- purging earlier than expected (i.e. Minor Breach cut by POL) 
-      -- or the new action just inherited some old effects that is being cut now 
+      -- purging earlier than expected (i.e. Minor Breach cut by POL)
+      -- or the new action just inherited some old effects that is being cut now
       if  e.endTime > now+1000 or e.startTime< self.startTime then
         -- sometimes, effects such as Minor Breach are purged and added when major action effect ends, so we should saved that for a little while
         if not effect.purgingTime then
           effect.purgingTime = now
           -- do it later
           zo_callLater(function() self:purgeEffect(effect) end, 50)
-          l.debug(DS_MODEL,1)("[m.purging] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
+          l.debug(DS_MODEL,1)("[m.purging] %s, from %s, #effectList:%d(-1)", e:toLogString(),self:toLogString(), #self.effectList)
           return e
         elseif e.saveTime and e.saveTime >= effect.purgingTime then
-          l.debug(DS_MODEL,1)("[m.purge-renewed] %s",  e:toLogString())
+          l.debug(DS_MODEL,1)("[m.purge-renewed] %s, in %s",  e:toLogString(), self:toLogString())
           return e
         end
       end
-      l.debug(DS_MODEL,1)("[m.purge] %s,dur:%d, stkCnt:%d, #effectList:%d(-1)", e:toLogString(), e.duration/1000,e.stackCount, #self.effectList)
       table.remove(self.effectList,i)
+      if l.debugEnabled(DS_MODEL,1) then
+        local effectListLog = ''
+        for key, effect in ipairs(self.effectList) do
+          effectListLog= effectListLog ..'\n [+--e:]'.. effect:toLogString()
+        end
+        l.debug(DS_MODEL,1)("[m.purged] %s, from %s, #effectList:%d%s",
+          e:toLogString(), self:toLogString(), #self.effectList, effectListLog)
+      end
       oldEffect = e -- we need duration info to end action
       break
     end
@@ -908,14 +936,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     if not var.ignored then
       local ok = true
       if self.flags.forEnemy and oldEffect
-         and var.ability.id~=oldEffect.ability.id -- count if this effect has same id
-         and var.unitId~=oldEffect.unitId -- count if this effect has same unit id
-         and math.abs(oldEffect.startTime-var.startTime)<100 -- count if this effect comes at a different time
-        then
+        and var.ability.id~=oldEffect.ability.id -- count if this effect has same id
+        and var.unitId~=oldEffect.unitId -- count if this effect has same unit id
+        and math.abs(oldEffect.startTime-var.startTime)<100 -- count if this effect comes at a different time
+      then
         ok = false
         reason = reason .. string.format('not counted as available:%s\n',var:toLogString())
       end
-      if ok then 
+      if ok then
         availableEffectCount = availableEffectCount+1
       end
     else
@@ -992,12 +1020,20 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
       local now = GetGameTimeMilliseconds()
       if math.abs(e.endTime-effect.endTime)>1000 then
         self.effectList[i] = effect
+        -- save effect end time to aid judgement on the strictness of following effects
+        if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
+          self.effectEndTimes[#self.effectEndTimes+1] = effect.endTime
+        end
       end
       self.effectList[i].saveTime = now -- #number
       return e
     end
   end
   table.insert(self.effectList, effect)
+  -- save effect end time to aid judgement on the strictness of following effects
+  if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
+    self.effectEndTimes[#self.effectEndTimes+1] = effect.endTime
+  end
   -- record targetId for enemy actions
   if self.flags.forEnemy and effect.unitId>0 then
     self.targetId = effect.unitId
@@ -1012,8 +1048,9 @@ end
 
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
-  return string.format("$%d-%s@%.2f~%.2f<%.2f>%s",self.sn, self.ability:toLogString(), self.startTime/1000, 
-    self:getEndTime()/1000, self:getDuration()/1000, self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount))
+  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.sn, self.ability:toLogString(), self.startTime/1000,
+    self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
+    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount))
 end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
@@ -1077,7 +1114,7 @@ end
 mEffect.toLogString --#(#Effect:self)->(#string)
 = function(self)
   return string.format("%s, %.2f~%.2f<%d>, stack:%d, unitId:%d %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
-      self.duration/1000, self.stackCount, self.unitId, self.ignored and ' [ignored]' or '')
+    self.duration/1000, self.stackCount, self.unitId, self.ignored and ' [ignored]' or '')
 end
 --========================================
 --        register

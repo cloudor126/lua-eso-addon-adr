@@ -1,5 +1,9 @@
+3.107b
+- Improved the matching policy to match effects coming in sequence i.e. Arcanist's Runeguard of Freedom. 
+- Added a '>' marking to hint that the tracker is over timed (showing the timer of the following effect) i.e. Crowd Control Immunity after Arcanist's Runeguard of Freedom.
+
 3.106
-- Impoved the policy introduced in v3.104 which may cause timer lost when abilities are re-performed.
+- Improved the policy introduced in v3.104 which may cause timer lost when abilities are re-performed.
 
 3.105
 - Added Arcanist Crux into filtered list so that crux durantion won't be mixed into ability durations.
