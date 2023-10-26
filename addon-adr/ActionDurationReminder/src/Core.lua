@@ -312,6 +312,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       return true
     end
   end
+
   for id, a in pairs(l.idActionMap) do
     if matcher(a) then
       if a.flags.forArea and action.flags.forEnemy then
@@ -328,14 +329,25 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       if a.ability.id ~= action.ability.id then
         return a
       end
-      -- don't replace enemy actions, so that they can be traced seperately
-      if action.flags.forEnemy then
+      -- don't replace enemy actions excluding fake, so that they can be traced seperately
+      if action.flags.forEnemy and not a.fake then
         return nil
       end
       return a
     end
+    
   end
   l.debug(DS_ACTION,1)('[aM:none]')
+  return nil
+end
+
+l.getActionBySlot --#(#number:hotbarCategory, #number:slotNum)->(Models#Action)
+= function(hotbarCategory, slotNum)
+  for key, var in pairs(l.idActionMap) do
+    if var.hotbarCategory == hotbarCategory and var.slotNum == slotNum then
+      return var
+    end
+  end
   return nil
 end
 
@@ -401,6 +413,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         abilityAccepter(var)
       end
       l.saveAction(action)
+    else
     end
   end
   -- 6. save
@@ -748,9 +761,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
       if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still exist
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
-      if action.oldAction and action.oldAction.fake and action:getEndTime() <= now+20 and  action:getStartTime()>now-500 then
-        l.debug(DS_ACTION,1)('[trg]%s', action:toLogString())
-        l.removeAction(action)
+      if action.oldAction and action.oldAction.fake then
+        if now < action:getStartTime()+1100 then
+          l.debug(DS_ACTION,1)('[trg]%s', action:toLogString())
+          df('fade and remove now: %s', action:toLogString())
+          l.removeAction(action)
+        end
       end
       return
     end
@@ -933,6 +949,8 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   end
   -- remove fake/trigger actions from queue, otherwise next fake action will failed to recognize i.e. Crystal Fragment
   if action.oldAction and action.oldAction.fake then
+    df('removing action with fake old: %s',action:toLogString()) -- TODO
+    df('old: %s',action.oldAction:toLogString()) -- TODO
     local newQueue = {} --#list<Models#Action>
     for key, a in ipairs(l.actionQueue) do
       if a.ability.id ~= action.ability.id and a.ability.id~= action.oldAction.ability.id then
@@ -940,6 +958,11 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
       end
     end
     l.actionQueue = newQueue
+    d('checking current:')
+    for key, var in pairs(l.idActionMap) do
+    	df('in idActionMap: %s', var:toLogString())
+    end
+    d('---')
   end
   --
   return removed
@@ -974,16 +997,6 @@ l.saveAction -- #(Models#Action:action)->()
     l.debug(DS_ACTION,1)('[s]%s,idActionMap(%i),timeActionMap(%i),#effectList:%d%s', action:toLogString(),
       len(l.idActionMap),len(l.timeActionMap), #action.effectList, effectListLog)
   end
-end
-
-l.getActionBySlot --#(#number:hotbarCategory, #number:slotNum)->(Models#Action)
-= function(hotbarCategory, slotNum)
-  for key, var in pairs(l.idActionMap) do
-    if var.hotbarCategory == hotbarCategory and var.slotNum == slotNum then
-      return var
-    end
-  end
-  return nil
 end
 
 
