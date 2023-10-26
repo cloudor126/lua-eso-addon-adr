@@ -894,9 +894,10 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
-      -- purging earlier than expected (i.e. Minor Breach cut by POL)
+      local withOldFake = self.oldAction and self.oldAction.fake
+      -- if not purging a fake old action and purging earlier than expected (i.e. Minor Breach cut by POL)
       -- or the new action just inherited some old effects that is being cut now
-      if  e.endTime > now+1000 or e.startTime< self.startTime then
+      if not withOldFake and ( e.endTime > now+1000 or e.startTime< self.startTime  ) then
         -- sometimes, effects such as Minor Breach are purged and added when major action effect ends, so we should saved that for a little while
         if not effect.purgingTime then
           effect.purgingTime = now
@@ -956,8 +957,8 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     (oldEffect.startTime>= self.startTime)
     or
     (
-    -- or the old one is fake, so a real action now is triggered and we should do a purge
-    self.oldAction and self.oldAction.fake
+    -- either the current one or the old one is fake, so a real action now is triggered and we should do a purge
+    self.fake or (self.oldAction and self.oldAction.fake)
     )
     )
   then
