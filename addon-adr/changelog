@@ -1,3 +1,6 @@
+3.109a
+- Fixed a bug of  minor debuff effect matching policy i.e. arcanist's Cruxweaver Armor will keep the 30 sec timer when taking damage.
+
 3.108
 - Fixed an effect purging problem i.e. Sorcerer's Crystal Fragments will not get a wrong timer after triggered.
 

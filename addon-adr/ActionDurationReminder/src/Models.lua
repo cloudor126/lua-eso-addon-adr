@@ -660,8 +660,12 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     if effect.ability.id == e.ability.id then return true end
   end
   
-  -- 3.0 if it is following effectTimeEnds, it might be matched by description
   local strict = effect.startTime > self.startTime + self.castTime + 2000
+  -- 3.0.x if it is minor debuff, it could be non-strict
+  if effect.ability.icon:find('ability_debuff_min',1,true) then
+    strict = false
+  end
+  -- 3.0.x if it is following other effect's timeEnds, it could be non-strict
   if strict then -- try to accept continued effect
     local matchEffectsEnd = false
     for key, var in ipairs(self.effectEndTimes) do
