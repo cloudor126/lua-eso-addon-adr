@@ -46,7 +46,7 @@ distributions {
 }
 
 distZip{
-    archiveFile.set(file("${distZip.destinationDir}/${addonName}-${addonVersion}.zip"))
+    archiveFile.set(file("${distZip.destinationDirectory}/${addonName}-${addonVersion}.zip"))
 }
 
 if (hasProperty('ESO_PTS_ADDONS_DIR')){
