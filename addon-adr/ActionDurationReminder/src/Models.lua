@@ -1053,9 +1053,11 @@ end
 
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
-  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.sn, self.ability:toLogString(), self.startTime/1000,
+  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d",self.sn, self.ability:toLogString(), self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
-    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount))
+    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
+    self.hotbarCategory,self.slotNum
+    )
 end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)

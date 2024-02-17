@@ -133,6 +133,11 @@ l.onCoreUpdate -- #()->()
   local toShowIdList = {} --#list<#number>
   for id, action in pairs(core.getIdActionMap()) do
     if not showedActionMap[id] then
+      -- filter removed long-stack action
+      if #action.effectList==0 and action.stackCount > 0 and action.hotbarCategory==hotbarCategory then
+        action.stackCount= 0
+      end
+      -- collect
       action.flags.shifted = true
       toShowActionMap[id] = action
       toShowIdList[#toShowIdList+1] = id
