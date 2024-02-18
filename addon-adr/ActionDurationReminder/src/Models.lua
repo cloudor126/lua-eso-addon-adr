@@ -1120,8 +1120,8 @@ end
 
 mEffect.toLogString --#(#Effect:self)->(#string)
 = function(self)
-  return string.format("%s, %.2f~%.2f<%d>, stack:%d, unitId:%d %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
-    self.duration/1000, self.stackCount, self.unitId, self.ignored and ' [ignored]' or '')
+  return string.format("%s, %.2f~%.2f<%d>, stack:%d, unit:%s(%d) %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
+    self.duration/1000, self.stackCount, self.unitTag, self.unitId, self.ignored and ' [ignored]' or '')
 end
 --========================================
 --        register

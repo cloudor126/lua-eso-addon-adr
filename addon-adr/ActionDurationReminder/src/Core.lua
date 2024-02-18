@@ -62,6 +62,8 @@ l.ignoredCache = utils.newRecentCache(1000, 10)
 
 l.ignoredIds = {} -- #map<#number,#boolean>
 
+l.snActionMap = {} --#map<#number,Models#Action>
+
 l.timeActionMap = {}--#map<#number,Models#Action>
 
 l.targetId = nil -- #number
@@ -312,10 +314,12 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       l.debug(DS_ACTION,1)('[aM:slot]')
       return true
     end
+    return false
   end
 
   for id, a in pairs(l.idActionMap) do
     if matcher(a) then
+      
       if a.flags.forArea and action.flags.forEnemy then
         -- fix the flags changed from area to enemy
         action.flags.forArea = true
@@ -332,6 +336,14 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       end
       -- don't replace enemy actions excluding fake, so that they can be traced seperately
       if action.flags.forEnemy and not a.fake then
+        -- except this action only have player effects i.e. Shrouded Dagger
+        local playerOnly = true
+        for key, var in ipairs(a.effectList) do
+        	if var.unitTag ~= 'player' then
+        	 playerOnly = false
+        	end
+        end
+        if playerOnly then return a end
         return nil
       end
       return a
@@ -947,6 +959,18 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
     removed = true
     l.debug(DS_ACTION, 1)('[d]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
   end
+  -- remove from timeActionMap
+  local times = {}
+  for key, var in pairs(l.timeActionMap) do
+  	if var.sn == action.sn then
+  	 times[#times+1] = key
+  	end
+  end
+  for key, var in ipairs(times) do
+  	l.timeActionMap[var] = nil
+  end
+  -- remove from snActionMap
+  l.snActionMap[action.sn] = nil
   -- remove fake/trigger actions from queue, otherwise next fake action will failed to recognize i.e. Crystal Fragment
   if action.oldAction and action.oldAction.fake then
     local newQueue = {} --#list<Models#Action>
@@ -970,6 +994,7 @@ l.saveAction -- #(Models#Action:action)->()
   if sameNameAction then l.idActionMap[sameNameAction.ability.id] = nil end
 
   l.idActionMap[action.ability.id] = action
+  l.snActionMap[action.sn] = action
   action.saved = true
   for i, effect in ipairs(action.effectList) do
     l.timeActionMap[effect.startTime] = action
@@ -1013,6 +1038,7 @@ m.clearActions -- #()->()
   l.actionQueue = {}
   l.idActionMap = {}
   l.timeActionMap = {}
+  l.snActionMap = {}
 end
 addon.clearActions = m.clearActions
 
@@ -1050,6 +1076,12 @@ m.getIdActionMap -- #()->(#map<#number,Models#Action>)
   return l.idActionMap
 end
 addon.getIdActionMap = m.getIdActionMap
+
+m.getSnActionMap -- #()->(#map<#number,Models#Action>)
+= function()
+  return l.snActionMap
+end
+addon.getSnActionMap = m.getSnActionMap
 
 m.getTimeActionMap -- #()->(#map<#number,Models#Action>)
 = function()
