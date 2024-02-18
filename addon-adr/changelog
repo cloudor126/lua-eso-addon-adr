@@ -1,3 +1,6 @@
+3.111
+- Fixed a bug of not showing alert because of simultaneous emergence of reminders i.e. alert of Flame of Oblivion should not be nullified by Molten Whip.
+
 3.110
 - Fixed a bug of not removing hint with stack after skill had been unequiped i.e. Necro's Flame Skull will hide when unequiped.
 

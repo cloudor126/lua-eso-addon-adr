@@ -199,8 +199,8 @@ l.onCoreUpdate -- #()->()
   local savedVars = l.getSavedVars()
   if not savedVars.alertEnabled then return end
 
-  local timeActionMap = core.getTimeActionMap()
-  for id,action in pairs(timeActionMap) do
+  local idActionMap = core.getIdActionMap()
+  for id,action in pairs(idActionMap) do
     l.checkAction(action)
   end
   if savedVars.alertRemoveWhenCastAgain then
