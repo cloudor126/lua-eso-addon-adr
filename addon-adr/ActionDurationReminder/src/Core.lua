@@ -295,6 +295,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
   local abilityName = action.ability.name
   local matcher -- #(Models#Action:a)->(#boolean)
   = function(a)
+    if a:getEndTime(false) < action.startTime then return false end
     if a.ability.id == action.ability.id then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
