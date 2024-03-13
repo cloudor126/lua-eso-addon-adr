@@ -1,3 +1,6 @@
+3.113
+- Added effect event from player pet into processing i.e. Necro's Sacrificial Bones can show buff counter from bone pets.
+
 3.112
 - Fixed a bug of memory leak i.e. spam Shrouded Dagger with Oaken Soul should not cause FPS drop any more.
 

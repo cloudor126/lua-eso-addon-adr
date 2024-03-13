@@ -548,7 +548,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   effectType,abilityType,statusEffectType,unitName,unitId,abilityId,sourceType)
   local now = GetGameTimeMilliseconds()
   effectName = effectName:gsub('^.*< (.*) >$','%1'):gsub('%^%w','')
-  l.debug(DS_EFFECT, 1)('[%s%s]%s(%s)@%.2f<%.2f>[%s] for %s(%i), effectType:%d, abilityType:%d, statusEffectType:%d',
+  l.debug(DS_EFFECT, 1)('[%s%s]%s(%s)@%.2f<%.2f>[%s] for %s(%i:%s), effectType:%d, abilityType:%d, statusEffectType:%d, sourceType:%d',
     ({'+','-','=','*','/'})[changeType] or '?',
     stackCount > 0 and tostring(stackCount) or '',
     effectName,
@@ -558,9 +558,11 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     iconName,
     unitTag~='' and unitTag or 'none',
     unitId,
+    unitName,
     effectType,
     abilityType,
-    statusEffectType
+    statusEffectType,
+    sourceType
   )
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
@@ -876,6 +878,8 @@ l.onStart -- #()->()
   EVENT_MANAGER:RegisterForUpdate(addon.name, 100, l.onUpdate)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_EFFECT_CHANGED, l.onEffectChanged)
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
+  EVENT_MANAGER:RegisterForEvent(addon.name..'_pet', EVENT_EFFECT_CHANGED, l.onEffectChanged)
+  EVENT_MANAGER:AddFilterForEvent(addon.name..'_pet', EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER_PET)
 
   EVENT_MANAGER:RegisterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, function(...)
     local sourceType = select(17, ... ) -- #string
