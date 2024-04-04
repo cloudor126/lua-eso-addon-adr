@@ -194,14 +194,33 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
   return false
 end
 
+local lastLog = 0
+addon.alertLogCntValve = 20
+addon.alertLogInterval = 10
+-- /script ActionDurationReminder.alertLogCntValve=0 ActionDurationReminder.alertLogInterval=3
+-- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=10
 l.onCoreUpdate -- #()->()
 = function()
   local savedVars = l.getSavedVars()
   if not savedVars.alertEnabled then return end
 
   local snActionMap = core.getSnActionMap()
+  local cntMap = {} -- #map<#number,#number>
   for sn,action in pairs(snActionMap) do
     l.checkAction(action)
+    cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
+  end
+  
+  local now = GetGameTimeSeconds()
+  if now - lastLog > addon.alertLogInterval then
+    local didLog = false
+    for id, cnt in pairs(cntMap) do
+    	if cnt > addon.alertLogCntValve then
+    	 didLog = true
+    	 df("[!ADR!] |t24:24:%s|t%s(%d) #%d", GetAbilityIcon(id), GetAbilityName(id), id, cnt)
+    	end
+    end
+    if didLog then lastLog = now end
   end
   if savedVars.alertRemoveWhenCastAgain then
     for k,v in pairs(l.showedControls) do

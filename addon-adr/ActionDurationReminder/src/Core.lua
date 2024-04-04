@@ -426,6 +426,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         abilityAccepter(var)
       end
       l.saveAction(action)
+      l.removeAction(sameNameAction) -- clear from registries
     else
     end
   end
@@ -958,7 +959,8 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
 = function(action)
   local removed = false
   -- remove from idActionMap
-  if l.idActionMap[action.ability.id] then
+  local old = l.idActionMap[action.ability.id]
+  if old and old.sn == action.sn then
     l.idActionMap[action.ability.id] = nil
     removed = true
     l.debug(DS_ACTION, 1)('[d]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
@@ -1045,6 +1047,7 @@ m.clearActions -- #()->()
   l.snActionMap = {}
 end
 addon.clearActions = m.clearActions
+addon.clear = m.clearActions
 
 m.clearAreaActions -- #()->()
 = function()

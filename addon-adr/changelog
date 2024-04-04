@@ -1,3 +1,6 @@
+3.114
+- Fixed a memory leak bug that was causing game delays, especially when the alert popup is enabled.
+
 3.113
 - Added effect event from player pet into processing i.e. Necro's Sacrificial Bones can show buff counter from bone pets.
 
