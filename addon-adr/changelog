@@ -1,4 +1,4 @@
-3.114
+3.114b
 - Fixed a memory leak bug that was causing game delays, especially when the alert popup is enabled.
 
 3.113

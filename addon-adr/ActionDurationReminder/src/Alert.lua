@@ -196,9 +196,9 @@ end
 
 local lastLog = 0
 addon.alertLogCntValve = 20
-addon.alertLogInterval = 10
+addon.alertLogInterval = 300
 -- /script ActionDurationReminder.alertLogCntValve=0 ActionDurationReminder.alertLogInterval=3
--- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=10
+-- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=300
 l.onCoreUpdate -- #()->()
 = function()
   local savedVars = l.getSavedVars()

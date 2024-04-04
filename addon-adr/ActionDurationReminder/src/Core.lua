@@ -963,7 +963,7 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   if old and old.sn == action.sn then
     l.idActionMap[action.ability.id] = nil
     removed = true
-    l.debug(DS_ACTION, 1)('[d]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
+    l.debug(DS_ACTION, 1)('[d]idActionMap:%s',action:toLogString())
   end
   -- remove from timeActionMap
   local times = {}
@@ -997,8 +997,13 @@ l.saveAction -- #(Models#Action:action)->()
 
   -- clear same name action that can have a different id
   local sameNameAction = l.getActionByNewAction(action)
-  if sameNameAction then l.idActionMap[sameNameAction.ability.id] = nil end
+  if sameNameAction and sameNameAction.sn~=action.sn then
+    l.removeAction(sameNameAction)
+  end
 
+  local old = l.idActionMap[action.ability.id]
+  if old and old.sn == action.sn then old = nil end
+  
   l.idActionMap[action.ability.id] = action
   l.snActionMap[action.sn] = action
   action.saved = true
@@ -1021,6 +1026,7 @@ l.saveAction -- #(Models#Action:action)->()
     l.debug(DS_ACTION,1)('[s]%s,idActionMap(%i),timeActionMap(%i),#effectList:%d%s', action:toLogString(),
       len(l.idActionMap),len(l.timeActionMap), #action.effectList, effectListLog)
   end
+  if old then l.removeAction(old) end
 end
 
 
