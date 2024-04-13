@@ -587,6 +587,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     ['ability_mage_039']='blight seed',
     ['arcanist_crux']='arcanist crux',
     ['death_recap_bleed_dot']='bleed dot',
+    ['ability_healer_023']='sunlight',
   }
   for key, var in pairs(ignoredIdsConfig) do
     if not l.ignoredIds[key] and iconName:find(key,1,true) then

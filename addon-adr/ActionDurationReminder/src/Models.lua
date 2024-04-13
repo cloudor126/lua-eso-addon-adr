@@ -227,10 +227,10 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   return effect
 end
 
-local function matchFunc(s1, s2)
+local function matchFunc(s1, s2, full)
   if s1=='' or s2=='' then return false end
   if s1 == s2 then return true end
-  if s1:find(s2, 1,true) or s2:find(s1, 1,true) then return true end
+  if not full and (s1:find(s2, 1,true) or s2:find(s1, 1,true)) then return true end
   return false
 end
 
@@ -274,11 +274,11 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
       return true
     end
   end
-  if matchFunc(self.name , other.name) then
+  if matchFunc(self.name , other.name, true) then
     memoizeMatch(idHash, strict, true)
     return true
   end
-  if self.progressionName and matchFunc(self.progressionName, other.name) then
+  if self.progressionName and matchFunc(self.progressionName, other.name, true) then
     memoizeMatch(idHash, strict, true)
     return true
   end
