@@ -1,5 +1,6 @@
 3.115
 - Added a mechanism to clean up potential leaks.
+- Added a class set effect (sunlight stack effect from Wrathsun) into filter list.
 
 3.114b
 - Fixed a memory leak bug that was causing game delays, especially when the alert popup is enabled.
