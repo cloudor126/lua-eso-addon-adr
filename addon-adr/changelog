@@ -1,3 +1,6 @@
+3.115a
+- Updated chinese translation
+
 3.115
 - Added a mechanism to clean up potential leaks.
 - Added a class set effect (sunlight stack effect from Wrathsun) into filter list.
