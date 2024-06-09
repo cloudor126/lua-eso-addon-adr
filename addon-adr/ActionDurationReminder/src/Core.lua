@@ -297,7 +297,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
   local abilityName = action.ability.name
   local matcher -- #(Models#Action:a)->(#boolean)
   = function(a)
-    if a:getEndTime(false) < action.startTime then return false end
+    if a:getDuration() > 0 and a:getEndTime(false) < action.startTime then return false end
     if a.ability.id == action.ability.id then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
@@ -387,7 +387,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 4. queue it
   l.queueAction(action)
   -- 5. replace saved
-  if not action.flags.forGround and action.channelTime==0 then -- ground and channel action should not inherit old action effects
+  if not action.flags.forGround then -- ground and channel action should not inherit old action effects
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
     if sameNameAction and sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
@@ -519,7 +519,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     then
       local duration = action.duration
       -- use descript duration if action has channel time i.e. Arcanist FateCarver,
-      if result == ACTION_RESULT_EFFECT_GAINED_DURATION and duration == 0 and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
+      if result == ACTION_RESULT_EFFECT_GAINED_DURATION and duration == 0 -- and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
         and sourceType==targetType and sourceUnitId == targetUnitId
       then
         duration = hitValue

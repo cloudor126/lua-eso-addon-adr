@@ -120,9 +120,8 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.slotNum = slotNum --#number
   action.ability = m.newAbility(GetSlotBoundId(slotNum, hotbarCategory),GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
-  local channeled,castTime,channelTime = GetAbilityCastInfo(action.ability.id)
+  local channeled,castTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
-  action.channelTime = channeled and channelTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
   if action.duration<1000 then action.duration = 0 end
@@ -555,7 +554,11 @@ end
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
-  return self.duration==0 and optEffect and optEffect.duration==0 and self.stackCount>0
+  return self.duration==0 and self.stackCount>0 and 
+    (
+      optEffect and optEffect.duration==0
+      or not optEffect
+    ) 
     -- should not remove newly created covering action
     or (self.oldAction and not optEffect and #self.effectList>0 and GetGameTimeMilliseconds()-self.startTime<1000)
 end

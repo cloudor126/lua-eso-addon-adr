@@ -1,3 +1,6 @@
+3.117
+- Fixed a bug of matching skills i.e. Necromancer's Flame Skull can show at proper place now.
+
 3.116
 - Fixed a bug of filtering concurrent events i.e. Werewolf's Brutal Pounce can get a correct stack count.
 
