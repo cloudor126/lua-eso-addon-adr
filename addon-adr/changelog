@@ -1,4 +1,7 @@
-3.117
+3.118
+- Improved a matching policy to prevent effects from being updated by potion use.
+
+3.117a
 - Fixed a bug of matching skills i.e. Necromancer's Flame Skull can show at proper place now.
 
 3.116

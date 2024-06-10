@@ -554,11 +554,11 @@ end
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
-  return self.duration==0 and self.stackCount>0 and 
+  return self.duration==0 and self.stackCount>0 and
     (
-      optEffect and optEffect.duration==0
-      or not optEffect
-    ) 
+    optEffect and optEffect.duration==0
+    or not optEffect
+    )
     -- should not remove newly created covering action
     or (self.oldAction and not optEffect and #self.effectList>0 and GetGameTimeMilliseconds()-self.startTime<1000)
 end
@@ -657,12 +657,15 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
-  -- 2. fast check already matched effects
-  for i, var in ipairs(self.effectList) do
-    local e = var --#Effect
-    if effect.ability.id == e.ability.id then return true end
+  -- 2. fast check already matched effects unless it is a buff effect
+  local isBuff = effect.ability.icon:find('ability_buff_m',1,true)
+  if not isBuff then
+    for i, var in ipairs(self.effectList) do
+      local e = var --#Effect
+      if effect.ability.id == e.ability.id then return true end
+    end
   end
-  
+
   local strict = effect.startTime > self.startTime + self.castTime + 2000
   -- 3.0.x if it is minor debuff, it could be non-strict
   if effect.ability.icon:find('ability_debuff_min',1,true) then
@@ -682,14 +685,18 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   -- 3. check ability match
   if self:matchesAbility(effect.ability, strict) then
     -- 3.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
-    local bad = false
     if strict and effect.duration%1000>0 and self.duration >0
       and effect.ability.name ~= self.ability.name
       and math.floor(effect.duration/1000+0.5)~= math.floor(self.duration/1000+0.5)
     then
-      bad = true
+      return false
     end
-    if not bad then return true end
+    -- 3.b filter buff with different duration
+    if isBuff and effect.duration ~= self.duration then
+      return false
+    end
+    -- 
+    return true
   end
   --
   return false
@@ -704,6 +711,10 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   -- 2. fast check already matched effects
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and (e.unitId == effect.unitId or effect.unitId==0) then
+      -- e.g. buff updated by potion
+      if effect.ability.icon:find('ability_buff_m',1,true) and effect.duration ~= self.duration then
+        return false
+      end 
       return true
     end
   end
@@ -1060,7 +1071,7 @@ mAction.toLogString --#(#Action:self)->(#string)
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
     self.hotbarCategory,self.slotNum
-    )
+  )
 end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
