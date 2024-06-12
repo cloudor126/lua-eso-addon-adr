@@ -691,10 +691,6 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     then
       return false
     end
-    -- 3.b filter buff with different duration
-    if isBuff and effect.duration ~= self.duration then
-      return false
-    end
     -- 
     return true
   end
@@ -711,10 +707,6 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   -- 2. fast check already matched effects
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and (e.unitId == effect.unitId or effect.unitId==0) then
-      -- e.g. buff updated by potion
-      if effect.ability.icon:find('ability_buff_m',1,true) and effect.duration ~= self.duration then
-        return false
-      end 
       return true
     end
   end

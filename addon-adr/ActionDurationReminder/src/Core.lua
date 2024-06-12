@@ -319,7 +319,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
 
   for id, a in pairs(l.idActionMap) do
     if matcher(a) then
-      
+
       if a.flags.forArea and action.flags.forEnemy then
         -- fix the flags changed from area to enemy
         action.flags.forArea = true
@@ -339,16 +339,16 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
         -- except this action only have player effects i.e. Shrouded Dagger
         local playerOnly = true
         for key, var in ipairs(a.effectList) do
-        	if var.unitTag ~= 'player' then
-        	 playerOnly = false
-        	end
+          if var.unitTag ~= 'player' then
+            playerOnly = false
+          end
         end
         if playerOnly then return a end
         return nil
       end
       return a
     end
-    
+
   end
   l.debug(DS_ACTION,1)('[aM:none]')
   return nil
@@ -666,7 +666,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     return
   end
+  
+  -- check duration
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
+  -- check if it's a potion effect
+  if effect.startTime - l.lastQuickslotTime < 100 and iconName:find('ability_buff_m',1,true) then return end
+  
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
     if duration == 0 then
@@ -969,12 +974,12 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   -- remove from timeActionMap
   local times = {}
   for key, var in pairs(l.timeActionMap) do
-  	if var.sn == action.sn then
-  	 times[#times+1] = key
-  	end
+    if var.sn == action.sn then
+      times[#times+1] = key
+    end
   end
   for key, var in ipairs(times) do
-  	l.timeActionMap[var] = nil
+    l.timeActionMap[var] = nil
   end
   -- remove from snActionMap
   l.snActionMap[action.sn] = nil
@@ -1004,7 +1009,7 @@ l.saveAction -- #(Models#Action:action)->()
 
   local old = l.idActionMap[action.ability.id]
   if old and old.sn == action.sn then old = nil end
-  
+
   l.idActionMap[action.ability.id] = action
   l.snActionMap[action.sn] = action
   action.saved = true
