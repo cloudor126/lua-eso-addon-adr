@@ -101,6 +101,12 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   else
     ability.progressionName = nil
   end -- only keep different name
+  if hasProgression then
+    local _,icon3,_ = GetAbilityProgressionAbilityInfo(progressionIndex,false,1)
+    if icon3 ~= icon then
+      ability.icon3 = icon3 -- #string
+    end
+  end
   ability.description = GetAbilityDescription(id):gsub('%^%w','') -- #string
   setmetatable(ability,{__index=mAbility})
   return ability
@@ -269,6 +275,12 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   end
   if other.icon2  then
     if fMatchIconPath(self.icon, other.icon2) then
+      memoizeMatch(idHash, strict, true)
+      return true
+    end
+  end
+  if self.icon3 then
+     if fMatchIconPath(self.icon3, other.icon) then
       memoizeMatch(idHash, strict, true)
       return true
     end

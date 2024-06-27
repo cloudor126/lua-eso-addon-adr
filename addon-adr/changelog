@@ -1,3 +1,6 @@
+3.119
+- Improved effect matching i.e. Bolt Escape Fatigue stack effect can be counted again.
+
 3.118a
 - Improved a matching policy to prevent effects from being updated by potion use.
 
