@@ -395,12 +395,14 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
   -- 3. filter by keywords
   if not l.filterAbilityOk(action.ability) then
-    l.debug(DS_EFFECT,1)('[]filtered')
+    l.debug(DS_ACTION,1)('[a-]filtered by keywords')
     return
   end
+  
   if l.idDurationMap[action.ability.id] then
     action.configDuration = l.idDurationMap[action.ability.id]
     action.endTime = action.startTime + action.configDuration
+    l.debug(DS_ACTION,1)('[a*]modified to %d, %s', action.configDuration, action:toLogString())
   end
   -- 4. queue it
   l.queueAction(action)
@@ -450,7 +452,14 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
   -- 6. save
   if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect
-    and action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds*1000 then
+    and
+    (
+      ( action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds*1000)
+      or
+      (action.configDuration and action.configDuration>0)
+    ) 
+     
+    then
     -- 6.x save short without effects
     l.saveAction(action)
   end

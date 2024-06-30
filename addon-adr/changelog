@@ -1,4 +1,4 @@
-3.120
+3.120a
 - Added support for customizing durations in Patterns of White List in Core settings i.e. a line of 'unstable wall = 20.5' would modify your Unstable Wall of Fire/Ice/Light to 20.5 seconds. 
 
 3.119
