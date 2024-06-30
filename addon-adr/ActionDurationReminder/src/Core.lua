@@ -48,6 +48,8 @@ l.actionQueue = {} --#list<Models#Action>
 
 l.idActionMap = {}--#map<#number,Models#Action>
 
+l.idDurationMap = {} --#map<#number,#number>
+
 l.idFilteringMap = {} --#map<#number,#boolean>
 
 l.gallopAction = nil -- Models#Action
@@ -108,14 +110,26 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
   local checkOk = false
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
+    local left,dur = line:match "^(.-)%s*=%s*(.-)$"
+    if left then
+      line = left
+    end
     if line and #line>0 then
-      checked = true
+      if not dur then checked = true end
       if line:match('%d+') then
         checkOk = tonumber(line) == ability.id
       else
         checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
       end
-      if checkOk then break end
+      if checkOk then
+        if dur then
+          dur = tonumber(dur)
+          if dur then
+            l.idDurationMap[ability.id] = dur*1000
+          end
+        end
+       break 
+      end
     end
   end
   if checked and not checkOk then
@@ -383,6 +397,10 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if not l.filterAbilityOk(action.ability) then
     l.debug(DS_EFFECT,1)('[]filtered')
     return
+  end
+  if l.idDurationMap[action.ability.id] then
+    action.configDuration = l.idDurationMap[action.ability.id]
+    action.endTime = action.startTime + action.configDuration
   end
   -- 4. queue it
   l.queueAction(action)
@@ -1190,7 +1208,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           type = "editbox",
           name = addon.text("Patterns of White List in line"), -- or string id or function returning a string
           getFunc = function() return l.getSavedVars().coreKeyWords end,
-          setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} end,
+          setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} l.idDurationMap={} end,
           -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
           isMultiline = true, --boolean (optional)
           isExtraWide = true, --boolean (optional)

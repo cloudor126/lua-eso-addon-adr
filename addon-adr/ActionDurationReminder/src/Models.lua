@@ -130,6 +130,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
+  action.configDuration = nil --#number
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
   action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
@@ -330,6 +331,7 @@ end
 
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
+  if self.configDuration then return self.configDuration end
   local optEffect = self:optEffect() -- #Effect
   return optEffect and optEffect.duration or self.duration or self.descriptionDuration
 end
@@ -355,6 +357,7 @@ end
 
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
 = function(self, debugging)
+  if self.configDuration then return self.startTime + self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
   reason = reason or 'nil'
   local now = GetGameTimeMilliseconds()
@@ -380,6 +383,7 @@ end
 
 mAction.getFullEndTime -- #(#Action:self)->(#number)
 = function(self)
+  if self.configDuration then return self.startTime+self.configDuration end
   local endTime = 0;
   for key, var in ipairs(self.effectList) do
     if not var.ignored then
