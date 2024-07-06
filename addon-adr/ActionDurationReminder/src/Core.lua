@@ -110,11 +110,11 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
   local checkOk = false
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
-    local left,dur = line:match "^(.-)%s*=%s*(.-)$"
-    if left then
-      line = left
-    end
     if line and #line>0 then
+      local left,dur = line:match "^(.-)%s*=%s*(.-)$"
+      if left then
+        line = left
+      end
       if not dur then checked = true end
       if line:match('%d+') then
         checkOk = tonumber(line) == ability.id
@@ -122,13 +122,15 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
         checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
       end
       if checkOk then
+        l.debug(DS_ACTION,2)('[Filtering] $s is ok', left)
         if dur then
+          l.debug(DS_ACTION,2)('[Filtering] got %s = %s', left, dur)
           dur = tonumber(dur)
           if dur then
             l.idDurationMap[ability.id] = dur*1000
           end
         end
-       break 
+        break
       end
     end
   end
@@ -398,7 +400,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     l.debug(DS_ACTION,1)('[a-]filtered by keywords')
     return
   end
-  
+
   if l.idDurationMap[action.ability.id] then
     action.configDuration = l.idDurationMap[action.ability.id]
     action.endTime = action.startTime + action.configDuration
@@ -454,12 +456,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if not action.flags.forGround -- i.e. Scalding Rune ground action should not show the timer without effect
     and
     (
-      ( action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds*1000)
-      or
-      (action.configDuration and action.configDuration>0)
-    ) 
-     
-    then
+    ( action.descriptionDuration and action.descriptionDuration<3000 and action.descriptionDuration>l.getSavedVars().coreMinimumDurationSeconds*1000)
+    or
+    (action.configDuration and action.configDuration>0)
+    )
+
+  then
     -- 6.x save short without effects
     l.saveAction(action)
   end
@@ -693,12 +695,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     return
   end
-  
+
   -- check duration
   if duration > 0 and duration < l.getSavedVars().coreMinimumDurationSeconds*1000 +100 then return end
   -- check if it's a potion effect
   if effect.startTime - l.lastQuickslotTime < 100 and iconName:find('ability_buff_m',1,true) then return end
-  
+
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
     if duration == 0 then
