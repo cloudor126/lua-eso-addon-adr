@@ -60,7 +60,7 @@ l.lastEffectAction = nil -- Models#Action
 
 l.lastQuickslotTime = 0 -- #number
 
-l.ignoredCache = utils.newRecentCache(1000, 10)
+l.ignoredCache = utils.newRecentCache(3000, 10)
 
 l.ignoredIds = {} -- #map<#number,#boolean>
 
@@ -604,6 +604,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=4 then
     l.debug(DS_ACTION,1)('[] '..key..' ignored by cache counted '..numMarks)
+    l.ignoredCache:mark(key)
     return
   end
   l.ignoredCache:mark(key)
