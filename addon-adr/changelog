@@ -1,3 +1,6 @@
+3.121
+- Optimize the blacklist/whitelist filtering mechanism to filter not only skills but also their effects.
+
 3.120a
 - Added support for customizing durations in Patterns of White List in Core settings i.e. a line of 'unstable wall = 20.5' would modify your Unstable Wall of Fire/Ice/Light to 20.5 seconds. 
 
@@ -28,8 +31,6 @@
 
 3.112
 - Fixed a bug of memory leak i.e. spam Shrouded Dagger with Oaken Soul should not cause FPS drop any more.
-3.112
-- Optimize the blacklist/whitelist filtering mechanism to filter not only skills but also their effects.
 
 3.111
 - Fixed a bug of not showing alert because of simultaneous emergence of reminders i.e. alert of Flame of Oblivion should not be nullified by Molten Whip.
