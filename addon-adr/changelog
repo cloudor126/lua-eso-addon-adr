@@ -28,6 +28,8 @@
 
 3.112
 - Fixed a bug of memory leak i.e. spam Shrouded Dagger with Oaken Soul should not cause FPS drop any more.
+3.112
+- Optimize the blacklist/whitelist filtering mechanism to filter not only skills but also their effects.
 
 3.111
 - Fixed a bug of not showing alert because of simultaneous emergence of reminders i.e. alert of Flame of Oblivion should not be nullified by Molten Whip.

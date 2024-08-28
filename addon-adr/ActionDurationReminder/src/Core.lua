@@ -70,38 +70,9 @@ l.timeActionMap = {}--#map<#number,Models#Action>
 
 l.targetId = nil -- #number
 
-l.queueAction -- #(Models#Action:action)->()
-= function(action)
-  l.lastAction = action
-  local newQueue = {} --#list<Models#Action>
-  newQueue[1] = action
-  local now = GetGameTimeMilliseconds()
-  for key, a in ipairs(l.actionQueue) do
-    if not a.newAction and now - a.startTime < 3 * 1000 then
-      table.insert(newQueue,a)
-    end
-  end
-  l.actionQueue = newQueue
-end
-
-l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
-=function(switch, level)
-  return function(format, ...)
-    if l.debugEnabled(switch,level) then
-      d(os.date()..'>', string.format(format, ...))
-    end
-  end
-end
-
-l.debugEnabled -- #(#string:switch,#number:level)->(#boolean)
-= function(switch, level)
-  return (m.debugLevels[switch] and m.debugLevels[switch]>=level) or
-    (m.debugLevels[DS_ALL] and m.debugLevels[DS_ALL]>=level)
-end
-
-l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
-= function(ability)
-  local savedValue = l.idFilteringMap[ability.id]
+l.checkAbilityIdAndName -- #(#number:abilityId, #string:abilityName)->(#boolean)
+= function(abilityId, abilityName)
+  local savedValue = l.idFilteringMap[abilityId]
   if savedValue ~= nil then return savedValue end
 
   -- check white list
@@ -117,9 +88,9 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
       end
       if not dur then checked = true end
       if line:match('%d+') then
-        checkOk = tonumber(line) == ability.id
+        checkOk = tonumber(line) == abilityId
       else
-        checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
+        checkOk = zo_strformat("<<1>>", abilityName):lower():find(line,1,true)
       end
       if checkOk then
         l.debug(DS_ACTION,2)('[Filtering] $s is ok', left)
@@ -127,7 +98,7 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
           l.debug(DS_ACTION,2)('[Filtering] got %s = %s', left, dur)
           dur = tonumber(dur)
           if dur then
-            l.idDurationMap[ability.id] = dur*1000
+            l.idDurationMap[abilityId] = dur*1000
           end
         end
         break
@@ -135,7 +106,7 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
     end
   end
   if checked and not checkOk then
-    l.idFilteringMap[ability.id] = false
+    l.idFilteringMap[abilityId] = false
     return false
   end
   -- check black list
@@ -146,20 +117,35 @@ l.filterAbilityOk -- #(Models#Ability:ability)->(#boolean)
       local match = false
       if line:match('%d+') then
         local id = tonumber(line)
-        match = id == ability.id
+        match = id == abilityId
       else
-        local name = zo_strformat("<<1>>", ability.name):lower()
+        local name = zo_strformat("<<1>>", abilityName):lower()
         match = name:find(line,1,true)
       end
       if match then
-        l.idFilteringMap[ability.id] = false
+        l.idFilteringMap[abilityId] = false
         return false
       end
     end
   end
   --
-  l.idFilteringMap[ability.id] = true
+  l.idFilteringMap[abilityId] = true
   return true
+end
+
+l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
+=function(switch, level)
+  return function(format, ...)
+    if l.debugEnabled(switch,level) then
+      d(os.date()..'>', string.format(format, ...))
+    end
+  end
+end
+
+l.debugEnabled -- #(#string:switch,#number:level)->(#boolean)
+= function(switch, level)
+  return (m.debugLevels[switch] and m.debugLevels[switch]>=level) or
+    (m.debugLevels[DS_ALL] and m.debugLevels[DS_ALL]>=level)
 end
 
 l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
@@ -396,7 +382,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.flags.onlyOneTarget = true
   end
   -- 3. filter by keywords
-  if not l.filterAbilityOk(action.ability) then
+  if not l.checkAbilityIdAndName(action.ability.id, action.ability.name) then
     l.debug(DS_ACTION,1)('[a-]filtered by keywords')
     return
   end
@@ -599,6 +585,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
     return
   end
+  
+  if not l.checkAbilityIdAndName(abilityId, effectName) then
+    l.debug(DS_EFFECT,1)('[]filtered by blacklist.')
+    return
+  end
+  
   local key =(changeType == EFFECT_RESULT_UPDATED) and  ('%d:%s:%d:update'):format(abilityId,effectName,stackCount) or ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
   local numMarks = l.ignoredCache:get(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
@@ -673,7 +665,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
         return
       end
-      if not l.filterAbilityOk(effect.ability) then
+      if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
         l.debug(DS_EFFECT,1)('[]New stack effect filtered.')
         return
       end
@@ -709,7 +701,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
       return
     end
-    if not l.filterAbilityOk(effect.ability) then
+    if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
       l.debug(DS_EFFECT,1)('[]New effect filtered.')
       return
     end
@@ -777,7 +769,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
-    if not l.filterAbilityOk(effect.ability) then
+    if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
       l.debug(DS_EFFECT,1)('[]Update effect filtered.')
       return
     end
@@ -964,6 +956,20 @@ l.onUpdate -- #()->()
     end
     d('---->>>>')
   end
+end
+
+l.queueAction -- #(Models#Action:action)->()
+= function(action)
+  l.lastAction = action
+  local newQueue = {} --#list<Models#Action>
+  newQueue[1] = action
+  local now = GetGameTimeMilliseconds()
+  for key, a in ipairs(l.actionQueue) do
+    if not a.newAction and now - a.startTime < 3 * 1000 then
+      table.insert(newQueue,a)
+    end
+  end
+  l.actionQueue = newQueue
 end
 
 l.refineActions -- #()->()
