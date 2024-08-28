@@ -1,4 +1,51 @@
 
+
+3.79
+- Allowed debuff timers to track if they are no more than the skill's duration.
+- Added an option to choose whether ignore debuff timers if they are longer than the skill's duration (default:true).
+
+3.78
+- Prevented action to popup alert when it still has another longer counter but with a lower priority. 
+
+3.77
+- Disabled debuffs longer than action default duration i.e. Minor Breach would not be tracked with templar's Power of the Light.
+
+3.76
+- Reenabled minor buffs to let more abilities show a 2-stage timer i.e. Bound Aegis and Resolving Vigor can show '1/2' and '2/2' hints. 
+(Users can disable this feature by configuring ability blacklist.)
+
+3.75c
+- Added some restrictions for ground action trigerring i.e. Caltrops and Winter's Revenge won't show trigerring mark again. 
+
+3.74
+- Improved ground action starting recognition i.e. Lightweight Beast Trap can be counted even when not triggered.
+
+3.73
+- Pathed alert keyword filtering list to also support ability id like keyword filtering in core module.
+
+3.72
+- Added a secondary stack label at topleft corner i.e. Stone Giant now has both stagger count hint and debris count hint.
+
+3.71
+- Optimized bar matching policy to be bug-tolerant with German translation in necro Stalking Blastbones.
+(When skeleton is up, there's an extra 'r' in the german slot name) 
+
+3.70a
+- Patched Frost Clench to be marked as a tank-role skill thus taunt effect can be traced by this skill.
+
+3.69a
+- Imporved overiding actions matching policy i.e. Grim Focus and its morphs now can be traced properly.
+
+3.68
+- Improved enemy target action matching policy for mutable skills i.e. effects of werewolf Brutal Pounce and Brutal Carnage should be merged to show together.
+
+3.67
+- Improved fault tolerance on filtering effects created befor an action i.e. Crystal Fragments Proc timer now can be visible again. 
+
+3.66
+- Added an option to choose whether to clean up the timer when the target has been changed to another.
+- Changed the symbol added in v3.59 from '~' to '#'.
+
 3.65
 - Adjusted the same policy in v3.64 to let it be compatible with triggered timers i.e. Seething Fury for Molten Whip.
 

@@ -587,7 +587,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   
   if not l.checkAbilityIdAndName(abilityId, effectName) then
-    l.debug(DS_EFFECT,1)('[]filtered by blacklist.')
+    l.debug(DS_EFFECT,1)('[] filtered by blacklist.')
     return
   end
   
