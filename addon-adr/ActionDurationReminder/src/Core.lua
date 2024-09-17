@@ -586,6 +586,21 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     statusEffectType,
     sourceType
   )
+  
+  -- ## The following mocking code block might be useful later
+  --      if changeType~=2 and abilityId==61687  then -- TODO
+  --        zo_callLater(function()
+  --          d('<!!! mocking !!!')
+  --          local old = ActionDurationReminder.debugLevels.all
+  --          ActionDurationReminder.debugLevels.all = 2
+  --          local t = GetGameTimeSeconds()
+  --          l.onEffectChanged(eventCode,3,effectSlot,'Major Brutality','player',t,t+72,0,
+  --          '/esoui/art/icons/ability_buff_major_brutality.dds',buffType,1,0,0,GetUnitName('player'),31865,61665,1)
+  --          ActionDurationReminder.debugLevels.all = old
+  --          d('!!! mocking over!!!>')
+  --        end, 1)
+  --      end
+  
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
     l.debug(DS_FILTER,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
@@ -788,7 +803,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       l.debug(DS_EFFECT,1)('[]Update effect filtered.')
       return
     end
-    local action,isNew = l.findActionByOldEffect(effect, effect.duration>0)
+    -- find effect strictly if without duration or is buff
+    local action,isNew = l.findActionByOldEffect(effect, effect.duration>0 and not effect.ability.icon:find('ability_buff_',1,true))
     if not action then
       l.ignoredCache:mark(notFoundKey)
       l.debug(DS_EFFECT,1)('[]Update effect action not found')
