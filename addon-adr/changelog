@@ -1,5 +1,5 @@
 3.122
-- Improved concurrent events filtering and effect's action matching.
+- Improved concurrent events filtering and action matching, i.e. Two-handed Carve against mobs would show its DOT timer and Arcanist's Inspired Scholarship timer won't be affected by another DK group member's Igneous Weapons.
 
 3.121
 - Optimize the blacklist/whitelist filtering mechanism to filter not only skills but also their effects.
