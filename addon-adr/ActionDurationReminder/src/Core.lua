@@ -12,12 +12,14 @@ local m = {l=l} -- #M
 -- /script ActionDurationReminder.debugLevels.action=2
 -- /script ActionDurationReminder.debugLevels.effect=2
 -- /script ActionDurationReminder.debugLevels.target=2
+-- /script ActionDurationReminder.debugLevels.filter=2
 -- /script ActionDurationReminder.debugLevels.all=3
 -- /script ActionDurationReminder.debugLevels.all=2
 
 local DS_ACTION = "action" -- debug switch for action
 local DS_EFFECT = "effect" -- debug switch for effect
 local DS_TARGET = "target" -- debug switch for target
+local DS_FILTER = "filter" -- debug switch for target
 local DS_ALL = "all" -- debug switch for all
 
 ---
@@ -150,39 +152,43 @@ end
 
 l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect,stacking)
+  -- 0. cache to avoid repeated matching
+  local notMatched = {} -- #map<#number,#bool>
   -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
-    if l.lastAction:matchesNewEffect(effect) then
+    if not notMatched[l.lastAction.sn] and l.lastAction:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
       return l.lastAction
     end
+    notMatched[l.lastAction.sn] = true
   end
   -- try last effect action
   if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>effect.startTime then
-    if l.lastEffectAction.ability:matches(effect.ability,false) then
+    if not notMatched[l.lastEffectAction.sn] and l.lastEffectAction.ability:matches(effect.ability,false) then
       l.debug(DS_ACTION,1)('[F]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
       return l.lastEffectAction
     end
+    notMatched[l.lastEffectAction.sn] = true
   end
   -- try performed actions
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i] --Models#Action
-    if action:matchesNewEffect(effect) then
+    if not notMatched[action.sn] and action:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found one of queue by new match:%s', action:toLogString())
       return action
-    else
-      l.debug(DS_ACTION,1)('[F?]not found one of queue by new match:%s', action:toLogString())
     end
+    notMatched[action.sn] = true
+    l.debug(DS_ACTION,1)('[F?]not found one of queue by new match:%s', action:toLogString())
   end
   -- try saved actions
   for key, var in pairs(l.idActionMap) do
     local action=var --Models#Action
-    if action:matchesNewEffect(effect) then
+    if  not notMatched[action.sn] and action:matchesNewEffect(effect) then
       l.debug(DS_ACTION,1)('[F]found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
-    else
-      l.debug(DS_ACTION,1)('[F?]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
+    notMatched[action.sn] = true
+    l.debug(DS_ACTION,1)('[F?]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
   end
   -- try slotted actions for non minor buff effects
   if not effect.ability.icon:find('ability_buff_mi',1,true) then
@@ -582,24 +588,32 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   )
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
-    l.debug(DS_ACTION,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
+    l.debug(DS_FILTER,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
     return
   end
-  
+
   if not l.checkAbilityIdAndName(abilityId, effectName) then
-    l.debug(DS_EFFECT,1)('[] filtered by blacklist.')
+    l.debug(DS_FILTER,1)('[] filtered by blacklist.')
     return
   end
-  
-  local key =(changeType == EFFECT_RESULT_UPDATED) and  ('%d:%s:%d:update'):format(abilityId,effectName,stackCount) or ('%d:%s:%d:%d'):format(abilityId,effectName,changeType,stackCount)
+
+  local notFoundKey = ('%d:%s:not found'):format(abilityId,effectName)
+  local notFoundCount = l.ignoredCache:get(notFoundKey)
+  if notFoundCount>=2 then
+    l.debug(DS_FILTER,1)('[] '..notFoundKey..', ignored by cache counted '..notFoundCount)
+    l.ignoredCache:mark(notFoundKey)
+    return
+  end
+
+  local key =(changeType == EFFECT_RESULT_UPDATED) and  ('%d:%s:%d*%d:update'):format(abilityId,effectName,stackCount,unitId) or
+    ('%d:%s:%d:%d*%d'):format(abilityId,effectName,changeType,stackCount, unitId)
   local numMarks = l.ignoredCache:get(key)
+  l.ignoredCache:mark(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
-  if numMarks>=4 then
-    l.debug(DS_ACTION,1)('[] '..key..' ignored by cache counted '..numMarks)
-    l.ignoredCache:mark(key)
+  if numMarks>=3 then
+    l.debug(DS_FILTER,1)('[] '..key..' ignored by cache counted '..numMarks)
     return
   end
-  l.ignoredCache:mark(key)
 
   -- 0. prepare
   -- ignore expedition on others
@@ -661,7 +675,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     else
       action = l.findActionByNewEffect(effect, true)
       if not action then
-        l.ignoredCache:mark(key)
+        l.ignoredCache:mark(notFoundKey)
         l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
         return
       end
@@ -706,65 +720,66 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       return
     end
     local action = l.findActionByNewEffect(effect)
-    if action then
-      -- filter debuff if a bit longer than default duration
-      if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
-        and effect.ability.icon:find('ability_debuff_',1,true)
-        --        and not action.descriptionNums[effect.duration/1000] -- This line should be commented out because it conflicts with option *coreIgnoreLongDebuff*
-        and effect.duration < 15000 -- some longer debuff is useful, i.e. Rune of Edric Horror has a 20sec duration need to be tracked
-      then
-        l.debug(DS_ACTION,1)('[!] ignore a bit longer debuff %s for %s',effect:toLogString(), action:toLogString())
-        for key, effect in ipairs(action.effectList) do
-          l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
-        end
-        return
+    if not action then
+      l.ignoredCache:mark(notFoundKey)
+      l.debug(DS_EFFECT,1)('[]New effect action not found')
+      return
+    end
+    -- filter debuff if a bit longer than default duration
+    if l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
+      and effect.ability.icon:find('ability_debuff_',1,true)
+      --        and not action.descriptionNums[effect.duration/1000] -- This line should be commented out because it conflicts with option *coreIgnoreLongDebuff*
+      and effect.duration < 15000 -- some longer debuff is useful, i.e. Rune of Edric Horror has a 20sec duration need to be tracked
+    then
+      l.debug(DS_ACTION,1)('[!] ignore a bit longer debuff %s for %s',effect:toLogString(), action:toLogString())
+      for key, effect in ipairs(action.effectList) do
+        l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
       end
-      if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
-        df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
-      end
-      action:saveEffect(effect)
-      -- patches
-      -- weird patch
-      local weird = effect.duration == 0
-      if not weird then
-        local firstSave = not action.saved
-        l.saveAction(action)
-        if firstSave then
-          -- search player stack buff effects and save them in the newly saved action
-          local numBuffs = GetNumBuffs('player') -- #number
-          for i = 1, numBuffs do
-            local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
-              statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('player', i)
-            if timeStarted==timeEnding and stackCount>0 then
-              local startTime =  math.floor(timeStarted * 1000)
-              local ability = models.newAbility(abilityId,buffName,iconFilename)
-              local effect = models.newEffect(ability,'player',0,startTime,startTime,stackCount)
-              if action:matchesNewEffect(effect) then
-                -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
-                if action.duration and action.duration > 0 then
-                  effect.startTime = action.startTime
-                  effect.duration = action.duration
-                  effect.endTime = action.endTime
-                end
-                local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
-                if stackInfoUpdated then
-                  action:saveEffect(effect)
-                  l.saveAction(action)
-                  l.debug(DS_ACTION,1)('[us] updated stack info %s', action:toLogString())
-                end
+      return
+    end
+    if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
+      df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
+    end
+    action:saveEffect(effect)
+    -- patches
+    -- weird patch
+    local weird = effect.duration == 0
+    if not weird then
+      local firstSave = not action.saved
+      l.saveAction(action)
+      if firstSave then
+        -- search player stack buff effects and save them in the newly saved action
+        local numBuffs = GetNumBuffs('player') -- #number
+        for i = 1, numBuffs do
+          local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
+            statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('player', i)
+          if timeStarted==timeEnding and stackCount>0 then
+            local startTime =  math.floor(timeStarted * 1000)
+            local ability = models.newAbility(abilityId,buffName,iconFilename)
+            local effect = models.newEffect(ability,'player',0,startTime,startTime,stackCount)
+            if action:matchesNewEffect(effect) then
+              -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
+              if action.duration and action.duration > 0 then
+                effect.startTime = action.startTime
+                effect.duration = action.duration
+                effect.endTime = action.endTime
+              end
+              local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
+              if stackInfoUpdated then
+                action:saveEffect(effect)
+                l.saveAction(action)
+                l.debug(DS_ACTION,1)('[us] updated stack info %s', action:toLogString())
               end
             end
           end
         end
       end
-      -- count for daedric mines
-      local ofDaedricMines = iconName:find('daedric_mines',1,true)
-        or (iconName:find('mage_065',1,true) and action.ability.icon:find('daedric_[mt][io][nm][eb]',1,false)) -- this icon also appears in Wall of Element, we can filter by duration
-      if ofDaedricMines then ability.type = abilityType end -- record area effect for daedric mines
-
-      return
     end
-    l.debug(DS_EFFECT,1)('[]New effect action not found')
+    -- count for daedric mines
+    local ofDaedricMines = iconName:find('daedric_mines',1,true)
+      or (iconName:find('mage_065',1,true) and action.ability.icon:find('daedric_[mt][io][nm][eb]',1,false)) -- this icon also appears in Wall of Element, we can filter by duration
+    if ofDaedricMines then ability.type = abilityType end -- record area effect for daedric mines
+
     return
   end
   -- 3. update
@@ -774,24 +789,26 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       return
     end
     local action,isNew = l.findActionByOldEffect(effect, effect.duration>0)
-    if action then
-      if isNew and l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
-        and effect.ability.icon:find('ability_debuff_',1,true)
-      then
-        l.debug(DS_ACTION,1)('[!] ignore newly update long debuff %s for %s',effect:toLogString(), action:toLogString())
-        for key, effect in ipairs(action.effectList) do
-          l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
-        end
-        return
-      end
-      if isNew and effect.duration==0 then
-        l.debug(DS_ACTION,1)('[!] ignore 0ms newly update effect %s for %s',effect:toLogString(), action:toLogString())
-        return
-      end
-      action:saveEffect(effect)
-      l.saveAction(action)
+    if not action then
+      l.ignoredCache:mark(notFoundKey)
+      l.debug(DS_EFFECT,1)('[]Update effect action not found')
       return
     end
+    if isNew and l.getSavedVars().coreIgnoreLongDebuff and action.duration and action.duration >0 and effect.duration>action.duration
+      and effect.ability.icon:find('ability_debuff_',1,true)
+    then
+      l.debug(DS_ACTION,1)('[!] ignore newly update long debuff %s for %s',effect:toLogString(), action:toLogString())
+      for key, effect in ipairs(action.effectList) do
+        l.debug(DS_ACTION,1)('[+--e:]%s', effect:toLogString())
+      end
+      return
+    end
+    if isNew and effect.duration==0 then
+      l.debug(DS_ACTION,1)('[!] ignore 0ms newly update effect %s for %s',effect:toLogString(), action:toLogString())
+      return
+    end
+    action:saveEffect(effect)
+    l.saveAction(action)
     return
   end
   -- 4. fade

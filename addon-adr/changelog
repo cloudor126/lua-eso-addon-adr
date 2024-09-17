@@ -1,3 +1,6 @@
+3.122
+- Improved concurrent events filtering and effect's action matching.
+
 3.121
 - Optimize the blacklist/whitelist filtering mechanism to filter not only skills but also their effects.
 
