@@ -72,7 +72,7 @@ l.timeActionMap = {}--#map<#number,Models#Action>
 
 l.targetId = nil -- #number
 
-l.checkAbilityIdAndName -- #(#number:abilityId, #string:abilityName)->(#boolean)
+l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolean)
 = function(abilityId, abilityName)
   local savedValue = l.idFilteringMap[abilityId]
   if savedValue ~= nil then return savedValue end
@@ -388,7 +388,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.flags.onlyOneTarget = true
   end
   -- 3. filter by keywords
-  if not l.checkAbilityIdAndName(action.ability.id, action.ability.name) then
+  if not l.checkAbilityIdAndNameOk(action.ability.id, action.ability.name) then
     l.debug(DS_ACTION,1)('[a-]filtered by keywords')
     return
   end
@@ -534,6 +534,11 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   --    hitValue
   --  )
 
+ -- filter by keywords
+  if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
+    return
+  end
+  
   for key, action in pairs(l.actionQueue) do
     if not action.saved
       and (action.ability.id == abilityId or action.ability.name == abilityName)
@@ -603,19 +608,19 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
-    l.debug(DS_FILTER,1)('[] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
+    l.debug(DS_FILTER,1)('[!] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
     return
   end
 
-  if not l.checkAbilityIdAndName(abilityId, effectName) then
-    l.debug(DS_FILTER,1)('[] filtered by blacklist.')
+  if not l.checkAbilityIdAndNameOk(abilityId, effectName) then
+    l.debug(DS_FILTER,1)('[!] filtered by blacklist.')
     return
   end
 
   local notFoundKey = ('%d:%s:not found'):format(abilityId,effectName)
   local notFoundCount = l.ignoredCache:get(notFoundKey)
   if notFoundCount>=2 then
-    l.debug(DS_FILTER,1)('[] '..notFoundKey..', ignored by cache counted '..notFoundCount)
+    l.debug(DS_FILTER,1)('[!] '..notFoundKey..', ignored by cache counted '..notFoundCount)
     l.ignoredCache:mark(notFoundKey)
     return
   end
@@ -626,7 +631,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   l.ignoredCache:mark(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=3 then
-    l.debug(DS_FILTER,1)('[] '..key..' ignored by cache counted '..numMarks)
+    l.debug(DS_FILTER,1)('[!] '..key..' ignored by cache counted '..numMarks)
     return
   end
 
@@ -694,7 +699,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         l.debug(DS_EFFECT,1)('[]New stack effect action not found.')
         return
       end
-      if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
+      if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
         l.debug(DS_EFFECT,1)('[]New stack effect filtered.')
         return
       end
@@ -730,7 +735,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
       return
     end
-    if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
+    if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
       l.debug(DS_EFFECT,1)('[]New effect filtered.')
       return
     end
@@ -799,7 +804,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
-    if not l.checkAbilityIdAndName(effect.ability.id, effect.ability.name) then
+    if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
       l.debug(DS_EFFECT,1)('[]Update effect filtered.')
       return
     end
