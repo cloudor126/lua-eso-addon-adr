@@ -1,3 +1,6 @@
+3.123
+- Add rules to track Arcane's Eldrich debuff timer.
+
 3.122
 - Improved concurrent events filtering and action matching, i.e. Two-handed Carve against mobs would show its DOT timer and Arcanist's Inspired Scholarship timer won't be affected by another DK group member's Igneous Weapons.
 
