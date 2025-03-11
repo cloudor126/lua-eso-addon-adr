@@ -117,15 +117,12 @@ l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolea
     line = line:match "^%s*(.-)%s*$"
     if line and #line>0 then
       local match = false
-      df('processing line : %s', line)
       if line:match('^%d+$') then
         local id = tonumber(line)
         match = id == abilityId
-        df('matching %d with %d, result:%s', abilityId, id, match and 'y' or 'n')
       else
         local name = zo_strformat("<<1>>", abilityName):lower()
         match = name:find(line,1,true)
-        df('matching %s with %s, result:%s', name, line, match and 'y' or 'n')
       end
       if match then
         l.idFilteringMap[abilityId] = false
