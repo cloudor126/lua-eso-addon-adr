@@ -62,7 +62,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     line = line:match("^%s*(.-)%s*$")
     if line and line:len()>0 then
       checked = true
-      if line:match('%d+') then
+      if line:match('^%d+$') then
         checkOk = tonumber(line) == ability.id
       else
         checkOk = zo_strformat("<<1>>", ability.name):lower():find(line,1,true)
@@ -75,7 +75,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
     if line and line:len()>0 then
-      if line:match('%d+') then
+      if line:match('^%d+$') then
         if tonumber(line) == ability.id then return end
       end
       if zo_strformat("<<1>>", ability.name):lower():find(line,1,true) then
