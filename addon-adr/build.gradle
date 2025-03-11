@@ -4,7 +4,12 @@ plugins{
 
 ext.addonName = "ActionDurationReminder"
 ext.addonId = 1536
-ext.addonCompatible = '10.1.0'
+ext.addonCompatible = '10.3.5'
+ext.esoApiToken = project.property('com.esoui.apiToken')
+ext.esoPtsDir = project.property('ESO_PTS_ADDONS_DIR')
+ext.esoLiveDir = project.property('ESO_LIVE_ADDONS_DIR')
+
+
 file('changelog').withReader('utf8'){reader->
     def m = reader.readLine() =~ /(\d+)(\.\w+)+/
     if(m){
@@ -50,20 +55,20 @@ distZip{
 }
 
 if (hasProperty('ESO_PTS_ADDONS_DIR')){
-    def installDir =  new File(project.property( 'ESO_PTS_ADDONS_DIR'),addonName)
+    def installDir =  new File(esoPtsDir, addonName)
     task installToPTS(type:Sync){
-    	group 'distribution'
-    	description 'Installs the project into PTS dir'
+    	group='distribution'
+    	description='Installs the project into PTS dir'
     	with mainContents
         into installDir
     }
 }
 
 if (hasProperty('ESO_LIVE_ADDONS_DIR')){
-    def installDir =  new File(project.property( 'ESO_LIVE_ADDONS_DIR'),addonName)
+    def installDir =  new File(esoLiveDir, addonName)
     task installToLive(type:Sync){
-    	group 'distribution'
-    	description 'Installs the project into LIVE dir'
+    	group='distribution'
+    	description='Installs the project into LIVE dir'
     	with mainContents
         into installDir
     }
@@ -76,15 +81,15 @@ task upload {
     doLast{
         def changelog = file('changelog').getText('utf8').replaceAll('"',/\\"/)
         def cmd = ['curl',
-            '-H', "\"x-api-token: ${project.property('com.esoui.apiToken')}\"",
+            '-H', "\"x-api-token: ${esoApiToken}\"",
             '-F', "id=${addonId}",
             '-F', "version=$addonVersion",
             '-F', "compatible=$addonCompatible",
-            '-F', "\"changelog=$changelog\"",
+            //'-F', "\"changelog=$changelog\"",
             '-F', "\"updatefile=@${distZip.archiveFile.get().asFile.absolutePath}\"",
             //'--resolve', 'api.esoui.com:443:104.25.180.72',
             'https://api.esoui.com/addons/update']
-        //print cmd.join(' ')
+        print cmd.join(' ')
         def proc = cmd.execute()
         proc.consumeProcessOutput(System.out, System.err)
         proc.waitFor()
