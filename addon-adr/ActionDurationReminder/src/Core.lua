@@ -405,9 +405,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
     if sameNameAction and sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
-      l.debug(DS_ACTION,1)('[aM]%s@%.2f\n%s\n<%.2f~%.2f>, \nnewFlags:\n%s', sameNameAction.ability:toLogString(),
-        sameNameAction.startTime/1000,  sameNameAction:getFlagsInfo(),
-        sameNameAction:getStartTime()/1000, sameNameAction:getEndTime()/1000, action:getFlagsInfo())
+      l.debug(DS_ACTION,1)('[aM]%s', sameNameAction:toLogString())
       sameNameAction.newAction = action
       action.effectList = {}
       for key, var in ipairs(sameNameAction.effectList) do
@@ -439,8 +437,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       for key, var in ipairs(sameNameAction.relatedAbilityList) do
         abilityAccepter(var)
       end
-      l.saveAction(action)
       l.removeAction(sameNameAction) -- clear from registries
+      l.saveAction(action) -- TODO triggered fake action?
     else
     end
   end

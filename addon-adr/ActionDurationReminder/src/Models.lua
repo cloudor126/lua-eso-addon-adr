@@ -281,7 +281,7 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
     end
   end
   if self.icon3 then
-     if fMatchIconPath(self.icon3, other.icon) then
+    if fMatchIconPath(self.icon3, other.icon) then
       memoizeMatch(idHash, strict, true)
       return true
     end
@@ -707,7 +707,7 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
     then
       return false
     end
-    -- 
+    --
     return true
   end
   --
@@ -1075,10 +1075,15 @@ end
 
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
-  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d",self.sn, self.ability:toLogString(), self.startTime/1000,
+  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s%s bar%dslot%d\n%s%s",self.sn, self.ability:toLogString(), self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
+    self.fake and 'fake,' or '',
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
-    self.hotbarCategory,self.slotNum
+    self.hotbarCategory,self.slotNum,
+    self:getFlagsInfo(),
+    self.oldAction and string.format("\noldAction:$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.oldAction.sn, self.oldAction.ability:toLogString(), self.oldAction.startTime/1000,
+      self.oldAction:getEndTime()/1000, self.oldAction.endTime/1000,self.oldAction:getDuration()/1000,
+      self.oldAction.fake and 'fake,' or '') or ''
   )
 end
 
