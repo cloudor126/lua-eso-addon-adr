@@ -356,9 +356,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       end
       return a
     end
-
   end
-  l.debug(DS_ACTION,1)('[aM:none]')
   return nil
 end
 
@@ -403,9 +401,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 5. replace saved
   if not action.flags.forGround then -- ground and channel action should not inherit old action effects
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
-    if sameNameAction and sameNameAction.saved then
+    
+    if not sameNameAction then
+      l.debug(DS_ACTION,2)('[aM:none]')
+    elseif sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
-      l.debug(DS_ACTION,1)('[aM]%s', sameNameAction:toLogString())
+      l.debug(DS_ACTION,2)('[aM]%s', sameNameAction:toLogString())
       sameNameAction.newAction = action
       action.effectList = {}
       for key, var in ipairs(sameNameAction.effectList) do
@@ -420,7 +421,13 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       action.stackEffect = sameNameAction.stackEffect
       sameNameAction.stackEffect = nil
       action.oldAction = sameNameAction
+      
+      -- inherit fake property from ancestor to parent
+      if sameNameAction.oldAction and sameNameAction.oldAction.fake then
+        sameNameAction.fake = true
+      end
 
+      -- inherit duration
       if action.duration == 0 and sameNameAction.duration >0 then
         action.inheritDuration = sameNameAction.duration
       elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
@@ -430,7 +437,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       = function(relatedAbility)
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
-          l.debug(DS_ACTION,1)('[aMs]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
+          l.debug(DS_ACTION,2)('[aMs]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
         end
       end
       abilityAccepter(sameNameAction.ability)
@@ -439,7 +446,6 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       end
       l.removeAction(sameNameAction) -- clear from registries
       l.saveAction(action) -- TODO triggered fake action?
-    else
     end
   end
   -- 6. save
@@ -617,7 +623,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
 
   local notFoundKey = ('%d:%s:not found'):format(abilityId,effectName)
   local notFoundCount = l.ignoredCache:get(notFoundKey)
-  if notFoundCount>=2 then
+  if notFoundCount>=3 then
     l.debug(DS_FILTER,1)('[!] '..notFoundKey..', ignored by cache counted '..notFoundCount)
     l.ignoredCache:mark(notFoundKey)
     return
@@ -628,7 +634,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local numMarks = l.ignoredCache:get(key)
   l.ignoredCache:mark(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
-  if numMarks>=3 then
+  if numMarks>=6 then
     l.debug(DS_FILTER,1)('[!] '..key..' ignored by cache counted '..numMarks)
     return
   end

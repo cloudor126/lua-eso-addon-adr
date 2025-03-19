@@ -990,6 +990,8 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   then
     l.debug(DS_MODEL,1)("[m.purge end] %s, reason:\n%s\n", self:toLogString(), reason)
     self.endTime = now
+  else
+    l.debug(DS_MODEL,1)("[m.purge not end] %s\n", self:toLogString(), reason)
   end
   return oldEffect
 end
