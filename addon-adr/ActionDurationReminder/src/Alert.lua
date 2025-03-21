@@ -25,6 +25,7 @@ local alertSavedVarsDefaults ={
   alertAheadSeconds = 1,
   alertKeepSeconds = 2,
   alertIconSize = 50,
+  alertIconOpacity = 100,
   alertFontName = "BOLD_FONT",
   alertFontStyle = "thick-outline",
   alertCustomFontName = "",
@@ -301,14 +302,18 @@ end
 
 l.retrieveControl -- #()->(Control#Control)
 = function()
-  if #l.controlPool >0 then
-    return table.remove(l.controlPool,#l.controlPool)
-  end
   local savedVars = l.getSavedVars()
+  if #l.controlPool >0 then
+    local control = table.remove(l.controlPool,#l.controlPool)
+    control.icon:SetDimensions(savedVars.alertIconSize,savedVars.alertIconSize)
+    control.icon:SetAlpha(savedVars.alertIconOpacity/100.0)
+    return control
+  end
   local control = WINDOW_MANAGER:CreateTopLevelWindow()
-  local icon = control:CreateControl(nil, CT_TEXTURE)
+  local icon = control:CreateControl(nil, CT_TEXTURE) -- TextureControl#TextureControl
   icon:SetDrawLayer(DL_CONTROLS)
   icon:SetDimensions(savedVars.alertIconSize,savedVars.alertIconSize)
+  icon:SetAlpha(savedVars.alertIconOpacity/100.0)
   icon:SetAnchor(LEFT)
   control.icon = icon
   local label = control:CreateControl(nil, CT_LABEL)
@@ -451,16 +456,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertFontName,
       }, {
         type = "slider",
-        name = text("Icon Size"),
-        --tooltip = "",
-        min = 18, max = 98, step = 2,
-        getFunc = function() return l.getSavedVars().alertIconSize end,
-        setFunc = function(value) l.getSavedVars().alertIconSize = value end,
-        disabled = function() return not l.getSavedVars().alertEnabled end,
-        width = "full",
-        default = alertSavedVarsDefaults.alertIconSize,
-      }, {
-        type = "slider",
         name = text("Font Size"),
         --tooltip = "",
         min = 18, max = 48, step = 2,
@@ -479,6 +474,26 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         width = "full",
         default = alertSavedVarsDefaults.alertFontStyle,
       },{
+        type = "slider",
+        name = text("Icon Size"),
+        --tooltip = "",
+        min = 18, max = 98, step = 2,
+        getFunc = function() return l.getSavedVars().alertIconSize end,
+        setFunc = function(value) l.getSavedVars().alertIconSize = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertIconSize,
+      }, {
+        type = "slider",
+        name = text("Icon Opacity %"),
+        --tooltip = "",
+        min = 10, max = 100, step = 10,
+        getFunc = function() return l.getSavedVars().alertIconOpacity end,
+        setFunc = function(value) l.getSavedVars().alertIconOpacity = value end,
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        width = "full",
+        default = alertSavedVarsDefaults.alertIconOpacity,
+      }, {
         type = "editbox",
         name = text("Patterns of White List in line"), -- or string id or function returning a string
         getFunc = function() return l.getSavedVars().alertKeyWords end,

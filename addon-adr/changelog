@@ -1,3 +1,6 @@
+3.128
+- Added an option in settings of POPUP ALERT to set icon opacity.
+
 3.127
 - Fixed a bug where the Crystal Fragment timer was not being cleared upon triggering.
 
