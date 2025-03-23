@@ -401,7 +401,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 5. replace saved
   if not action.flags.forGround then -- ground and channel action should not inherit old action effects
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
-    
+
     if not sameNameAction then
       l.debug(DS_ACTION,2)('[aM:none]')
     elseif sameNameAction.saved then
@@ -421,7 +421,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       action.stackEffect = sameNameAction.stackEffect
       sameNameAction.stackEffect = nil
       action.oldAction = sameNameAction
-      
+
       -- inherit fake property from ancestor to parent
       if sameNameAction.oldAction and sameNameAction.oldAction.fake then
         sameNameAction.fake = true
@@ -538,11 +538,11 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   --    hitValue
   --  )
 
- -- filter by keywords
+  -- filter by keywords
   if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
     return
   end
-  
+
   for key, action in pairs(l.actionQueue) do
     if not action.saved
       and (action.ability.id == abilityId or action.ability.name == abilityName)
@@ -595,7 +595,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     statusEffectType,
     sourceType
   )
-  
+
   -- ## The following mocking code block might be useful later
   --      if changeType~=2 and abilityId==61687  then -- TODO
   --        zo_callLater(function()
@@ -609,7 +609,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   --          d('!!! mocking over!!!>')
   --        end, 1)
   --      end
-  
+
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
     l.debug(DS_FILTER,1)('[!] '..effectName..' ignored by id:'..abilityId..', reason:'..l.ignoredIds[abilityId])
@@ -735,9 +735,15 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- 2. gain
   if changeType == EFFECT_RESULT_GAINED then
     if duration == 0 then
-      l.debug(DS_EFFECT,1)('[]New effect without duration ignored.')
-      --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
-      return
+      if iconName:find("ability_buff_major_evasion",1,true) then
+        -- patching for major evasion's initial zero duration event which will be updated right next
+        duration = 6000
+        endTime = startTime+duration
+      else
+        l.debug(DS_EFFECT,1)('[]New effect without duration ignored.')
+        --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
+        return
+      end
     end
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
       l.debug(DS_EFFECT,1)('[]New effect filtered.')
