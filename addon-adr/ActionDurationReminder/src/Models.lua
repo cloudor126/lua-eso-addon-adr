@@ -101,7 +101,7 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   else
     ability.progressionName = nil
   end -- only keep different name
-  if hasProgression then
+  if hasProgression and progressionIndex then
     local _,icon3,_ = GetAbilityProgressionAbilityInfo(progressionIndex,1,1)
     if icon3 ~= icon then
       ability.icon3 = icon3 -- #string
