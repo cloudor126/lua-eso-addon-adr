@@ -24,6 +24,9 @@ local fRefinePath -- #(#string:path)->(#string)
 = function(path)
   if not path then return path end
   path = path:lower()
+  -- 过滤三个数字后的部分，例如 "/esoui/art/icons/ability_werewolf_002_rend_b.dds"
+  -- 变为"/esoui/art/icons/ability_werewolf_002"
+  path = path:match("(.-[0-9][0-9][0-9])") or path
   local index = path:find(".dds",1,true)
   if index and index>1 then
     path = path:sub(1,index-1)
@@ -1085,7 +1088,7 @@ mAction.toLogString --#(#Action:self)->(#string)
     self:getFlagsInfo(),
     self.oldAction and string.format("\noldAction:$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.oldAction.sn, self.oldAction.ability:toLogString(), self.oldAction.startTime/1000,
       self.oldAction:getEndTime()/1000, self.oldAction.endTime/1000,self.oldAction:getDuration()/1000,
-      self.oldAction.fake and 'fake,' or '') or ''
+      self.oldAction.fake and 'fake,' or '') or '\nwithoutOld'
   )
 end
 

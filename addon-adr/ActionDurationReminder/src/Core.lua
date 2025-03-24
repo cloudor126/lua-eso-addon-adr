@@ -315,10 +315,8 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       end
     end
     if abilityName:find(a.ability.name,1,true) then return true end
-    -- i.e. Assassin's Will name can match Merciless Resolve action by its description
-    if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
-      and not addon.isSimpleWord(abilityName) and a.description:find(abilityName,1,true) -- TODO test chinese version
-    then
+    -- i.e. Assassin's Will name can match Merciless Resolve action by slot
+    if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum then
       l.debug(DS_ACTION,1)('[aM:slot]')
       return true
     end

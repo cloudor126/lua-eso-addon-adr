@@ -1,3 +1,6 @@
+3.130
+- Optimized action and effect matching, i.e. Werewolve's Pounce and Carnage can be properly tracked. 
+
 3.129
 - Optimized to be compatible with a weird sequence of Elude's Major Evasion effect events.
 
