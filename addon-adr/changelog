@@ -1,3 +1,6 @@
+3.131
+- Fixed a bug in getting skill infomation, i.e. Bolt Escape and its morphs can be tracked now. 
+
 3.130
 - Optimized action and effect matching, i.e. Werewolve's Pounce and Carnage can be properly tracked. 
 

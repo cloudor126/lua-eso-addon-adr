@@ -85,11 +85,11 @@ task upload {
             '-F', "id=${addonId}",
             '-F', "version=$addonVersion",
             '-F', "compatible=$addonCompatible",
-            //'-F', "\"changelog=$changelog\"",
+            '-F', "\"changelog=$changelog\"",
             '-F', "\"updatefile=@${distZip.archiveFile.get().asFile.absolutePath}\"",
             //'--resolve', 'api.esoui.com:443:104.25.180.72',
             'https://api.esoui.com/addons/update']
-        print cmd.join(' ')
+        // print cmd.join(' ')
         def proc = cmd.execute()
         proc.consumeProcessOutput(System.out, System.err)
         proc.waitFor()
