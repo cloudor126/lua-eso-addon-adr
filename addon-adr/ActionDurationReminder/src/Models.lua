@@ -127,7 +127,15 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.sn = nextSeed() --#number
   action.targetOut = false
   action.slotNum = slotNum --#number
-  action.ability = m.newAbility(GetSlotBoundId(slotNum, hotbarCategory),GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
+  local abilityId = GetSlotBoundId(slotNum, hotbarCategory)
+  local slotType = GetSlotType(slotNum,hotbarCategory)
+  action.crafted = false
+  if slotType == ACTION_TYPE_CRAFTED_ABILITY then
+    action.crafted = true
+    action.craftedId = abilityId -- #number
+    abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
+  end
+  action.ability = m.newAbility(abilityId, GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime = GetAbilityCastInfo(action.ability.id)
   action.castTime = castTime or 0 --#number
@@ -136,7 +144,15 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.configDuration = nil --#number
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
-  action.description = zo_strformat("<<1>>", GetAbilityDescription(action.ability.id)) --#string
+  local description = action.ability.description
+  if action.crafted then
+    local sid1,sid2,sid3 = GetCraftedAbilityActiveScriptIds(action.craftedId)
+    description = description..'\n'..GetCraftedAbilityScriptDescription(action.craftedId, sid1)
+      ..'\n'..GetCraftedAbilityScriptDescription(action.craftedId, sid2)
+      ..'\n'..GetCraftedAbilityScriptDescription(action.craftedId, sid3)
+  end
+  action.description = zo_strformat("<<1>>", description) --#string
+  action.ability.description = action.description
   action.effectEndTimes = {} --#list<#number>
 
   -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
@@ -335,7 +351,7 @@ end
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
   if self.configDuration then return self.configDuration end
-  local optEffect = self:optEffect() -- #Effect
+  local optEffect,reason = self:optEffect() -- #Effect
   return optEffect and optEffect.duration or self.duration or self.descriptionDuration
 end
 
@@ -754,7 +770,7 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       ignored = true
     end
     -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
-    if self.duration > 0 and self.startTime+self.duration-300 <= effect.startTime then
+    if self.duration > 3000 and self.startTime+self.duration-300 <= effect.startTime then
       -- only ignore if this duration is not equal to action duration e.g. warden's Subterrian Assault
       if self.duration ~= effect.duration then
         reason = reason..'ignored following duration,'
