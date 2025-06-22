@@ -4,7 +4,7 @@ plugins{
 
 ext.addonName = "ActionDurationReminder"
 ext.addonId = 1536
-ext.addonCompatible = '10.3.5'// "11.0.0"
+ext.addonCompatible = "11.0.0"
 ext.esoApiToken = project.property('com.esoui.apiToken')
 ext.esoPtsDir = project.property('ESO_PTS_ADDONS_DIR')
 ext.esoLiveDir = project.property('ESO_LIVE_ADDONS_DIR')
