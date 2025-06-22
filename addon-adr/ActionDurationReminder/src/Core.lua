@@ -250,18 +250,28 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   local matchHotbarCategory = nil
   local currentHotbarCategory = GetActiveHotbarCategory()
   local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
+  local isCrux =  effect.ability.icon:find("arcanist_crux",18,true) 
   for i=1, 3 do
     local hotbarCategory = indices[i]
     for slotNum = 3,8 do
       local slotBoundId = GetSlotBoundId(slotNum,hotbarCategory)
+      local slotIcon = GetSlotTexture(slotNum,hotbarCategory)
       if slotBoundId >0 then
-        local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
-        if (effect.ability.name== slotName)
-          or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
-        then
-          matchSlotNum = slotNum
-          matchHotbarCategory = hotbarCategory
-          break
+        if isCrux then
+          if slotIcon:find('arcanist_002',18,true) or slotIcon:find('arcanist_003_b',18,true) then
+            matchSlotNum = slotNum
+            matchHotbarCategory = hotbarCategory
+            break
+          end
+        else
+          local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
+          if (effect.ability.name== slotName)
+            or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
+          then
+            matchSlotNum = slotNum
+            matchHotbarCategory = hotbarCategory
+            break
+          end
         end
       end
     end
@@ -643,7 +653,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local ignoredIdsConfig ={
     ['ability_mage_062']='burning effect',
     ['ability_mage_039']='blight seed',
-    ['arcanist_crux']='arcanist crux',
     ['death_recap_bleed_dot']='bleed dot',
     ['ability_healer_023']='sunlight',
   }

@@ -1,3 +1,6 @@
+3.133
+- Re-enabled crux count tracking.
+
 3.132
 - Added support for crafted abilities, i.e. Trample with Major Heroism can be tracked.
 

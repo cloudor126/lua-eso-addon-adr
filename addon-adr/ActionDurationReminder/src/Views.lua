@@ -112,7 +112,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, 0, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
+  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, -5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
   local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
   inst.stackLabel2 = stackLabel2 --LabelControl#LabelControl
   stackLabel2:SetFont(l.getStackLabelFont())
@@ -120,7 +120,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel2:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   stackLabel2:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 2, shifted and( - savedVars.barStackLabelYOffsetInShift - 5) or ( - savedVars.barStackLabelYOffset - 5))
+  stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
   
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cooldown.shifted = shifted

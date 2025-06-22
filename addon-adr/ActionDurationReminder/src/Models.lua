@@ -144,6 +144,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.configDuration = nil --#number
   if action.duration<1000 then action.duration = 0 end
   action.inheritDuration = 0 --#number
+  action.showCrux = action.ability.icon:find('arcanist_002',18,true) or action.ability.icon:find('arcanist_003_b',18,true)
   local description = action.ability.description
   if action.crafted then
     local sid1,sid2,sid3 = GetCraftedAbilityActiveScriptIds(action.craftedId)
@@ -688,11 +689,15 @@ end
 
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
-  -- 1. tank skills can taunt
+  -- 1. crux
+  if self.showCrux and effect.ability.icon:find('arcanist_crux',18,true) then
+    return true
+  end
+  -- 2. tank skills can taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
-  -- 2. fast check already matched effects unless it is a buff effect
+  -- 3. fast check already matched effects unless it is a buff effect
   local isBuff = effect.ability.icon:find('ability_buff_m',1,true)
   if not isBuff then
     for i, var in ipairs(self.effectList) do
@@ -702,11 +707,11 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   end
 
   local strict = effect.startTime > self.startTime + self.castTime + 2000
-  -- 3.0.x if it is minor debuff, it could be non-strict
+  -- 4.0.x if it is minor debuff, it could be non-strict
   if effect.ability.icon:find('ability_debuff_min',1,true) then
     strict = false
   end
-  -- 3.0.x if it is following other effect's timeEnds, it could be non-strict
+  -- 4.0.x if it is following other effect's timeEnds, it could be non-strict
   if strict then -- try to accept continued effect
     local matchEffectsEnd = false
     for key, var in ipairs(self.effectEndTimes) do
@@ -717,9 +722,9 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   end
   strict = strict or (effect.duration>0 and effect.duration<4000) -- Render Flesh has a 4 second Minor Defile
 
-  -- 3. check ability match
+  -- 5. check ability match
   if self:matchesAbility(effect.ability, strict) then
-    -- 3.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
+    -- 5.a filter non-integer duration effect i.e. Merciless Charge has same icon but 10.9s duration
     if strict and effect.duration%1000>0 and self.duration >0
       and effect.ability.name ~= self.ability.name
       and math.floor(effect.duration/1000+0.5)~= math.floor(self.duration/1000+0.5)
@@ -735,17 +740,21 @@ end
 
 mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
-  -- 1. taunt
+  -- 1. crux
+  if self.showCrux and effect.ability.icon:find('arcanist_crux',18,true) then
+    return true
+  end
+  -- 2. taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
-  -- 2. fast check already matched effects
+  -- 3. fast check already matched effects
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and (e.unitId == effect.unitId or effect.unitId==0) then
       return true
     end
   end
-  -- 3 stack effect
+  -- 4 stack effect
   if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and (self.stackEffect.unitId== effect.unitId or effect.unitId==0) then
     return true
   end
