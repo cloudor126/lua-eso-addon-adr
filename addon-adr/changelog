@@ -1,3 +1,6 @@
+3.134
+- Enabled tracking of effects with a frequency, i.e. Banner Bearer can be tracked with the 5 seconds class script.
+
 3.133a
 - Re-enabled crux count tracking.
 

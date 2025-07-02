@@ -469,7 +469,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   elseif remain > 0 then
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      self.cooldown:start(remain, 8000, otherInfo == '1/2')
+      self.cooldown:start(remain, 8000, otherInfo == '1/2' or action.tickEffect)
     end
   else
     self.cdMark = 0

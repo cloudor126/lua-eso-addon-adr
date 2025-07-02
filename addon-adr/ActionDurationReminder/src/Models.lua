@@ -232,13 +232,14 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.stackCount2 = 0
   action.stackEffect = nil -- #Effect
   action.stackEffect2 = nil -- #Effect
+  action.tickEffect = nil -- #Effect
   action.targetId = nil --#number
   setmetatable(action,{__index=mAction})
   return action
 end
 
 m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime, #number:stackCount)->(#Effect)
-=  function(ability, unitTag, unitId, startTime, endTime, stackCount)
+=  function(ability, unitTag, unitId, startTime, endTime, stackCount, tickRate)
   local effect = {} -- #Effect
   effect.ability = ability --#Ability
   effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others' -- #string player or playerpet or others
@@ -248,7 +249,8 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.duration = endTime-startTime -- #number
   effect.ignored = false -- #boolean
   effect.ignorableDebuff = false -- #boolean
-  effect.stackCount = stackCount -- #number
+  effect.stackCount = stackCount or 0 -- #number
+  effect.tickRate = tickRate or 0 -- #number
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -351,6 +353,9 @@ end
 
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
+  if self.tickEffect then
+    return self.tickEffect.tickRate
+  end
   if self.configDuration then return self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
   return optEffect and optEffect.duration or self.duration or self.descriptionDuration
@@ -377,6 +382,13 @@ end
 
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
 = function(self, debugging)
+  if self.tickEffect then
+    local start = self.tickEffect.startTime
+    local now = GetGameTimeMilliseconds()
+    local span = now - start
+    local offset = span - span % self.tickEffect.tickRate
+    return start + offset + self.tickEffect.tickRate
+  end
   if self.configDuration then return self.startTime + self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
   reason = reason or 'nil'
@@ -458,6 +470,9 @@ end
 
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
+  if self.tickEffect then
+    return '∞'
+  end
   local optEffect = self:optEffect()
   if not optEffect or not self.duration
   then
@@ -560,6 +575,13 @@ end
 
 mAction.getStartTime -- #(#Action:self)->(#number)
 = function(self)
+  if self.tickEffect then
+    local start = self.tickEffect.startTime
+    local now = GetGameTimeMilliseconds()
+    local span = now - start
+    local offset = span - span % self.tickEffect.tickRate
+    return start + offset
+  end
   local optEffect = self:optEffect()
   return optEffect and optEffect.startTime or self.startTime
 end
@@ -746,6 +768,10 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   end
   -- 2. taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
+    return true
+  end
+  -- 3. tick effect
+  if self.tickEffect and self.tickEffect.ability.id == effect.ability.id then
     return true
   end
   -- 3. fast check already matched effects
@@ -946,6 +972,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
 = function(self, effect)
   local oldEffect = effect -- #Effect
   local now = GetGameTimeMilliseconds()
+  -- process tickEffect
+  if self.tickEffect and self.tickEffect.ability.id==oldEffect.ability.id then
+    oldEffect = self.tickEffect
+    self.tickEffect = nil
+    l.debug(DS_MODEL,1)("[m.purged] %s, in %s",  oldEffect:toLogString(), self:toLogString())
+    return
+  end
+  -- process effectList
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
       local withOldFake = self.oldAction and self.oldAction.fake
@@ -1029,6 +1063,12 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   if effect.drop then return end
   -- ignore pure stack effect, they should have been saved using updateStackInfo
   if effect.stackCount>0 and effect.duration==0 then
+    return
+  end
+
+  -- process effect with tickRate
+  if effect.tickRate >0 then
+    self.tickEffect = effect
     return
   end
 
@@ -1177,8 +1217,9 @@ end
 
 mEffect.toLogString --#(#Effect:self)->(#string)
 = function(self)
-  return string.format("%s, %.2f~%.2f<%d>, stack:%d, unit:%s(%d) %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
-    self.duration/1000, self.stackCount, self.unitTag, self.unitId, self.ignored and ' [ignored]' or '')
+  return string.format("%s, %.2f~%.2f<%d>, stack:%d, %s, unit:%s(%d) %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
+    self.duration/1000, self.stackCount, self.tickRate==0 and '' or string.format('tickRate:%d',self.tickRate),self.unitTag, self.unitId,
+    self.ignored and ' [ignored]' or '')
 end
 --========================================
 --        register

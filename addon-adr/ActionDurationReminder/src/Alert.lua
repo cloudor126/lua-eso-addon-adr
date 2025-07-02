@@ -116,6 +116,8 @@ l.checkAction --#(Models#Action:action)->()
   if action.slotNum == 8 then return end
   -- check action alerted
   if action.data.alerted then return end
+  -- check tick
+  if action.tickEffect then return end
   -- check action just override without new effects
   if action:getFullEndTime()-action.startTime < 3000 then return end
   if action:getStageInfo() == '1/2' then return end

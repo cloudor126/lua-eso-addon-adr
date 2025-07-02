@@ -232,6 +232,19 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
   return nil
 end
 
+l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
+= function(tickEffectId, unitId)
+  for key, action in pairs(l.idActionMap) do
+    if action.tickEffect and action.tickEffect.ability.id == tickEffectId
+      and action.tickEffect.unitId == unitId 
+    then
+      l.debug(DS_ACTION,1)('[F]found by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
+      return action
+    end
+  end
+  return nil
+end
+
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
   -- check if it's a major buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
@@ -250,7 +263,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   local matchHotbarCategory = nil
   local currentHotbarCategory = GetActiveHotbarCategory()
   local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
-  local isCrux =  effect.ability.icon:find("arcanist_crux",18,true) 
+  local isCrux =  effect.ability.icon:find("arcanist_crux",18,true)
   for i=1, 3 do
     local hotbarCategory = indices[i]
     for slotNum = 3,8 do
@@ -427,6 +440,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       action.lastEffectTime = sameNameAction.lastEffectTime
       action.stackCount = sameNameAction.stackCount
       action.stackEffect = sameNameAction.stackEffect
+      action.tickEffect = sameNameAction.tickEffect
       sameNameAction.stackEffect = nil
       action.oldAction = sameNameAction
 
@@ -487,7 +501,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
-  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+  l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
     abilityName,
     abilityId,
     now/1000,
@@ -505,18 +519,27 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
     powerType,
     hitValue
   )
-  if result == ACTION_RESULT_DIED_XP then
+  -- ACTION_RESULT_EFFECT_GAINED 2240
+  -- ACTION_RESULT_EFFECT_GAINED_DURATION  2245
+  -- 2240? TODO GetAbilityFrequencyMS
+  if result == ACTION_RESULT_DIED_XP then --2262
     for key, var in pairs(l.idActionMap) do
       var:purgeEffectByTargetUnitId(targetUnitId)
-    end
   end
-  if result == ACTION_RESULT_EFFECT_FADED then
+  end
+  if result == ACTION_RESULT_EFFECT_FADED then --2250
+    l.debug(DS_EFFECT, 1)('[CE] ACTION_RESULT_EFFECT_FADED, %s(%d)', abilityName, abilityId)
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitType == targetType and action.channelUnitId == targetUnitId then
+      l.debug(DS_EFFECT, 1)('[CE] cancel channeling action %s', action:toLogString())
       action.endTime = now
     end
+    action = l.findActionByTick(abilityId, targetUnitId)
+    if action then
+      l.debug(DS_EFFECT, 1)('[CE] cancel tick action %s \n with tickEffect:%s', action:toLogString(), action.tickEffect:toLogString())
+      l.removeAction(action)
+    end
   end
-
 end
 
 l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError,
@@ -525,6 +548,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 --#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
+  --
   if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
   local now = GetGameTimeMilliseconds()
   --  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
@@ -551,6 +575,25 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     return
   end
 
+  -- pick effect with tick rate
+  if result==ACTION_RESULT_EFFECT_GAINED and sourceType==targetType and sourceUnitId == targetUnitId then
+    local tickRate = GetAbilityFrequencyMS(abilityId)
+    if tickRate > l.getSavedVars().coreMinimumDurationSeconds*1000 then
+
+      local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
+      local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, 0, tickRate);
+      l.debug(DS_EFFECT,1)('[+] %s', effect:toLogString())
+      local action = l.findActionByNewEffect(effect) -- Models#Action
+      if action then
+        action:saveEffect(effect)
+        if not action.saved then
+          l.saveAction(action)
+        end
+      end
+    end
+  end
+
+  -- justify recorded actions
   for key, action in pairs(l.actionQueue) do
     if not action.saved
       and (action.ability.id == abilityId or action.ability.name == abilityName)
@@ -679,7 +722,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     l.lastEffectAction = nil
   end
   local ability = models.newAbility(abilityId, effectName, iconName)
-  local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime, stackCount);
+  local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime, stackCount, 0);
   -- 1. stack
   if stackCount > 0 then -- e.g. relentless focus
     local action = nil -- Models#Action
@@ -793,7 +836,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
           if timeStarted==timeEnding and stackCount>0 then
             local startTime =  math.floor(timeStarted * 1000)
             local ability = models.newAbility(abilityId,buffName,iconFilename)
-            local effect = models.newEffect(ability,'player',0,startTime,startTime,stackCount)
+            local effect = models.newEffect(ability,'player',0,startTime,startTime,stackCount, 0)
             if action:matchesNewEffect(effect) then
               -- stackable actions with duration should ignore eso buggy effect time e.g. 20s Relentless Focus
               if action.duration and action.duration > 0 then
@@ -938,7 +981,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
       local action = l.timeActionMap[startTime]
       if action then
         local ability = models.newAbility(abilityId,buffName,iconFilename)
-        local effect = models.newEffect(ability,'none',0,startTime,startTime,0) -- only for match, no need to be precise timing
+        local effect = models.newEffect(ability,'none',0,startTime,startTime, 0, 0) -- only for match, no need to be precise timing
         if action:matchesOldEffect(effect) then
           action.targetOut = false
           l.idActionMap[action.ability.id] = action
