@@ -353,7 +353,7 @@ end
 
 mAction.getDuration -- #(#Action:self)->(#number)
 = function(self)
-  if self.tickEffect then
+  if self.tickEffect and self.duration==0 then
     return self.tickEffect.tickRate
   end
   if self.configDuration then return self.configDuration end
@@ -382,7 +382,7 @@ end
 
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
 = function(self, debugging)
-  if self.tickEffect then
+  if self.tickEffect and self.duration==0 then
     local start = self.tickEffect.startTime
     local now = GetGameTimeMilliseconds()
     local span = now - start
@@ -470,7 +470,7 @@ end
 
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
-  if self.tickEffect then
+  if self.tickEffect and self.duration==0  then
     return '∞'
   end
   local optEffect = self:optEffect()
@@ -575,7 +575,7 @@ end
 
 mAction.getStartTime -- #(#Action:self)->(#number)
 = function(self)
-  if self.tickEffect then
+  if self.tickEffect and self.duration==0 then
     local start = self.tickEffect.startTime
     local now = GetGameTimeMilliseconds()
     local span = now - start

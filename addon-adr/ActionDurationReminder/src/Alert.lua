@@ -137,6 +137,9 @@ l.checkAction --#(Models#Action:action)->()
     action.data.alerted = true
     local showAbility = action.ability
     local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
+    if GetSlotType(action.slotNum,action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+      mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
+    end
     if showAbility.id ~= mutantId then
       local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
       if action:matchesAbility(slotAbility) then
@@ -232,7 +235,7 @@ l.onCoreUpdate -- #()->()
           if action.ability.id == id and sn<maxSnMap[id] then toRemove[#toRemove+1] =action end
         end
         for key, var in ipairs(toRemove) do
-        	core.l.removeAction(var)
+          core.l.removeAction(var)
         end
       end
     end

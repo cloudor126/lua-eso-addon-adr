@@ -80,6 +80,9 @@ l.onCoreUpdate -- #()->()
   for slotNum = 3,8 do
     local widget = l.mainBarWidgetMap[slotNum]
     local abilityId = GetSlotBoundId(slotNum,hotbarCategory)
+    if GetSlotType(slotNum,hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+      abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
+    end
     local action = core.getActionBySlot(hotbarCategory,slotNum)
     if action
       -- check this position action

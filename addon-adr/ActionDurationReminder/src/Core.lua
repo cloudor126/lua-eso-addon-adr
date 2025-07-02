@@ -236,7 +236,7 @@ l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
 = function(tickEffectId, unitId)
   for key, action in pairs(l.idActionMap) do
     if action.tickEffect and action.tickEffect.ability.id == tickEffectId
-      and action.tickEffect.unitId == unitId 
+      and action.tickEffect.unitId == unitId
     then
       l.debug(DS_ACTION,1)('[F]found by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
       return action
@@ -268,6 +268,9 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
     local hotbarCategory = indices[i]
     for slotNum = 3,8 do
       local slotBoundId = GetSlotBoundId(slotNum,hotbarCategory)
+      if GetSlotType(slotNum,hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+        slotBoundId = GetAbilityIdForCraftedAbilityId(slotBoundId)
+      end
       local slotIcon = GetSlotTexture(slotNum,hotbarCategory)
       if slotBoundId >0 then
         if isCrux then
@@ -501,24 +504,24 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
-  l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
-    abilityName,
-    abilityId,
-    now/1000,
-    abilityGraphic,
-    sourceName,
-    sourceType,
-    sourceUnitId,
-    targetName,
-    targetType,
-    targetUnitId,
-    abilityActionSlotType,
-    damageType,
-    overflow,
-    result,
-    powerType,
-    hitValue
-  )
+  --  l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+  --    abilityName,
+  --    abilityId,
+  --    now/1000,
+  --    abilityGraphic,
+  --    sourceName,
+  --    sourceType,
+  --    sourceUnitId,
+  --    targetName,
+  --    targetType,
+  --    targetUnitId,
+  --    abilityActionSlotType,
+  --    damageType,
+  --    overflow,
+  --    result,
+  --    powerType,
+  --    hitValue
+  --  )
   -- ACTION_RESULT_EFFECT_GAINED 2240
   -- ACTION_RESULT_EFFECT_GAINED_DURATION  2245
   -- 2240? TODO GetAbilityFrequencyMS
@@ -528,7 +531,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   end
   if result == ACTION_RESULT_EFFECT_FADED then --2250
-    l.debug(DS_EFFECT, 1)('[CE] ACTION_RESULT_EFFECT_FADED, %s(%d)', abilityName, abilityId)
+    l.debug(DS_EFFECT, 3)('[CE] ACTION_RESULT_EFFECT_FADED, %s(%d)', abilityName, abilityId)
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitType == targetType and action.channelUnitId == targetUnitId then
       l.debug(DS_EFFECT, 1)('[CE] cancel channeling action %s', action:toLogString())
@@ -898,11 +901,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByOldEffect(effect)
     if action then
       local oldEffect = action:purgeEffect(effect)
-      local clearTimeRecord = true
-      for key, var in ipairs(action.effectList) do
-        if var.startTime == oldEffect.startTime then clearTimeRecord=false end
+      if oldEffect then
+        local clearTimeRecord = true
+        for key, var in ipairs(action.effectList) do
+          if var.startTime == oldEffect.startTime then clearTimeRecord=false end
+        end
+        if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still exist
       end
-      if clearTimeRecord then l.timeActionMap[oldEffect.startTime] = nil end -- don't clear time record if other effect still exist
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake then
         if now < action:getStartTime()+1100 then
