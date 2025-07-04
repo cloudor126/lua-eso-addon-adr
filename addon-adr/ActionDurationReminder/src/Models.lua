@@ -233,6 +233,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.stackEffect = nil -- #Effect
   action.stackEffect2 = nil -- #Effect
   action.tickEffect = nil -- #Effect
+  action.tickEffectDoubled = false -- #boolean
   action.targetId = nil --#number
   setmetatable(action,{__index=mAction})
   return action
@@ -470,8 +471,13 @@ end
 
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
-  if self.tickEffect and self.duration==0  then
-    return '∞'
+  if self.tickEffect then
+    if not self.duration or self.duration ==0 then
+      return '∞'
+    end
+    local total = math.floor(self.duration/ self.tickEffect.tickRate+0.2)
+    local remain = math.floor((self:getEndTime()-GetGameTimeMilliseconds())/self.tickEffect.tickRate)
+    return string.format('%d/%d',math.max(1,total-remain), total)
   end
   local optEffect = self:optEffect()
   if not optEffect or not self.duration
@@ -825,12 +831,13 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       optEffect = effect
       reason = reason..'only one'
     else
+      -- TODO
       if debugging then
         df('[DBG] Comparing %s with %s', optEffect:toLogString(), effect:toLogString())
       end
       optEffect,reason = self:optEffectOf(optEffect,effect)
       if debugging then
-        df('[DBG] Opt %s', optEffect:toLogString())
+        df('[DBG] Opt %s, reason:%s', optEffect:toLogString(), reason)
       end
     end
   end
@@ -974,9 +981,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   local now = GetGameTimeMilliseconds()
   -- process tickEffect
   if self.tickEffect and self.tickEffect.ability.id==oldEffect.ability.id then
+    if self.tickEffectDoubled then
+      self.tickEffectDoubled = false
+      l.debug(DS_MODEL,1)("[m.purged double tick] %s",  self:toLogString())
+      return
+    end
     oldEffect = self.tickEffect
     self.tickEffect = nil
-    l.debug(DS_MODEL,1)("[m.purged] %s, in %s",  oldEffect:toLogString(), self:toLogString())
+    l.debug(DS_MODEL,1)("[m.purged tick] %s",  self:toLogString())
     return
   end
   -- process effectList
@@ -1068,6 +1080,10 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
 
   -- process effect with tickRate
   if effect.tickRate >0 then
+    if self.tickEffect and self.tickEffect.ability.id == effect.ability.id then
+      self.tickEffectDoubled = true
+      return
+    end
     self.tickEffect = effect
     return
   end
@@ -1143,9 +1159,14 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   return nil
 end
 
-mAction.toLogString --#(#Action:self)->(#string)
+mAction.toLogString --#(#Action:self, #boolean:effectList)->(#string)
 = function(self)
-  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s%s bar%dslot%d\n%s%s",self.sn, self.ability:toLogString(), self.startTime/1000,
+  local effectListLog = #self.effectList>0 and ':' or ''
+  for key, effect in ipairs(self.effectList) do
+    effectListLog= effectListLog ..'\n+ [e] '.. effect:toLogString()
+  end
+  local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
+  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s%s bar%dslot%d\n%s%s%s%s",self.sn, self.ability:toLogString(), self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
     self.fake and 'fake,' or '',
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
@@ -1153,7 +1174,9 @@ mAction.toLogString --#(#Action:self)->(#string)
     self:getFlagsInfo(),
     self.oldAction and string.format("\noldAction:$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.oldAction.sn, self.oldAction.ability:toLogString(), self.oldAction.startTime/1000,
       self.oldAction:getEndTime()/1000, self.oldAction.endTime/1000,self.oldAction:getDuration()/1000,
-      self.oldAction.fake and 'fake,' or '') or '\nwithoutOld'
+      self.oldAction.fake and 'fake,' or '') or '\nwithoutOld',
+    effectListLog,
+    tickEffectLog
   )
 end
 
