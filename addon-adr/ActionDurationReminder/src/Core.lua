@@ -517,7 +517,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         abilityAccepter(var)
       end
       l.removeAction(sameNameAction) -- clear from registries
-      l.saveAction(action) -- TODO triggered fake action?
+      l.saveAction(action)
     end
   end
   -- 6. save
@@ -579,15 +579,26 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED then --2250
     local _=nil
+    -- TODO
+    df('[ce-] %s(%d), channelUnitId:%d', abilityName, abilityId, targetUnitId)
     if l.debugEnabled(DS_EFFECT,3) then
       l.debug(DS_EFFECT, 3)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d)', abilityName, abilityId)
     end
     local action = l.idActionMap[abilityId]
+    if action then
+      df('[ce-a] found %s, channelUnitId:%d', action:toLogString(), action.channelUnitId or 0)
+    else
+      df('[ce-?] no action matched')
+    end
     if action and action.channelUnitType == targetType and action.channelUnitId == targetUnitId then
       if l.debugEnabled(DS_EFFECT,1) then
         l.debug(DS_EFFECT, 1)('[CE-] cancel channeling action %s', action:toLogString())
       end
-      action.endTime = now
+      action.channelStartTime = 0
+      action.channelEndTime = 0
+      if #action.effectList == 0 then
+        action.endTime = now
+      end
     end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action then
@@ -651,31 +662,42 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
       end
     end
   end
-
   -- justify recorded actions
-  for key, action in pairs(l.actionQueue) do
-    if not action.saved
-      and (action.ability.id == abilityId or action.ability.name == abilityName)
-    then
-      local duration = action.duration
-      -- use descript duration if action has channel time i.e. Arcanist FateCarver,
-      if result == ACTION_RESULT_EFFECT_GAINED_DURATION and duration == 0 -- and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
-        and sourceType==targetType and sourceUnitId == targetUnitId
+  if result == ACTION_RESULT_EFFECT_GAINED_DURATION then -- TODO
+    local _ = nil
+    if l.debugEnabled(DS_EFFECT,1) then
+      l.debug(DS_EFFECT,1)('[CE+duration] %s(%d) + %d', abilityName, abilityId, hitValue)
+    end
+    for key, action in pairs(l.actionQueue) do
+      if (action.ability.id == abilityId or action.ability.name == abilityName)
       then
-        duration = hitValue
-        action.channelUnitType = targetType
-        action.channelUnitId = targetUnitId
-      end
-      --
-      if  duration > l.getSavedVars().coreMinimumDurationSeconds*1000
-        and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround ) then
-        action.startTime = now
-        action.endTime = now+duration
-        if action.flags.forGround then
-          -- record this to mark next effect as activated one
-          action.groundFirstEffectId = -1
+        local duration = action.duration
+        -- use descript duration if action has channel time i.e. Arcanist FateCarver,
+        if duration == 0 -- and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
+          and sourceType==targetType and sourceUnitId == targetUnitId
+        then
+          duration = hitValue
+          action.channelStartTime = now
+          action.channelEndTime = now+duration
+          action.channelUnitType = targetType
+          action.channelUnitId = targetUnitId
+          if l.debugEnabled(DS_EFFECT,1) then
+            l.debug(DS_EFFECT,1)('[CE+channel] %s', action:toLogString())
+          end
+          -- TODO
+          df('[ce+channel] %s', action:toLogString())
         end
-        l.saveAction(action)
+        --
+        if  not action.saved and duration > l.getSavedVars().coreMinimumDurationSeconds*1000
+          and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround ) then
+          action.startTime = now
+          action.endTime = now+duration
+          if action.flags.forGround then
+            -- record this to mark next effect as activated one
+            action.groundFirstEffectId = -1
+          end
+          l.saveAction(action)
+        end
       end
     end
   end
@@ -1281,7 +1303,7 @@ l.saveAction -- #(Models#Action:action)->()
     return count
   end
   if l.debugEnabled(DS_ACTION,1) then
-    l.debug(DS_ACTION,1)('[s](idActionMap(%i),timeActionMap(%i)),%s', len(l.idActionMap),len(l.timeActionMap), action:toLogString())
+    l.debug(DS_ACTION,1)('[s]idActionMap(%i),timeActionMap(%i)\n%s', len(l.idActionMap),len(l.timeActionMap), action:toLogString())
   end
   if old then l.removeAction(old) end
 end

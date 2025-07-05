@@ -192,6 +192,8 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
 
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
   action.lastEffectTime = 0 --#number
+  action.channelStartTime = 0 --#number
+  action.channelEndTime = 0 --#number
   action.oldAction = nil --#Action
   action.newAction = nil --#Action
 
@@ -357,6 +359,9 @@ mAction.getDuration -- #(#Action:self)->(#number)
   if self.tickEffect and self.duration==0 then
     return self.tickEffect.tickRate
   end
+  if self.channelStartTime>0 and self.channelEndTime>0 then
+    return self.channelEndTime - self.channelStartTime
+  end
   if self.configDuration then return self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
   return optEffect and optEffect.duration or self.duration or self.descriptionDuration
@@ -390,6 +395,7 @@ mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
     local offset = span - span % self.tickEffect.tickRate
     return start + offset + self.tickEffect.tickRate
   end
+  if self.channelEndTime >0 then return self.channelEndTime end
   if self.configDuration then return self.startTime + self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
   reason = reason or 'nil'
@@ -475,8 +481,10 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     if not self.duration or self.duration ==0 then
       return '∞'
     end
-    local total = math.floor(self.duration/ self.tickEffect.tickRate+0.2)
-    local remain = math.floor((self:getEndTime()-GetGameTimeMilliseconds())/self.tickEffect.tickRate)
+    local dur = self:getDuration()
+    df('duration:%d, tickRate:%d', dur, self.tickEffect.tickRate)
+    local total = math.floor(dur/ self.tickEffect.tickRate+0.95)
+    local remain = math.ceil((self:getEndTime()-GetGameTimeMilliseconds())/self.tickEffect.tickRate)
     return string.format('%d/%d',math.max(1,total-remain), total)
   end
   local optEffect = self:optEffect()
@@ -588,6 +596,7 @@ mAction.getStartTime -- #(#Action:self)->(#number)
     local offset = span - span % self.tickEffect.tickRate
     return start + offset
   end
+  if self.channelStartTime>0 then return self.channelStartTime end
   local optEffect = self:optEffect()
   return optEffect and optEffect.startTime or self.startTime
 end
@@ -1003,21 +1012,20 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
           effect.purgingTime = now
           -- do it later
           zo_callLater(function() self:purgeEffect(effect) end, 50)
-          l.debug(DS_MODEL,1)("[m.purging] %s, from %s, #effectList:%d(-1)", e:toLogString(),self:toLogString(), #self.effectList)
+          if l.debugEnabled(DS_MODEL,1) then
+            l.debug(DS_MODEL,1)("[m.purging] %s, from %s, #effectList:%d(-1)", e:toLogString(),self:toLogString(), #self.effectList)
+          end
           return e
         elseif e.saveTime and e.saveTime >= effect.purgingTime then
-          l.debug(DS_MODEL,1)("[m.purge-renewed] %s, in %s",  e:toLogString(), self:toLogString())
+          if l.debugEnabled(DS_MODEL,1) then
+            l.debug(DS_MODEL,1)("[m.purge-renewed] %s, in %s",  e:toLogString(), self:toLogString())
+          end
           return e
         end
       end
       table.remove(self.effectList,i)
       if l.debugEnabled(DS_MODEL,1) then
-        local effectListLog = ''
-        for key, effect in ipairs(self.effectList) do
-          effectListLog= effectListLog ..'\n [+--e:]'.. effect:toLogString()
-        end
-        l.debug(DS_MODEL,1)("[m.purged] %s, from %s, #effectList:%d%s",
-          e:toLogString(), self:toLogString(), #self.effectList, effectListLog)
+        l.debug(DS_MODEL,1)("[m.purged] %s, from %s",e:toLogString(), self:toLogString())
       end
       oldEffect = e -- we need duration info to end action
       break
@@ -1062,10 +1070,10 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
     )
   then
-    l.debug(DS_MODEL,1)("[m.purge end] %s, reason:\n%s\n", self:toLogString(), reason)
+    l.debug(DS_MODEL,1)("[m.purge end] %s, %s", reason, self:toLogString())
     self.endTime = now
   else
-    l.debug(DS_MODEL,1)("[m.purge not end] %s\n", self:toLogString(), reason)
+    l.debug(DS_MODEL,1)("[m.purge not end] %s, %s", reason, self:toLogString())
   end
   return oldEffect
 end
@@ -1159,16 +1167,20 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   return nil
 end
 
-mAction.toLogString --#(#Action:self, #boolean:effectList)->(#string)
+mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
   local effectListLog = #self.effectList>0 and ':' or ''
   for key, effect in ipairs(self.effectList) do
     effectListLog= effectListLog ..'\n+ [e] '.. effect:toLogString()
   end
   local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
-  return string.format("$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s%s bar%dslot%d\n%s%s%s%s",self.sn, self.ability:toLogString(), self.startTime/1000,
+  return string.format("$Action%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
+    self.sn, 
+    self.fake and '(fake)' or '',
+    self.ability:toLogString(),
+    self.channelStartTime>0 and 'channeling@' or '', 
+    self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
-    self.fake and 'fake,' or '',
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
     self.hotbarCategory,self.slotNum,
     self:getFlagsInfo(),
@@ -1182,9 +1194,8 @@ end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
-  l.debug(DS_MODEL,1)('[m.us]before %s stackCount set to %d, %d effect(s) existed',self:toLogString(), stackCount, #self.effectList);
-  for key, var in ipairs(self.effectList) do
-    l.debug(DS_MODEL,1)('--- %s with duration %d, stackCount is %d', var.ability:toLogString(), var.duration, var.stackCount);
+  if l.debugEnabled(DS_MODEL,1) then
+    l.debug(DS_MODEL,1)('[m.us]updating stackCount to %d from %s in %s',stackCount, effect:toLogString(), self:toLogString());
   end
   local addType = 0
   if not self.stackEffect then
@@ -1197,7 +1208,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
       addType = 2
       if self.stackEffect2 and self.stackEffect2.ability.id~= effect.ability.id then
         addType = 0
-        l.debug(DS_MODEL,1)('[m.us.f] old stackEffect2 %s existed, ingore new one. ',self.stackEffect2.ability:toLogString());
+        l.debug(DS_MODEL,1)('[m.us.filtered] ingored because old stackEffect2 existed: %s ',self.stackEffect2:toLogString());
       end
     end
   elseif self.stackEffect.ability.id == effect.ability.id then
