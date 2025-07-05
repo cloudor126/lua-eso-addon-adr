@@ -194,6 +194,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.lastEffectTime = 0 --#number
   action.channelStartTime = 0 --#number
   action.channelEndTime = 0 --#number
+  action.channelUnitId = 0 --#number
   action.oldAction = nil --#Action
   action.newAction = nil --#Action
 
@@ -245,6 +246,9 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
 =  function(ability, unitTag, unitId, startTime, endTime, stackCount, tickRate)
   local effect = {} -- #Effect
   effect.ability = ability --#Ability
+  if effect.ability.icon:find('arcanist_crux',18,true) then
+    effect.isCrux = true --#boolean
+  end
   effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others' -- #string player or playerpet or others
   effect.unitId = unitId -- #number
   effect.startTime = startTime -- #number
@@ -488,8 +492,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return string.format('%d/%d',math.max(1,total-remain), total)
   end
   local optEffect = self:optEffect()
-  if not optEffect or not self.duration
-  then
+  if not optEffect or not self.duration then
     return nil
   end
   -- 1/2 by firstStageId cache
@@ -624,6 +627,16 @@ mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
   return false
 end
 
+mAction.isShowingCruxDuration -- #(#Action:self)->(#boolean)
+= function(self)
+  local optEffect = self:optEffect()
+  if optEffect and optEffect.isCrux -- opt effect is crux?
+    and self.channelStartTime==0 -- not showing channel time
+  then
+    return true end
+  return false
+end
+
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
@@ -727,7 +740,7 @@ end
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 1. crux
-  if self.showCrux and effect.ability.icon:find('arcanist_crux',18,true) then
+  if self.showCrux and effect.isCrux then
     return true
   end
   -- 2. tank skills can taunt
@@ -778,7 +791,7 @@ end
 mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
   -- 1. crux
-  if self.showCrux and effect.ability.icon:find('arcanist_crux',18,true) then
+  if self.showCrux and effect.isCrux then
     return true
   end
   -- 2. taunt
@@ -855,6 +868,9 @@ end
 
 mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect,#string)
 = function(self,effect1, effect2)
+  -- lower crux priority
+  if effect1.isCrux then return effect2 end
+  if effect2.isCrux then return effect1 end
   -- override long duration
   if self.flags.forArea and effect1:isLongDuration() ~= effect2:isLongDuration() then
     return effect1:isLongDuration() and effect2 or effect1, "normal prior to long" -- opt normal duration
@@ -1175,10 +1191,10 @@ mAction.toLogString --#(#Action:self)->(#string)
   end
   local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
   return string.format("$Action%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
-    self.sn, 
+    self.sn,
     self.fake and '(fake)' or '',
     self.ability:toLogString(),
-    self.channelStartTime>0 and 'channeling@' or '', 
+    self.channelStartTime>0 and string.format('channeling(%d)@',self.channelUnitId or 0) or '',
     self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),

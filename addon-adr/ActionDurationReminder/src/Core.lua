@@ -579,18 +579,11 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED then --2250
     local _=nil
-    -- TODO
-    df('[ce-] %s(%d), channelUnitId:%d', abilityName, abilityId, targetUnitId)
-    if l.debugEnabled(DS_EFFECT,3) then
-      l.debug(DS_EFFECT, 3)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d)', abilityName, abilityId)
-    end
+      if l.debugEnabled(DS_EFFECT,2) then
+        l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),channelUnitId:%d', abilityName, abilityId,targetUnitId)
+      end
     local action = l.idActionMap[abilityId]
-    if action then
-      df('[ce-a] found %s, channelUnitId:%d', action:toLogString(), action.channelUnitId or 0)
-    else
-      df('[ce-?] no action matched')
-    end
-    if action and action.channelUnitType == targetType and action.channelUnitId == targetUnitId then
+    if action and action.channelUnitId == targetUnitId then
       if l.debugEnabled(DS_EFFECT,1) then
         l.debug(DS_EFFECT, 1)('[CE-] cancel channeling action %s', action:toLogString())
       end
@@ -663,32 +656,20 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     end
   end
   -- justify recorded actions
-  if result == ACTION_RESULT_EFFECT_GAINED_DURATION then -- TODO
+  if result == ACTION_RESULT_EFFECT_GAINED_DURATION then
     local _ = nil
     if l.debugEnabled(DS_EFFECT,1) then
       l.debug(DS_EFFECT,1)('[CE+duration] %s(%d) + %d', abilityName, abilityId, hitValue)
     end
+    -- for not saved actions, i.e. ground action
     for key, action in pairs(l.actionQueue) do
-      if (action.ability.id == abilityId or action.ability.name == abilityName)
-      then
+      if (action.ability.id == abilityId or action.ability.name == abilityName) then
         local duration = action.duration
-        -- use descript duration if action has channel time i.e. Arcanist FateCarver,
-        if duration == 0 -- and action.channelTime>l.getSavedVars().coreMinimumDurationSeconds*1000
-          and sourceType==targetType and sourceUnitId == targetUnitId
+        if duration == 0 and sourceType==targetType and sourceUnitId == targetUnitId
         then
           duration = hitValue
-          action.channelStartTime = now
-          action.channelEndTime = now+duration
-          action.channelUnitType = targetType
-          action.channelUnitId = targetUnitId
-          if l.debugEnabled(DS_EFFECT,1) then
-            l.debug(DS_EFFECT,1)('[CE+channel] %s', action:toLogString())
-          end
-          -- TODO
-          df('[ce+channel] %s', action:toLogString())
         end
-        --
-        if  not action.saved and duration > l.getSavedVars().coreMinimumDurationSeconds*1000
+        if not action.saved and duration > l.getSavedVars().coreMinimumDurationSeconds*1000
           and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround ) then
           action.startTime = now
           action.endTime = now+duration
@@ -697,6 +678,23 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
             action.groundFirstEffectId = -1
           end
           l.saveAction(action)
+          return
+        end
+      end
+    end
+    -- for saved actions, i.e. channel actions
+    for key, action in pairs(l.idActionMap) do
+      if (action.ability.id == abilityId or action.ability.name == abilityName) then
+        local duration = action.duration
+        if duration == 0  and sourceType==targetType and sourceUnitId == targetUnitId then
+          duration = hitValue
+          action.channelStartTime = now
+          action.channelEndTime = now+duration
+          action.channelUnitId = targetUnitId
+          if l.debugEnabled(DS_EFFECT,1) then
+            l.debug(DS_EFFECT,1)('[CE+channel] %s', action:toLogString())
+          end
+          return
         end
       end
     end
@@ -1052,8 +1050,8 @@ end
 
 l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
 = function(eventCode,initial)
-  -- TODO
-  d('player activated')
+  -- after ported
+  
 end
 
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()

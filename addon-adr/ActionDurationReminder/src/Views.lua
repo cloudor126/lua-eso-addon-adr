@@ -121,7 +121,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel2:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
-  
+
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cooldown.shifted = shifted
   inst.cdMark = 0
@@ -409,7 +409,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
 
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
-  local otherInfo = action:getStageInfo() or action:getAreaEffectCount()
+  local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
+  local isCrux = action:isShowingCruxDuration()
   -- label
   local stackCountOnly = false
   if #action.effectList==0 and action.stackCount > 0 then
@@ -419,6 +420,9 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
     local hint = string.format('%.1f', remain/1000)
     if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
       hint = string.format('%d', remain/1000)
+    end
+    if isCrux then
+      hint = string.format('[%d]', remain/1000)
     end
     self.label:SetText(hint)
     self.label:SetHidden(false)
@@ -432,8 +436,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       local stackText = string.format(action.stackCountMatch and '%d^' or '%d',action.stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
-    elseif otherInfo then
-      self.stackLabel:SetText(otherInfo)
+    elseif stageInfo then
+      self.stackLabel:SetText(stageInfo)
       self.stackLabel:SetHidden(false)
     else
       self.stackLabel:SetHidden(true)
@@ -469,7 +473,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   elseif remain > 0 then
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      self.cooldown:start(remain, 8000, otherInfo == '1/2' or action.tickEffect)
+      self.cooldown:start(remain, 8000, stageInfo == '1/2' or action.tickEffect)
     end
   else
     self.cdMark = 0
