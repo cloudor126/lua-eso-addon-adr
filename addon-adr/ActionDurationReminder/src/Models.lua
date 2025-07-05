@@ -513,7 +513,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   -- 1/2 by same start, same duration but with another long buff
   if math.abs(optEffect.startTime-self.startTime)< 500
     and optEffect.duration== self.duration
-    and optEffect.duration * 3 < self:getMaxOriginEffectDuration() * 2 then
+    and optEffect.duration +3000 <= self:getMaxOriginEffectDuration() then
     self.data.firstStageId = optEffect.ability.id
     return '1/2'
   end
