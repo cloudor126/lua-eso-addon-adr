@@ -486,7 +486,6 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
       return '∞'
     end
     local dur = self:getDuration()
-    df('duration:%d, tickRate:%d', dur, self.tickEffect.tickRate)
     local total = math.floor(dur/ self.tickEffect.tickRate+0.95)
     local remain = math.ceil((self:getEndTime()-GetGameTimeMilliseconds())/self.tickEffect.tickRate)
     return string.format('%d/%d',math.max(1,total-remain), total)
