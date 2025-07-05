@@ -1,3 +1,7 @@
+3.135
+- Optimized staged info support, i.e. VMA 2-handed weapon's Stampede and Flames of Oblivion can be tracked with staged info.
+- Added brackets to Crux timers to distinguish them from Fatecarver's channel time and Tentacular Dread's mark time.
+
 3.134b
 - Enabled tracking of effects with a frequency, i.e. Banner Bearer can be tracked with the 5 seconds class script.
 
