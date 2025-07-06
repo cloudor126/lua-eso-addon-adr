@@ -579,9 +579,9 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED then --2250
     local _=nil
-      if l.debugEnabled(DS_EFFECT,2) then
-        l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),channelUnitId:%d', abilityName, abilityId,targetUnitId)
-      end
+    if l.debugEnabled(DS_EFFECT,2) then
+      l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),channelUnitId:%d', abilityName, abilityId,targetUnitId)
+    end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
       if l.debugEnabled(DS_EFFECT,1) then
@@ -1050,8 +1050,29 @@ end
 
 l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
 = function(eventCode,initial)
-  -- after ported
-  
+  -- check toggled actions
+  local tickedActions = {} -- #list<Models#Action>
+  for key,action in pairs(l.idActionMap) do
+    if action.tickEffect then
+      table.insert(tickedActions,action)
+    end
+  end
+  local toggledIdInfo = {} -- #map<#number,#boolean>
+  local hotbarCategory = GetActiveHotbarCategory()
+  for slotNum=3, 8 do
+    if IsSlotToggled(slotNum, hotbarCategory) then
+      local abilityId = GetSlotBoundId(slotNum,hotbarCategory)
+      if GetSlotType(slotNum,hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+        abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
+      end
+      toggledIdInfo[abilityId] = true
+    end
+  end
+  for key, action in ipairs(tickedActions) do
+    if not toggledIdInfo[action.ability.id] then
+      l.removeAction(action)
+    end
+  end
 end
 
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()

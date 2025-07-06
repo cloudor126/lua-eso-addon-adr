@@ -1,3 +1,6 @@
+3.136
+- Added cleanup for vanished effects with a frequency after porting. 
+
 3.135a
 - Optimized staged info support, i.e. VMA 2-handed weapon's Stampede and Flames of Oblivion can be tracked with staged info.
 - Added brackets to Crux timers to distinguish them from Fatecarver's channel time and Tentacular Dread's mark time.
