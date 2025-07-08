@@ -551,24 +551,26 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
-  --  l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
-  --    abilityName,
-  --    abilityId,
-  --    now/1000,
-  --    abilityGraphic,
-  --    sourceName,
-  --    sourceType,
-  --    sourceUnitId,
-  --    targetName,
-  --    targetType,
-  --    targetUnitId,
-  --    abilityActionSlotType,
-  --    damageType,
-  --    overflow,
-  --    result,
-  --    powerType,
-  --    hitValue
-  --  )
+  if l.debugEnabled(DS_EFFECT,3) then
+    l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+      abilityName,
+      abilityId,
+      now/1000,
+      abilityGraphic,
+      sourceName,
+      sourceType,
+      sourceUnitId,
+      targetName,
+      targetType,
+      targetUnitId,
+      abilityActionSlotType,
+      damageType,
+      overflow,
+      result,
+      powerType,
+      hitValue
+    )
+    end
   -- ACTION_RESULT_EFFECT_GAINED 2240
   -- ACTION_RESULT_EFFECT_GAINED_DURATION  2245
   -- 2240? TODO GetAbilityFrequencyMS
@@ -610,26 +612,28 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
 = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   --
-  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
   local now = GetGameTimeMilliseconds()
-  --  l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
-  --    abilityName,
-  --    abilityId,
-  --    now/1000,
-  --    abilityGraphic,
-  --    sourceName,
-  --    sourceType,
-  --    sourceUnitId,
-  --    targetName,
-  --    targetType,
-  --    targetUnitId,
-  --    abilityActionSlotType,
-  --    damageType,
-  --    overflow,
-  --    result,
-  --    powerType,
-  --    hitValue
-  --  )
+--  if l.debugEnabled(DS_EFFECT,3) then
+--    l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+--      abilityName,
+--      abilityId,
+--      now/1000,
+--      abilityGraphic,
+--      sourceName,
+--      sourceType,
+--      sourceUnitId,
+--      targetName,
+--      targetType,
+--      targetUnitId,
+--      abilityActionSlotType,
+--      damageType,
+--      overflow,
+--      result,
+--      powerType,
+--      hitValue
+--    )
+--  end
+  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
 
   -- filter by keywords
   if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
@@ -640,7 +644,6 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   if result==ACTION_RESULT_EFFECT_GAINED and sourceType==targetType and sourceUnitId == targetUnitId then
     local tickRate = GetAbilityFrequencyMS(abilityId)
     if tickRate > l.getSavedVars().coreMinimumDurationSeconds*1000 then
-
       local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
       local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, 0, tickRate);
       if l.debugEnabled(DS_EFFECT,1) then
@@ -651,6 +654,24 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         action:saveEffect(effect)
         if not action.saved then
           l.saveAction(action)
+          return
+        end
+      end
+    end
+    -- for not saved actions, i.e. Extended Ritual
+    for key, action in pairs(l.actionQueue) do
+      if (action.ability.id == abilityId or action.ability.name == abilityName) then
+        local duration = action.duration
+        if not action.saved and duration > l.getSavedVars().coreMinimumDurationSeconds*1000
+          and ((action.flags.forArea and now-action.startTime<2000) or action.flags.forGround ) then
+          action.startTime = now
+          action.endTime = now+duration
+          if action.flags.forGround then
+            -- record this to mark next effect as activated one
+            action.groundFirstEffectId = -1
+          end
+          l.saveAction(action)
+          return
         end
       end
     end

@@ -1,3 +1,6 @@
+3.137
+- Optimized combat event processing, i.e. Extended Ritual can show a timer now.
+
 3.136
 - Added cleanup for vanished effects with a frequency after porting. 
 
