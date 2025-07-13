@@ -1,3 +1,6 @@
+3.138
+- Fixed a bug where event timers updated incorrectly, i.e. Carve and Beast Trap can show timers correctly. 
+
 3.137
 - Optimized combat event processing, i.e. Extended Ritual can show a timer now.
 

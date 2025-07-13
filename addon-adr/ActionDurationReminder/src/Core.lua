@@ -705,7 +705,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     end
     -- for saved actions, i.e. channel actions
     for key, action in pairs(l.idActionMap) do
-      if (action.ability.id == abilityId or action.ability.name == abilityName) then
+      if action.channeled and (action.ability.id == abilityId or action.ability.name == abilityName) then
         local duration = action.duration
         if duration == 0  and sourceType==targetType and sourceUnitId == targetUnitId then
           duration = hitValue
@@ -718,6 +718,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           return
         end
       end
+      -- TODO if action not channeled, might need to update effect time, but this might be a duplicated action.
     end
   end
 end

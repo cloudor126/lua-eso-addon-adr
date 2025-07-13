@@ -138,6 +138,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.ability = m.newAbility(abilityId, GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime = GetAbilityCastInfo(action.ability.id)
+  action.channeled = channeled --#boolean
   action.castTime = castTime or 0 --#number
   action.startTime = GetGameTimeMilliseconds() --#number
   action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
@@ -817,8 +818,17 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return false
 end
 
+local debuggingLastTime = 0 --#number
 mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
 = function(self, debugging)
+  if debugging then -- 1 sec threshold
+    local now = GetGameTimeMilliseconds()
+    if now - debuggingLastTime > 1000 then
+      debuggingLastTime = now
+    else
+      debugging = false
+    end
+  end
   local optEffect = nil --#Effect
   local reason = ''
   local now = GetGameTimeMilliseconds()
@@ -852,7 +862,6 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       optEffect = effect
       reason = reason..'only one'
     else
-      -- TODO
       if debugging then
         df('[DBG] Comparing %s with %s', optEffect:toLogString(), effect:toLogString())
       end
