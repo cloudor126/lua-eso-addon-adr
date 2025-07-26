@@ -117,7 +117,7 @@ l.checkAction --#(Models#Action:action)->()
   -- check action alerted
   if action.data.alerted then return end
   -- check tick
-  if action.tickEffect then return end
+  if action.tickEffect and action.duration==0 then return end
   -- check action just override without new effects
   if action:getFullEndTime()-action.startTime < 3000 then return end
   if action:getStageInfo() == '1/2' then return end

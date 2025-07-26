@@ -596,9 +596,9 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
       end
     end
     action = l.findActionByTick(abilityId, targetUnitId)
-    if action then
+    if action and action.duration==0 then
       if l.debugEnabled(DS_EFFECT,1) then
-        l.debug(DS_EFFECT, 1)('[CE-] cancel tick action %s', action:toLogString())
+        l.debug(DS_EFFECT, 1)('[CE-] cancel non-dur tick action %s', action:toLogString())
       end
       l.removeAction(action)
     end

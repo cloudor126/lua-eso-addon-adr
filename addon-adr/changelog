@@ -1,3 +1,6 @@
+3.139
+- Fixed a bug where tick effect caused popup alerts failed to display, i.e. Betty Netch can popup alerts correctly.
+
 3.138
 - Fixed a bug where event timers updated incorrectly, i.e. Carve and Beast Trap can show timers correctly. 
 
