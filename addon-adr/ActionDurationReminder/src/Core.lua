@@ -579,10 +579,11 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
       var:purgeEffectByTargetUnitId(targetUnitId)
   end
   end
-  if result == ACTION_RESULT_EFFECT_FADED then --2250
+  if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
     local _=nil
     if l.debugEnabled(DS_EFFECT,2) then
-      l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),channelUnitId:%d', abilityName, abilityId,targetUnitId)
+      l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),target:%s(%d), source:%s(%d)',
+       abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
@@ -794,7 +795,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local numMarks = l.ignoredCache:get(key)
   l.ignoredCache:mark(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
-  if numMarks>=6 then
+  if numMarks>=12 then
     if l.debugEnabled(DS_FILTER,1) then
       l.debug(DS_FILTER,1)('[!] '..key..' ignored by cache counted '..numMarks)
     end
@@ -1124,8 +1125,8 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   -- 1. remove all enemy actions from self.idActionMap
   local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
-    if l.debugEnabled(DS_TARGET,1) then
-      l.debug(DS_TARGET,1)('processing action %s, %s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
+    if l.debugEnabled(DS_TARGET,3) then
+      l.debug(DS_TARGET,3)('[Tgt changing] processing action %s, %s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
     end
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do

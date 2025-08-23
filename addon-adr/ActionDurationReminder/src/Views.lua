@@ -443,8 +443,9 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       self.stackLabel:SetHidden(true)
     end
     -- stackLabel2
-    if action.stackCount2 and action.stackCount2 > 0 then
-      self.stackLabel2:SetText(action.stackCount2)
+    local stageInfo2 = action:getStageInfo2()
+    if stageInfo2 and stageInfo2 > 0 then
+      self.stackLabel2:SetText(stageInfo2)
       self.stackLabel2:SetHidden(false)
     else
       self.stackLabel2:SetHidden(true)

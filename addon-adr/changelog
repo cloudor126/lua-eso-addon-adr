@@ -1,3 +1,6 @@
+3.140  
+- Added display of the number of units affected by AoE skills, i.e. Echoing Vigor will now show the total number of members healed.
+
 3.139
 - Fixed a bug where tick effect caused popup alerts failed to display, i.e. Betty Netch can popup alerts correctly.
 

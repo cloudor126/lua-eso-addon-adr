@@ -590,6 +590,49 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   return nil
 end
 
+mAction.getStageInfo2 -- #(#Action:self)->(#number)
+= function(self)
+  -- fixed value
+  if self.stackCount2 and self.stackCount2>0 then
+    return self.stackCount2
+  end
+  -- cached value
+  if self.flags.forArea then
+    local now = GetGameTimeMilliseconds()
+    if not self.getStageInfo2_Stamp or now - self.getStageInfo2_Stamp > 1000 then
+      -- calc: max unit counts of single ability
+      self.getStageInfo2_Stamp = now
+      self.getStageInfo2_Cache = nil
+      local abilityUnits = {}
+      for key, var in ipairs(self.effectList) do
+        local abilityId = var.ability.id
+        local units = abilityUnits[abilityId]
+        if units ==nil then
+          units = {}
+          units[-1]=0
+          abilityUnits[abilityId] = units
+        end
+        local unitId = var.unitId
+        if not units[unitId] then
+          units[unitId] = true
+          units[-1] = units[-1] + 1
+        end
+      end
+      local maxCount = 0
+      for key, var in pairs(abilityUnits) do
+        if var[-1] > maxCount then
+          maxCount = var[-1]
+        end
+      end
+      if maxCount>1 then
+        self.getStageInfo2_Cache = maxCount
+      end
+    end
+    return self.getStageInfo2_Cache
+  end
+  return nil
+end
+
 mAction.getStartTime -- #(#Action:self)->(#number)
 = function(self)
   if self.tickEffect and self.duration==0 then
