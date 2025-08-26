@@ -1,3 +1,6 @@
+3.141
+- Improved compatibility for ability names containing special control codes，i.e. Extended Ritual can be counted correctly in German client.
+
 3.140  
 - Added display of the number of units affected by AoE skills, i.e. Echoing Vigor will now show the total number of members healed.
 
