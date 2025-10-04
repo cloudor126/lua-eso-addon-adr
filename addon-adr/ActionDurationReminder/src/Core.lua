@@ -375,7 +375,9 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     end
     if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by slot
-    if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum then
+    if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
+      and (a.inCombat and action.inCombat) -- filter prebuff slot matches 
+    then
       if l.debugEnabled(DS_ACTION,1) then
         l.debug(DS_ACTION,1)('[aM:slot]')
       end

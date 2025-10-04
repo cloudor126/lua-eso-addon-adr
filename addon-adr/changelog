@@ -1,3 +1,6 @@
+3.142a
+- Fixed a bug where prebuffed actions could wrongly match triggered ground effects after switching skills at combat start.
+
 3.141
 - Improved compatibility for ability names containing special control codes，i.e. Extended Ritual can be counted correctly in German client.
 

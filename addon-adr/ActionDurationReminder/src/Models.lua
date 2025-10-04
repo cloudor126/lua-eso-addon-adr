@@ -192,6 +192,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   end
 
   action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
+  action.inCombat = IsUnitInCombat('player') --#boolean
   action.lastEffectTime = 0 --#number
   action.channelStartTime = 0 --#number
   action.channelEndTime = 0 --#number
@@ -1162,7 +1163,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     self.tickEffect = effect
     return
   end
-
+  
   -- debuff longer than default duration BUT: people think debuf is usefly i.e. Mass Hysteria
   if self.duration and self.duration >0 and effect.duration>self.duration
     and effect.ability.icon:find('ability_debuff_',1,true)

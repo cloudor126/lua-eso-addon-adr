@@ -81,6 +81,7 @@ task upload {
     doLast{
         def changelog = file('changelog').getText('utf8').replaceAll('"',/\\"/)
         def cmd = ['curl',
+            '--proxy', 'http://localhost:7897',  // 代理
             '-H', "\"x-api-token: ${esoApiToken}\"",
             '-F', "id=${addonId}",
             '-F', "version=$addonVersion",
