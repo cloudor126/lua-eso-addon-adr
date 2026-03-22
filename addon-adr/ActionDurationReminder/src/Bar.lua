@@ -281,7 +281,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       controls = {
         {
           type = "checkbox",
-          name = text("Timers Enabled"),
+          name = text("Enable Timer Bars"),
+          tooltip = text("Display countdown bars on your action bar slots"),
           getFunc = function() return l.getSavedVars().barEnabled end,
           setFunc = function(value) l.getSavedVars().barEnabled = value;if not value then l.hideWidgets() end end,
           width = "full",
@@ -289,7 +290,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "checkbox",
-          name = text("Shift Bar Enabled"),
+          name = text("Show Shift Bar"),
+          tooltip = text("Display a secondary bar above your action bar showing timers for your other weapon set"),
           getFunc = function() return l.getSavedVars().barShowShift end,
           setFunc = function(value) l.getSavedVars().barShowShift = value end,
           width = "full",
@@ -297,18 +299,18 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "slider",
-          name = text("Shift Bar Scale(%)"),
-          --tooltip = "",
+          name = text("Shift Bar Scale"),
+          tooltip = text("Scale of the shift bar"),
           min = 40, max = 100, step = 10,
           getFunc = function() return l.getSavedVars().barShowShiftScalePercent end,
-          setFunc = function(value) l.getSavedVars().barShowShiftScalePercent = value ; l.updateWidgets(views.updateWidgetShiftScalePercent) end, -- TODO
+          setFunc = function(value) l.getSavedVars().barShowShiftScalePercent = value ; l.updateWidgets(views.updateWidgetShiftScalePercent) end,
           width = "full",
           default = barSavedVarsDefaults.barShowShiftScalePercent,
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift end,
         },{
           type = "description",
           text = "",
-          title = text("Shift Bar Location"),
+          title = text("Shift Bar Position"),
           width = "half",
           disabled = function() return not l.getSavedVars().barEnabled end,
         },{
@@ -325,7 +327,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift end,
         },{
           type = "checkbox",
-          name = text("Shift Bar With All Slots"),
+          name = text("Show Empty Slots"),
+          tooltip = text("Display all 6 slots even when empty"),
           getFunc = function() return l.getSavedVars().barShowShiftFully end,
           setFunc = function(value) l.getSavedVars().barShowShiftFully = value end,
           width = "full",
@@ -333,7 +336,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift end,
         },{
           type = "checkbox",
-          name = text("Track Quickslot"),
+          name = text("Track Quickslot Item"),
+          tooltip = text("Show timer for your equipped quickslot item"),
           getFunc = function() return l.getSavedVars().barShowInQuickslot end,
           setFunc = function(value) l.getSavedVars().barShowInQuickslot = value end,
           width = "full",
@@ -341,7 +345,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled end,
         },{
           type = "checkbox",
-          name = text("Label Enabled"),
+          name = text("Show Time Labels"),
+          tooltip = text("Display remaining time as text on timer bars"),
           getFunc = function() return l.getSavedVars().barLabelEnabled end,
           setFunc = function(value) l.getSavedVars().barLabelEnabled = value end,
           width = "full",
@@ -359,7 +364,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "slider",
           name = text("Label Font Size"),
-          --tooltip = "",
           min = 12, max = 48, step = 1,
           getFunc = function() return l.getSavedVars().barLabelFontSize end,
           setFunc = function(value) l.getSavedVars().barLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
@@ -378,6 +382,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "slider",
           name = text("Label Vertical Offset"),
+          tooltip = text("Adjust time label position up or down"),
           min = -50, max = 50, step = 1,
           getFunc = function() return l.getSavedVars().barLabelYOffset end,
           setFunc = function(value) l.getSavedVars().barLabelYOffset = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
@@ -386,7 +391,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
         },{
           type = "slider",
-          name = text("Label Vertical Offset In Shift Bar"),
+          name = text("Label Offset (Shift Bar)"),
+          tooltip = text("Adjust time label position on the shift bar"),
           min = -50, max = 50, step = 1,
           getFunc = function() return l.getSavedVars().barLabelYOffsetInShift end,
           setFunc = function(value) l.getSavedVars().barLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetLabelYOffset) end,
@@ -395,7 +401,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           default = barSavedVarsDefaults.barLabelYOffsetInShift,
         },{
           type = "checkbox",
-          name = text("Label Ignore Decimal Part"),
+          name = text("Hide Decimals When Long"),
+          tooltip = text("Show only whole seconds when time remaining is above threshold"),
           getFunc = function() return l.getSavedVars().barLabelIgnoreDecimal end,
           setFunc = function(value) l.getSavedVars().barLabelIgnoreDecimal = value end,
           width = "full",
@@ -403,7 +410,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
         },{
           type = "slider",
-          name = text("Label Ignore Decimal Part Threshold"),
+          name = text("Decimal Hide Threshold"),
+          tooltip = text("Hide decimal portion when time remaining exceeds this value"),
           min = 0, max = 30, step = 0.5,
           getFunc = function() return l.getSavedVars().barLabelIgnoreDeciamlThreshold end,
           setFunc = function(value) l.getSavedVars().barLabelIgnoreDeciamlThreshold = value end,
@@ -412,7 +420,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           default = barSavedVarsDefaults.barLabelIgnoreDeciamlThreshold,
         },{
           type = "checkbox",
-          name = text("Stack Label Enabled"),
+          name = text("Show Stack Count"),
+          tooltip = text("Display stack count for stackable effects"),
           getFunc = function() return l.getSavedVars().barStackLabelEnabled end,
           setFunc = function(value) l.getSavedVars().barStackLabelEnabled = value end,
           width = "full",
@@ -421,6 +430,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "slider",
           name = text("Stack Label Vertical Offset"),
+          tooltip = text("Adjust stack label position up or down"),
           min = -50, max = 50, step = 1,
           getFunc = function() return l.getSavedVars().barStackLabelYOffset end,
           setFunc = function(value) l.getSavedVars().barStackLabelYOffset = value ; l.updateWidgets(views.updateWidgetStackLabelYOffset) end,
@@ -429,7 +439,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barStackLabelEnabled end,
         },{
           type = "slider",
-          name = text("Stack Label Vertical Offset In Shift Bar"),
+          name = text("Stack Label Offset (Shift Bar)"),
           min = -50, max = 50, step = 1,
           getFunc = function() return l.getSavedVars().barStackLabelYOffsetInShift end,
           setFunc = function(value) l.getSavedVars().barStackLabelYOffsetInShift = value ; l.updateWidgets(views.updateWidgetStackLabelYOffset) end,
@@ -448,7 +458,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "slider",
           name = text("Stack Label Font Size"),
-          --tooltip = "",
           min = 12, max = 48, step = 1,
           getFunc = function() return l.getSavedVars().barStackLabelFontSize end,
           setFunc = function(value) l.getSavedVars().barStackLabelFontSize = value ; l.updateWidgets(views.updateWidgetFont) end,
@@ -466,7 +475,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barStackLabelEnabled end,
         },{
           type = "checkbox",
-          name = text("Line Enabled"),
+          name = text("Show Cooldown Line"),
+          tooltip = text("Display a progress line under skill slots showing remaining cooldown"),
           getFunc = function() return l.getSavedVars().barCooldownVisible end,
           setFunc = function(value) l.getSavedVars().barCooldownVisible = value; l.updateWidgets(views.updateWidgetCooldown) end,
           width = "full",
@@ -483,7 +493,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           default = barSavedVarsDefaults.barCooldownThickness,
         },{
           type = "slider",
-          name = text("Line Opacity %"),
+          name = text("Line Opacity"),
           min = 10, max = 100, step = 10,
           getFunc = function() return l.getSavedVars().barCooldownOpacity end,
           setFunc = function(value) l.getSavedVars().barCooldownOpacity = value ; l.updateWidgets(views.updateWidgetCooldown) end,
@@ -505,7 +515,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           }
         },{
           type = "slider",
-          name = text("Line Ending Seconds"),
+          name = text("Line Ending Threshold"),
+          tooltip = text("Change to ending color when remaining time is below this value"),
           min = 0, max = 4, step = 0.5,
           getFunc = function() return l.getSavedVars().barCooldownEndingSeconds end,
           setFunc = function(value) l.getSavedVars().barCooldownEndingSeconds = value ; l.updateWidgets(views.updateWidgetCooldown) end,
@@ -515,6 +526,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },{
           type = "colorpicker",
           name = text("Line Ending Color"),
+          tooltip = text("Line color when remaining time is below threshold"),
           getFunc = function() return unpack(l.getSavedVars().barCooldownEndingColor) end,
           setFunc = function(r,g,b,a) l.getSavedVars().barCooldownEndingColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
           width = "full",

@@ -34,6 +34,7 @@ local coreSavedVarsDefaults = {
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
   coreLogTrackedEffectsInChat = false,
+  coreDebugFilterPattern = '', -- empty means no filter, e.g. " Lash$" for abilities ending with " Lash"
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
@@ -376,7 +377,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if abilityName:find(a.ability.name,1,true) then return true end
     -- i.e. Assassin's Will name can match Merciless Resolve action by slot
     if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
-      and (a.inCombat and action.inCombat) -- filter prebuff slot matches 
+      and (a.inCombat and action.inCombat) -- filter prebuff slot matches
     then
       if l.debugEnabled(DS_ACTION,1) then
         l.debug(DS_ACTION,1)('[aM:slot]')
@@ -554,7 +555,30 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
-  if l.debugEnabled(DS_EFFECT,3) then
+  local logged = false
+  local filterPattern = l.getSavedVars().coreDebugFilterPattern
+  if filterPattern ~= '' and abilityName:match(filterPattern) then
+    logged = true
+    d(os.date()..'>', string.format('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+      abilityName,
+      abilityId,
+      now/1000,
+      abilityGraphic,
+      sourceName,
+      sourceType,
+      sourceUnitId,
+      targetName,
+      targetType,
+      targetUnitId,
+      abilityActionSlotType,
+      damageType,
+      overflow,
+      result,
+      powerType,
+      hitValue
+    ))
+  elseif l.debugEnabled(DS_EFFECT,3) then
+    logged = true
     l.debug(DS_EFFECT, 3)('[CE]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
       abilityName,
       abilityId,
@@ -573,7 +597,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
       powerType,
       hitValue
     )
-    end
+  end
   -- ACTION_RESULT_EFFECT_GAINED 2240
   -- ACTION_RESULT_EFFECT_GAINED_DURATION  2245
   -- 2240? TODO GetAbilityFrequencyMS
@@ -584,13 +608,13 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
     local _=nil
-    if l.debugEnabled(DS_EFFECT,2) then
+    if not logged and l.debugEnabled(DS_EFFECT,2) then
       l.debug(DS_EFFECT, 2)('[CE-] ACTION_RESULT_EFFECT_FADED, %s(%d),target:%s(%d), source:%s(%d)',
-       abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
+        abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
-      if l.debugEnabled(DS_EFFECT,1) then
+      if not logged and l.debugEnabled(DS_EFFECT,1) then
         l.debug(DS_EFFECT, 1)('[CE-] cancel channeling action %s', action:toLogString())
       end
       action.channelStartTime = 0
@@ -601,7 +625,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
     end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
-      if l.debugEnabled(DS_EFFECT,1) then
+      if not logged and l.debugEnabled(DS_EFFECT,1) then
         l.debug(DS_EFFECT, 1)('[CE-] cancel non-dur tick action %s', action:toLogString())
       end
       l.removeAction(action)
@@ -618,26 +642,26 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   --
   abilityName = zo_strformat("<<1>>", abilityName)
   local now = GetGameTimeMilliseconds()
---  if l.debugEnabled(DS_EFFECT,3) then
---    l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
---      abilityName,
---      abilityId,
---      now/1000,
---      abilityGraphic,
---      sourceName,
---      sourceType,
---      sourceUnitId,
---      targetName,
---      targetType,
---      targetUnitId,
---      abilityActionSlotType,
---      damageType,
---      overflow,
---      result,
---      powerType,
---      hitValue
---    )
---  end
+  --  if l.debugEnabled(DS_EFFECT,3) then
+  --    l.debug(DS_EFFECT, 3)('[CE+]%s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
+  --      abilityName,
+  --      abilityId,
+  --      now/1000,
+  --      abilityGraphic,
+  --      sourceName,
+  --      sourceType,
+  --      sourceUnitId,
+  --      targetName,
+  --      targetType,
+  --      targetUnitId,
+  --      abilityActionSlotType,
+  --      damageType,
+  --      overflow,
+  --      result,
+  --      powerType,
+  --      hitValue
+  --    )
+  --  end
   if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
 
   -- filter by keywords
@@ -1445,12 +1469,29 @@ end)
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
   settings.addMenuOptions(
     {
-      type = "checkbox",
-      name = addon.text("Log Tracked Effects In Chat"),
-      getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
-      setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
-      width = "full",
-      default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
+      type = "submenu",
+      name = addon.text("Debug"),
+      controls = {
+        {
+          type = "checkbox",
+          name = addon.text("Log Tracked Effects"),
+          tooltip = addon.text("Print tracked effects to chat when they are applied"),
+          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
+          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
+          width = "full",
+          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
+        },
+        {
+          type = "editbox",
+          name = addon.text("Combat Event Filter"),
+          tooltip = addon.text('Lua pattern to filter combat event debug logs (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
+          getFunc = function() return l.getSavedVars().coreDebugFilterPattern end,
+          setFunc = function(text) l.getSavedVars().coreDebugFilterPattern = text end,
+          isMultiline = false,
+          width = "full",
+          default = coreSavedVarsDefaults.coreDebugFilterPattern,
+        },
+      }
     }
   )
   settings.addMenuOptions(
@@ -1460,7 +1501,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       controls = {
         {
           type = "checkbox",
-          name = addon.text("Multiple Target Tracking"),
+          name = addon.text("Multi-Target Tracking"),
+          tooltip = addon.text("Track DoT timers on multiple targets simultaneously"),
           getFunc = function() return l.getSavedVars().coreMultipleTargetTracking end,
           setFunc = function(value) l.getSavedVars().coreMultipleTargetTracking = value end,
           width = "full",
@@ -1468,7 +1510,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "checkbox",
-          name = addon.text("Multiple Target Tracking Without Clearing"),
+          name = addon.text("Preserve Timers on Target Switch"),
+          tooltip = addon.text("Keep timers when switching targets (no target moment won't clear previous target's timers)"),
           getFunc = function() return l.getSavedVars().coreMultipleTargetTrackingWithoutClearing end,
           setFunc = function(value) l.getSavedVars().coreMultipleTargetTrackingWithoutClearing = value end,
           width = "full",
@@ -1477,7 +1520,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "checkbox",
-          name = addon.text("Clear When Combat End"),
+          name = addon.text("Clear on Combat End"),
+          tooltip = addon.text("Remove all timers when combat ends"),
           getFunc = function() return l.getSavedVars().coreClearWhenCombatEnd end,
           setFunc = function(value) l.getSavedVars().coreClearWhenCombatEnd = value end,
           width = "full",
@@ -1485,7 +1529,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "slider",
-          name = addon.text("Seconds to Keep Timers After Timeout"),
+          name = addon.text("Post-Expiry Flash Duration"),
+          tooltip = addon.text("Show a flashing 0.0 for this many seconds after timer expires, reminding you the skill is ready to recast"),
           min = 0, max = 10, step = 1,
           getFunc = function() return l.getSavedVars().coreSecondsBeforeFade end,
           setFunc = function(value) l.getSavedVars().coreSecondsBeforeFade = value end,
@@ -1494,7 +1539,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "slider",
-          name = addon.text("Seconds of Ignorable Short Timers"),
+          name = addon.text("Minimum Timer Duration"),
+          tooltip = addon.text("Ignore effects with duration shorter than this"),
           min = 1, max = 10, step = 0.5,
           getFunc = function() return l.getSavedVars().coreMinimumDurationSeconds end,
           setFunc = function(value) l.getSavedVars().coreMinimumDurationSeconds = value end,
@@ -1503,7 +1549,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "checkbox",
-          name = addon.text("Ignore Debuff Timers If Longer Than Skill's"),
+          name = addon.text("Ignore Mismatched Debuff Durations"),
+          tooltip = addon.text("Use skill's own duration when debuff duration is longer (handles buggy ESO debuff times)"),
           getFunc = function() return l.getSavedVars().coreIgnoreLongDebuff end,
           setFunc = function(value) l.getSavedVars().coreIgnoreLongDebuff = value end,
           width = "full",
@@ -1511,31 +1558,27 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "editbox",
-          name = addon.text("Patterns of White List in line"), -- or string id or function returning a string
+          name = addon.text("Whitelist Patterns"),
+          tooltip = addon.text("Skills to always track. One pattern per line. Use skill name substring or numeric ability ID"),
           getFunc = function() return l.getSavedVars().coreKeyWords end,
           setFunc = function(text) l.getSavedVars().coreKeyWords = text l.idFilteringMap={} l.idDurationMap={} end,
-          -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-          isMultiline = true, --boolean (optional)
-          isExtraWide = true, --boolean (optional)
-          width = "full", --or "half" (optional)
-          -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-          requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-          default = coreSavedVarsDefaults.coreKeyWords, -- default value or function that returns the default value (optional)
-        -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+          isMultiline = true,
+          isExtraWide = true,
+          width = "full",
+          requiresReload = false,
+          default = coreSavedVarsDefaults.coreKeyWords,
         },
         {
           type = "editbox",
-          name = addon.text("Patterns of Black List in line"), -- or string id or function returning a string
+          name = addon.text("Blacklist Patterns"),
+          tooltip = addon.text("Skills to never track. One pattern per line. Use skill name substring or numeric ability ID"),
           getFunc = function() return l.getSavedVars().coreBlackKeyWords end,
           setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text l.idFilteringMap={} end,
-          -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-          isMultiline = true, --boolean (optional)
-          isExtraWide = true, --boolean (optional)
-          width = "full", --or "half" (optional)
-          -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-          requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-          default = coreSavedVarsDefaults.coreBlackKeyWords, -- default value or function that returns the default value (optional)
-        -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+          isMultiline = true,
+          isExtraWide = true,
+          width = "full",
+          requiresReload = false,
+          default = coreSavedVarsDefaults.coreBlackKeyWords,
         }
       }
     }

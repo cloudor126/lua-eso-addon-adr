@@ -362,14 +362,16 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
     controls = {
       {
         type = "checkbox",
-        name = text("Enabled"),
+        name = text("Enable Popup Alert"),
+        tooltip = text("Show a popup alert before skill timer expires"),
         getFunc = function() return l.getSavedVars().alertEnabled end,
         setFunc = function(value) l.getSavedVars().alertEnabled = value end,
         width = "full",
         default = alertSavedVarsDefaults.alertEnabled,
       },  {
         type = "checkbox",
-        name = text("Icon Only"),
+        name = text("Icon Only Mode"),
+        tooltip = text("Show only the skill icon without text"),
         getFunc = function() return l.getSavedVars().alertIconOnly end,
         setFunc = function(value) l.getSavedVars().alertIconOnly = value end,
         disabled = function() return not l.getSavedVars().alertEnabled end,
@@ -377,7 +379,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertIconOnly,
       }, {
         type = "checkbox",
-        name = text("Remove When Cast Again"),
+        name = text("Dismiss on Recast"),
+        tooltip = text("Remove the alert when you cast the same skill again"),
         getFunc = function() return l.getSavedVars().alertRemoveWhenCastAgain end,
         setFunc = function(value) l.getSavedVars().alertRemoveWhenCastAgain = value end,
         disabled = function() return not l.getSavedVars().alertEnabled end,
@@ -385,7 +388,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertRemoveWhenCastAgain,
       }, {
         type = "button",
-        name = text("Move Alert Frame"),
+        name = text("Move Popup"),
         func = function()
           SCENE_MANAGER:Hide("gameMenuInGame")
           l.openAlertFrame()
@@ -397,7 +400,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         disabled = function() return not l.getSavedVars().alertEnabled end,
       }, {
         type = "button",
-        name = text("Reset Alert Frame"),
+        name = text("Reset Position"),
         func = function()
           l.getSavedVars().alertOffsetX = 0
           l.getSavedVars().alertOffsetY = 0
@@ -406,7 +409,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         disabled = function() return not l.getSavedVars().alertEnabled end,
       }, {
         type = "checkbox",
-        name = text("Sound Enabled"),
+        name = text("Play Sound"),
+        tooltip = text("Play a sound when alert appears"),
         getFunc = function() return l.getSavedVars().alertPlaySound end,
         setFunc = function(value) l.getSavedVars().alertPlaySound = value end,
         disabled = function() return not l.getSavedVars().alertEnabled end,
@@ -414,8 +418,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertPlaySound,
       }, {
         type = "slider",
-        name = text("Sound Select Index"),
-        --tooltip = "",
+        name = text("Alert Sound"),
         min = 1, max = #l.soundChoices, step = 1,
         getFunc = function() return l.findSoundIndex(l.getSavedVars().alertSoundName) end,
         setFunc = function(value) l.getSavedVars().alertSoundName = l.soundChoices[value]; PlaySound(SOUNDS[l.getSavedVars().alertSoundName]) end,
@@ -424,7 +427,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = l.findSoundIndex(alertSavedVarsDefaults.alertSoundName),
       }, {
         type = "button",
-        name = text("Sound Test"),
+        name = text("Test Sound"),
         func = function()
           PlaySound(SOUNDS[l.getSavedVars().alertSoundName])
         end,
@@ -432,8 +435,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         disabled = function() return not l.getSavedVars().alertPlaySound or not l.getSavedVars().alertEnabled end,
       }, {
         type = "slider",
-        name = text("Seconds to Show Before End"),
-        --tooltip = "",
+        name = text("Alert Lead Time"),
+        tooltip = text("Start showing the alert this many seconds before the skill expires"),
         min = 0, max = 3, step = 0.5,
         getFunc = function() return l.getSavedVars().alertAheadSeconds end,
         setFunc = function(value) l.getSavedVars().alertAheadSeconds = value end,
@@ -442,8 +445,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertAheadSeconds,
       }, {
         type = "slider",
-        name = text("Seconds to Show"),
-        --tooltip = "",
+        name = text("Alert Duration"),
+        tooltip = text("How long to display the alert"),
         min = 1, max = 18, step = 0.5,
         getFunc = function() return l.getSavedVars().alertKeepSeconds end,
         setFunc = function(value) l.getSavedVars().alertKeepSeconds = value end,
@@ -462,7 +465,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
       }, {
         type = "slider",
         name = text("Font Size"),
-        --tooltip = "",
         min = 18, max = 48, step = 2,
         getFunc = function() return l.getSavedVars().alertFontSize end,
         setFunc = function(value) l.getSavedVars().alertFontSize = value end,
@@ -481,7 +483,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
       },{
         type = "slider",
         name = text("Icon Size"),
-        --tooltip = "",
+        tooltip = text("Size of the skill icon in the popup"),
         min = 18, max = 98, step = 2,
         getFunc = function() return l.getSavedVars().alertIconSize end,
         setFunc = function(value) l.getSavedVars().alertIconSize = value end,
@@ -490,8 +492,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertIconSize,
       }, {
         type = "slider",
-        name = text("Icon Opacity %"),
-        --tooltip = "",
+        name = text("Icon Opacity"),
+        tooltip = text("Transparency of the skill icon"),
         min = 10, max = 100, step = 10,
         getFunc = function() return l.getSavedVars().alertIconOpacity end,
         setFunc = function(value) l.getSavedVars().alertIconOpacity = value end,
@@ -500,31 +502,27 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         default = alertSavedVarsDefaults.alertIconOpacity,
       }, {
         type = "editbox",
-        name = text("Patterns of White List in line"), -- or string id or function returning a string
+        name = text("Whitelist Patterns"),
+        tooltip = text("Skills to show alert for. One pattern per line. Use skill name substring or numeric ability ID"),
         getFunc = function() return l.getSavedVars().alertKeyWords end,
         setFunc = function(text) l.getSavedVars().alertKeyWords = text end,
-        -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-        isMultiline = true, --boolean (optional)
-        isExtraWide = true, --boolean (optional)
-        width = "full", --or "half" (optional)
-        disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
-        -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-        requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-        default = alertSavedVarsDefaults.alertKeyWords, -- default value or function that returns the default value (optional)
-      -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+        isMultiline = true,
+        isExtraWide = true,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        requiresReload = false,
+        default = alertSavedVarsDefaults.alertKeyWords,
       },{
         type = "editbox",
-        name = text("Patterns of Black List in line"), -- or string id or function returning a string
+        name = text("Blacklist Patterns"),
+        tooltip = text("Skills to never show alert for. One pattern per line. Use skill name substring or numeric ability ID"),
         getFunc = function() return l.getSavedVars().alertBlackKeyWords end,
         setFunc = function(text) l.getSavedVars().alertBlackKeyWords = text end,
-        -- tooltip = "Editbox's tooltip text.", -- or string id or function returning a string (optional)
-        isMultiline = true, --boolean (optional)
-        isExtraWide = true, --boolean (optional)
-        width = "full", --or "half" (optional)
-        disabled = function() return not l.getSavedVars().alertEnabled end, --or boolean (optional)
-        -- warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
-        requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
-        default = alertSavedVarsDefaults.alertBlackKeyWords, -- default value or function that returns the default value (optional)
-      -- reference = "MyAddonEditbox" -- unique global reference to control (optional)
+        isMultiline = true,
+        isExtraWide = true,
+        width = "full",
+        disabled = function() return not l.getSavedVars().alertEnabled end,
+        requiresReload = false,
+        default = alertSavedVarsDefaults.alertBlackKeyWords,
       }}})
 end)

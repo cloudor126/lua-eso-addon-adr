@@ -177,7 +177,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
     name = text("Patch"),
     controls={ {
       type = "checkbox",
-      name = text("Auto Move Attribute Bars"),
+      name = text("Auto-Move Attribute Bars"),
+      tooltip = text("Automatically reposition health/magicka/stamina bars to avoid overlap with timer bars"),
       getFunc = function() return l.getSavedVars().patchMoveBarsEnabled end,
       setFunc = function(value) l.getSavedVars().patchMoveBarsEnabled = value end,
       width = "full",
