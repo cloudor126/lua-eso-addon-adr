@@ -410,7 +410,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
   local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
-  local isCrux = action:isShowingCruxDuration()
+  local optEffect = action:optEffect()
   -- label
   local stackCountOnly = false
   if #action.effectList==0 and action.stackCount > 0 then
@@ -421,7 +421,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
     if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
       hint = string.format('%d', remain/1000)
     end
-    if isCrux then
+    -- Show brackets for secondary effects (tail effects, Crux, etc.)
+    if optEffect and (optEffect.isSecondary or optEffect.isCrux) then
       hint = string.format('[%d]', remain/1000)
     end
     self.label:SetText(hint)

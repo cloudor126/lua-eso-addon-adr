@@ -14,6 +14,21 @@ local mEffect = {} -- #Effect
 local DS_MODEL = "model" -- debug switch for model
 local DS_ALL = "all" -- debug switch for all
 
+--========================================
+--        Effect Priority Levels
+--========================================
+-- Lower number = higher priority
+local LEVEL_ACTION_ID_MATCH = 1      -- effect.ability.id matches action.ability.id with matching duration
+local LEVEL_STACK_EFFECT = 2         -- effect is action.stackEffect
+local LEVEL_STACK_EFFECT_2 = 3       -- effect is action.stackEffect2
+local LEVEL_ROLE_PREFERRED = 4       -- DPS: non-player effect; Tank/Healer: player effect
+local LEVEL_DURATION_MATCH = 5       -- effect.duration matches action.duration
+local LEVEL_LONGER_DURATION = 6      -- normal longer duration effect
+local LEVEL_TAIL_EFFECT = 7          -- effect significantly longer than action (tail effect, secondary)
+local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
+
+local SECONDARY_THRESHOLD = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
+
 
 
 local SPECIAL_DURATION_PATCH = {
@@ -867,6 +882,120 @@ mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return false
 end
 
+--========================================
+--        Effect Priority Level Methods
+--========================================
+
+mAction.calcStaticLevel -- #(#Action:self, #Effect:effect)->(#number)
+= function(self, effect)
+  -- Level 8: Crux (lowest priority)
+  if effect.isCrux then
+    return LEVEL_CRUX
+  end
+
+  local duration = self.duration > 0 and self.duration or self.inheritDuration
+
+  -- Level 1: actionId match + duration match
+  if effect.ability.id == self.ability.id and effect.duration == duration then
+    return LEVEL_ACTION_ID_MATCH
+  end
+
+  -- Level 2: stackEffect
+  if self.stackEffect and effect.ability.id == self.stackEffect.ability.id then
+    return LEVEL_STACK_EFFECT
+  end
+
+  -- Level 3: stackEffect2
+  if self.stackEffect2 and effect.ability.id == self.stackEffect2.ability.id then
+    return LEVEL_STACK_EFFECT_2
+  end
+
+  -- Level 4: role preferred
+  local role = GetSelectedLFGRole()
+  if (role == LFG_ROLE_DPS or self.flags.forEnemy) and not self.flags.forArea then
+    if not effect:isOnPlayer() and effect.duration > 0 then
+      return LEVEL_ROLE_PREFERRED
+    end
+  elseif role == LFG_ROLE_TANK then
+    if effect:isOnPlayer() then
+      return LEVEL_ROLE_PREFERRED
+    end
+  elseif role == LFG_ROLE_HEAL and not self.flags.forArea then
+    if effect:isOnPlayer() then
+      return LEVEL_ROLE_PREFERRED
+    end
+  end
+
+  -- Level 5: duration match
+  if duration > 0 and effect.duration == duration then
+    return LEVEL_DURATION_MATCH
+  end
+
+  -- Level 7: tail effect (significantly longer than action duration)
+  if duration > 0 and effect.duration > duration * 2 and effect.duration > 10000 then
+    return LEVEL_TAIL_EFFECT
+  end
+
+  -- Level 6: default (longer duration)
+  return LEVEL_LONGER_DURATION
+end
+
+mAction.sortEffectList -- #(#Action:self)->()
+= function(self)
+  table.sort(self.effectList, function(a, b)
+    if a.staticLevel ~= b.staticLevel then
+      return a.staticLevel < b.staticLevel
+    end
+    -- Same level: prefer longer duration
+    if a.duration ~= b.duration then
+      return a.duration > b.duration
+    end
+    -- Same duration: prefer later end time
+    return a.endTime > b.endTime
+  end)
+end
+
+mAction.recalcEffectLevels -- #(#Action:self)->()
+= function(self)
+  -- Recalculate static level for all effects
+  for _, effect in ipairs(self.effectList) do
+    effect.staticLevel = self:calcStaticLevel(effect)
+    effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
+  end
+  -- Re-sort the list
+  self:sortEffectList()
+end
+
+mAction.isFilteredByDynamic -- #(#Action:self, #Effect:effect, #number:now)->(#boolean)
+= function(self, effect, now)
+  -- Filter 1: expired effect
+  if now > effect.endTime then
+    effect.ignored = true
+    return true
+  end
+
+  -- Filter 2: Major Gallop when not mounted
+  if effect.ability.icon:find("major_gallop", 1, true) then
+    if not IsMounted() then
+      return true
+    end
+  end
+
+  -- Filter 3: after-phase effect (e.g. warden's Scorch ending brings some debuff effects)
+  if self.duration > 3000 and self.startTime + self.duration - 300 <= effect.startTime then
+    if self.duration ~= effect.duration then
+      return true
+    end
+  end
+
+  -- Filter 4: old effects at new action beginning (temporary ignore)
+  if effect.startTime + 1000 < self.startTime and now - self.startTime < 300 then
+    return true
+  end
+
+  return false
+end
+
 local debuggingLastTime = 0 --#number
 mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
 = function(self, debugging)
@@ -878,51 +1007,31 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       debugging = false
     end
   end
-  local optEffect = nil --#Effect
-  local reason = ''
+
   local now = GetGameTimeMilliseconds()
+  local reason = ''
+
   for i, effect in ipairs(self.effectList) do
-    effect.ignored = effect.ignored or now > effect.endTime
-    local ignored = effect.ignored
-    -- filter Major Gallop if not mount
-    if effect.ability.icon:find("major_gallop",1,true) then
-      if IsMounted() then return effect,'gallop' end
-      reason = reason..'ignored gallop,'
-      ignored = true
-    end
-    -- filter after phase effect e.g. warden's Scorch ending brings some debuff effects
-    if self.duration > 3000 and self.startTime+self.duration-300 <= effect.startTime then
-      -- only ignore if this duration is not equal to action duration e.g. warden's Subterrian Assault
-      if self.duration ~= effect.duration then
-        reason = reason..'ignored following duration,'
-        ignored = true
+    -- Special case: Major Gallop when mounted - return immediately
+    if effect.ability.icon:find("major_gallop", 1, true) then
+      if IsMounted() then
+        return effect, 'gallop'
       end
-    end
-    -- filter old effects at new action beginning
-    if effect.startTime+1000 < self.startTime -- plus 1000 to improve fault tolerance i.e. Crystal Fragments Proc may have happened in 1000ms
-      and now-self.startTime< 300 then
-      reason = reason..'ignored previous effect temporaly,'
-      ignored = true
     end
 
-    if ignored then
-    -- do nothing
-    elseif not optEffect then
-      optEffect = effect
-      reason = reason..'only one'
-    else
+    -- Dynamic filter check
+    if not self:isFilteredByDynamic(effect, now) then
       if debugging then
-        df('[DBG] Comparing %s with %s', optEffect:toLogString(), effect:toLogString())
+        df('[DBG] optEffect: %s, level=%d', effect:toLogString(), effect.staticLevel or 0)
       end
-      optEffect,reason = self:optEffectOf(optEffect,effect)
-      if debugging then
-        df('[DBG] Opt %s, reason:%s', optEffect:toLogString(), reason)
-      end
+      return effect, 'level:'..(effect.staticLevel or 0)
     end
   end
-  return optEffect,reason
+
+  return nil, 'none'
 end
 
+-- Legacy method kept for compatibility, may be removed later
 mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect,#string)
 = function(self,effect1, effect2)
   -- lower crux priority
@@ -1107,10 +1216,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
     oldEffect = self.stackEffect
     self.stackEffect = nil
+    -- Recalculate levels and sort since stackEffect changed
+    self:recalcEffectLevels()
   end
   if self.stackEffect2 and self.stackEffect2.ability.id == effect.ability.id and self.stackEffect2.unitId==effect.unitId then
     oldEffect = self.stackEffect2
     self.stackEffect2 = nil
+    -- Recalculate levels and sort since stackEffect2 changed
+    self:recalcEffectLevels()
   end
   local availableEffectCount = 0
   local reason = ''
@@ -1213,21 +1326,31 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
       local now = GetGameTimeMilliseconds()
       if math.abs(e.endTime-effect.endTime)>1000 then
+        -- Calculate static level before inserting
+        effect.staticLevel = self:calcStaticLevel(effect)
+        effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
         self.effectList[i] = effect
         -- save effect end time to aid judgement on the strictness of following effects
         if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
           self.effectEndTimes[#self.effectEndTimes+1] = effect.endTime
         end
+        -- Sort effect list by priority
+        self:sortEffectList()
       end
       self.effectList[i].saveTime = now -- #number
       return e
     end
   end
+  -- Calculate static level before inserting
+  effect.staticLevel = self:calcStaticLevel(effect)
+  effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
   table.insert(self.effectList, effect)
   -- save effect end time to aid judgement on the strictness of following effects
   if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
     self.effectEndTimes[#self.effectEndTimes+1] = effect.endTime
   end
+  -- Sort effect list by priority
+  self:sortEffectList()
   -- record targetId for enemy actions
   if self.flags.forEnemy and effect.unitId>0 then
     self.targetId = effect.unitId
@@ -1278,7 +1401,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
     addType = 1
     -- detect triggered bonus stack pattern: sudden stack at action beginning
     if stackCount>=2 -- sudden stack like Stone Giant, Flame Lash
-      and GetGameTimeMilliseconds()-self.startTime<500 -- in the beginning
+      and GetGameTimeMilliseconds()-self.startTime<1000 -- in the beginning (1000ms to account for latency and cast time)
       and not self.fake -- not for fake actions
     then
       addType = 2
