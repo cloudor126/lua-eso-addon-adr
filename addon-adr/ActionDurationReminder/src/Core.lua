@@ -646,6 +646,22 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   abilityName = zo_strformat("<<1>>", abilityName)
   local now = GetGameTimeMilliseconds()
 
+  if result ~= ACTION_RESULT_EFFECT_GAINED
+    and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION
+    and result ~= ACTION_RESULT_DAMAGE
+    and result ~= ACTION_RESULT_CRITICAL_DAMAGE
+  then return end
+  
+  -- filter by keywords
+  if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
+    return
+  end
+  local logging = false
+  local filterPattern = l.getSavedVars().coreDebugFilterPattern
+  if filterPattern ~= '' and abilityName:match(filterPattern) then
+    logging = true
+  end
+  
   -- handle stackCount2 consumption for triggered bonus stacks (e.g. Stone Giant, Flame Lash)
   if result == ACTION_RESULT_DAMAGE or result == ACTION_RESULT_CRITICAL_DAMAGE then
     for key, action in pairs(l.idActionMap) do
@@ -656,24 +672,15 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         if action.stackEffect2.stackCount and action.stackEffect2.stackCount > 0 then
           action.stackEffect2.stackCount = action.stackEffect2.stackCount - 1
         end
-        if l.debugEnabled(DS_ACTION,1) then
-          l.debug(DS_ACTION,1)('[CE] stackCount2 consumed for %s, remaining: %d', action.ability.name, action.stackCount2)
+        if l.debugEnabled(DS_ACTION,logging and 0 or 1) then
+          l.debug(DS_ACTION,logging and 0 or 1)('[CE] stackCount2 consumed for %s, remaining: %d', action.ability.name, action.stackCount2)
         end
       end
     end
   end
 
-  if result ~= ACTION_RESULT_EFFECT_GAINED and result ~= ACTION_RESULT_EFFECT_GAINED_DURATION then return end
 
-  -- filter by keywords
-  if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
-    return
-  end
-  local logging = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and abilityName:match(filterPattern) then
-    logging = true
-  end
+
   -- pick effect with tick rate
   if result==ACTION_RESULT_EFFECT_GAINED and sourceType==targetType and sourceUnitId == targetUnitId then
     local tickRate = GetAbilityFrequencyMS(abilityId)
@@ -722,8 +729,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           return
           --
         elseif hitValue > 1 then -- hitValue如果大于1，那就是一个stack效果，匹配上就可以加上stack
-          local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
-          local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, hitValue, 0);
+          local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now, hitValue, 0);
           action:updateStackInfo(hitValue,effect)
           if not action.saved then
             l.saveAction(action)
@@ -777,8 +783,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           end
           -- 有些action还只有纯层数，而不知道层数的期限，例如龙骑的power lash
           if action:isPureStack() then
-            local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
-            local effect = models.newEffect(ability, 'player', sourceUnitId, now, now+duration, 0, 0);
+            local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now+duration, 0, 0);
             action:saveEffect(effect)
             return
           end
