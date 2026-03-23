@@ -519,6 +519,19 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       for key, var in ipairs(sameNameAction.relatedAbilityList) do
         abilityAccepter(var)
       end
+      -- inherit effect matching cache from old action id to new action id
+      if sameNameAction.ability.id ~= action.ability.id then
+        local oldId = sameNameAction.ability.id
+        local newId = action.ability.id
+        local oldPrefix = oldId .. '/'
+        local newPrefix = newId .. '/'
+        for cacheKey, value in pairs(models.cacheOfActionMatchingEffect) do
+          if cacheKey:find(oldPrefix, 1, true) == 1 then
+            local newCacheKey = newPrefix .. cacheKey:sub(#oldPrefix + 1)
+            models.cacheOfActionMatchingEffect[newCacheKey] = value
+          end
+        end
+      end
       l.removeAction(sameNameAction) -- clear from registries
       l.saveAction(action)
     end
