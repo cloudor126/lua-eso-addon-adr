@@ -234,9 +234,9 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   action.data = {} -- #table to store data in
   action.effectList = {} -- #list<#Effect>
   action.stackCount = 0
-  action.stackCount2 = 0
+  action.stackCount2 = 0 -- for triggered bonus stacks (e.g. Stone Giant triggered stacks, Flame Lash bonus 5 stacks)
   action.stackEffect = nil -- #Effect
-  action.stackEffect2 = nil -- #Effect
+  action.stackEffect2 = nil -- #Effect for triggered bonus stacks
   action.tickEffect = nil -- #Effect
   action.tickEffectDoubled = false -- #boolean
   action.targetId = nil --#number
@@ -244,7 +244,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   return action
 end
 
-m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime, #number:stackCount)->(#Effect)
+m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime, #number:stackCount, #number:tickRate)->(#Effect)
 =  function(ability, unitTag, unitId, startTime, endTime, stackCount, tickRate)
   local effect = {} -- #Effect
   effect.ability = ability --#Ability
@@ -345,7 +345,7 @@ end
 
 mAbility.toLogString --#(#Ability:self)->(#string)
 = function(self)
-  return string.format("%s(%i)[%s]", self.name, self.id, self.icon)
+  return string.format("|t24:24:%s|t %s(%i)", self.icon, self.name, self.id)
 end
 
 --========================================
@@ -669,6 +669,11 @@ mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
     if effect:isOnPlayerpet() then return true end
   end
   return false
+end
+
+mAction.isPureStack  -- #(#Action:self)->(#boolean)
+= function(self)
+  return self.stackEffect and #self.effectList ==0
 end
 
 mAction.isShowingCruxDuration -- #(#Action:self)->(#boolean)
@@ -1265,11 +1270,14 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if l.debugEnabled(DS_MODEL,1) then
     l.debug(DS_MODEL,1)('[m.us]updating stackCount to %d from %s in %s',stackCount, effect:toLogString(), self:toLogString());
   end
+  -- stackEffect/stackCount: actively accumulated stacks (gradually build up via attacks, e.g. Grim Focus, Bound Armaments)
+  -- stackEffect2/stackCount2: triggered bonus stacks (suddenly granted by conditions, then consumed one by one)
+  -- e.g. Stone Giant gets stacks when triggered by other skills, Flame Lash gets 5 bonus stacks under certain conditions
   local addType = 0
   if not self.stackEffect then
     addType = 1
-    -- filter sudden big stack at action beginning
-    if stackCount>=2 -- filter sudden stack like Stone Giant
+    -- detect triggered bonus stack pattern: sudden stack at action beginning
+    if stackCount>=2 -- sudden stack like Stone Giant, Flame Lash
       and GetGameTimeMilliseconds()-self.startTime<500 -- in the beginning
       and not self.fake -- not for fake actions
     then
