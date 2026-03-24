@@ -369,6 +369,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if a.ability.id == action.ability.id then return true end
     -- check cache for non-trivial matches
     local cacheKey = a.ability.id .. '/' .. action.ability.id
+    local reverseKey = action.ability.id .. '/' .. a.ability.id
     if l.cacheOfActionMatchingAction[cacheKey] then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
@@ -377,11 +378,13 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
           l.debug(DS_ACTION,1)('[aM:related name]')
         end
         l.cacheOfActionMatchingAction[cacheKey] = true
+        l.cacheOfActionMatchingAction[reverseKey] = true
         return true
       end
     end
     if abilityName:find(a.ability.name,1,true) then
       l.cacheOfActionMatchingAction[cacheKey] = true
+      l.cacheOfActionMatchingAction[reverseKey] = true
       return true
     end
     -- i.e. Assassin's Will name can match Merciless Resolve action by slot
@@ -392,6 +395,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
         l.debug(DS_ACTION,1)('[aM:slot]')
       end
       l.cacheOfActionMatchingAction[cacheKey] = true
+      l.cacheOfActionMatchingAction[reverseKey] = true
       return true
     end
     return false
