@@ -73,6 +73,8 @@ l.timeActionMap = {}--#map<#number,Models#Action>
 
 l.targetId = nil -- #number
 
+l.cacheOfActionMatchingAction = {} -- #map<#string:#boolean>
+
 l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolean)
 = function(abilityId, abilityName)
   local savedValue = l.idFilteringMap[abilityId]
@@ -365,23 +367,31 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
   = function(a)
     if a:getDuration() > 0 and a:getEndTime(false) < action.startTime then return false end
     if a.ability.id == action.ability.id then return true end
+    -- check cache for non-trivial matches
+    local cacheKey = a.ability.id .. '/' .. action.ability.id
+    if l.cacheOfActionMatchingAction[cacheKey] then return true end
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
         if l.debugEnabled(DS_ACTION,1) then
           l.debug(DS_ACTION,1)('[aM:related name]')
         end
+        l.cacheOfActionMatchingAction[cacheKey] = true
         return true
       end
     end
-    if abilityName:find(a.ability.name,1,true) then return true end
+    if abilityName:find(a.ability.name,1,true) then
+      l.cacheOfActionMatchingAction[cacheKey] = true
+      return true
+    end
     -- i.e. Assassin's Will name can match Merciless Resolve action by slot
     if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
-      and (a.inCombat and action.inCombat) -- filter prebuff slot matches
+      and a.inCombat and action.inCombat -- only match if both in combat (auto-swap)
     then
       if l.debugEnabled(DS_ACTION,1) then
         l.debug(DS_ACTION,1)('[aM:slot]')
       end
+      l.cacheOfActionMatchingAction[cacheKey] = true
       return true
     end
     return false
