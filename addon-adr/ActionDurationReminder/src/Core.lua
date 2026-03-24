@@ -508,6 +508,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       action.lastEffectTime = sameNameAction.lastEffectTime
       action.stackCount = sameNameAction.stackCount
       action.stackEffect = sameNameAction.stackEffect
+      action.stackCount2 = sameNameAction.stackCount2
+      action.stackEffect2 = sameNameAction.stackEffect2
       action.tickEffect = sameNameAction.tickEffect
       sameNameAction.stackEffect = nil
       action.oldAction = sameNameAction
