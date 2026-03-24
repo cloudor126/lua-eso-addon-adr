@@ -369,8 +369,8 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if a.ability.id == action.ability.id then return true end
     -- check cache for non-trivial matches
     local cacheKey = a.ability.id .. '/' .. action.ability.id
-    local reverseKey = action.ability.id .. '/' .. a.ability.id
     if l.cacheOfActionMatchingAction[cacheKey] then return true end
+    local reverseKey = action.ability.id .. '/' .. a.ability.id
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
@@ -1462,10 +1462,10 @@ l.saveAction -- #(Models#Action:action)->()
     end
     return count
   end
+  if old then l.removeAction(old) end
   if l.debugEnabled(DS_ACTION,1) then
     l.debug(DS_ACTION,1)('[s]idActionMap(%i),timeActionMap(%i)\n%s', len(l.idActionMap),len(l.timeActionMap), action:toLogString())
   end
-  if old then l.removeAction(old) end
 end
 
 
