@@ -1420,10 +1420,14 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
     self.stackEffect = effect
     self.stackCountMatch = false -- #boolean
     self.stackCountMatch = stackCount>=3 and #self.effectList==0 and self.descriptionNums[stackCount]
+    local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
+    m.cacheOfActionMatchingEffect[cacheKey] = true
     return true
   elseif addType == 2 then
     self.stackCount2 = stackCount
     self.stackEffect2 = effect
+    local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
+    m.cacheOfActionMatchingEffect[cacheKey] = true
     return true
   end
 
