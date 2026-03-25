@@ -1090,7 +1090,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         end
       else
         if l.debugEnabled(DS_ACTION,'stack') then
-          l.debug('[AKC]purged ignored stack info %s (%s)', action.ability:toLogString(), action:ability:toLogString())
+          l.debug('[AKC]purged ignored stack info %s', action:toLogString())
         end
       end
     else
