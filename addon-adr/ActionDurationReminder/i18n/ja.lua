@@ -1,4 +1,5 @@
 local put = ActionDurationReminder.putText
+put("Ability Name Filter", "Ability Name Filter")
 put("Account Wide Configuration", "アカウント全体の設定")
 put("ADR Shift Bar Frame", "ADRシフトレーム")
 put("Auto Move Attribute Bars", "属性バーの自動移動")

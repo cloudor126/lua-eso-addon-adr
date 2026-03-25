@@ -1,4 +1,5 @@
 local put = ActionDurationReminder.putText
+put("Ability Name Filter", "Ability Name Filter")
 put("Account Wide Configuration", "Configuración de toda la cuenta")
 put("ADR Shift Bar Frame", "Marco de la barra de desplazamiento ADR")
 put("Auto Move Attribute Bars", "Mover automáticamente las barras de atributos")
