@@ -956,7 +956,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     [EFFECT_RESULT_FADED] = {'fade','E-'},
     [EFFECT_RESULT_UPDATED] = {'update','E='},
     [EFFECT_RESULT_FULL_REFRESH] = {'refresh','E*'},
-    [EFFECT_RESULT_TRANSFERRED] = {'transfer','E/'},
+    [EFFECT_RESULT_TRANSFER] = {'transfer','E/'},
   }
   local ctInfo = changeTypeMap[changeType] or {'unknown','E?'}
   if l.debugEnabled(DS_EFFECT,ctInfo[1]) then
@@ -1705,8 +1705,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "editbox",
-          name = addon.text("Combat Event Filter"),
-          tooltip = addon.text('Lua pattern to filter combat event debug logs (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
+          name = addon.text("Ability Name Filter"),
+          tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
           getFunc = function() return l.getSavedVars().coreDebugFilterPattern end,
           setFunc = function(text) l.getSavedVars().coreDebugFilterPattern = text end,
           isMultiline = false,
