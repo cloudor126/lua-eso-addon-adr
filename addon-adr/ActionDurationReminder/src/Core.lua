@@ -537,11 +537,6 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
   local action = models.newAction(slotNum,GetActiveHotbarCategory())
-  local logging = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and action.ability.name:match(filterPattern) then
-    logging = true
-  end
   if l.debugEnabled(DS_ACTION,'new') then
     l.debug('[AN]%s', action:toLogString())
   end
@@ -672,32 +667,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
-  local logged = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and abilityName:match(filterPattern) then
-    logged = true
-    --    TODO ActionResultXXX auto search utility
-    d(os.date()..'>', string.format('[CE] |t24:24:%s|t %s(%s)@%.2f[%s] source:%s(%i:%i) target:%s(%i:%i), abilityActionSlotType:%d,  damageType:%d, overflow:%d,result:%d,powerType:%d,hitvalue:%d',
-      GetAbilityIcon(abilityId),
-      abilityName,
-      abilityId,
-      now/1000,
-      abilityGraphic,
-      zo_strformat("<<1>>", sourceName),
-      sourceType,
-      sourceUnitId,
-      zo_strformat("<<1>>", targetName),
-      targetType,
-      targetUnitId,
-      abilityActionSlotType,
-      damageType,
-      overflow,
-      result,
-      powerType,
-      hitValue
-    ))
-  elseif l.debugEnabled(DS_COMBAT,'event') then
-    logged = true
+  if l.debugEnabled(DS_COMBAT,'event', abilityName) then
     l.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
       GetAbilityIcon(abilityId),
       abilityName,
@@ -728,13 +698,13 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
     local _=nil
-    if not logged and l.debugEnabled(DS_COMBAT,'fade') then
+    if l.debugEnabled(DS_COMBAT,'fade', abilityName) then
       l.debug('[C-]EFFECT_FADED,%s(%d),target:%s(%d),source:%s(%d)',
         abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
-      if not logged and l.debugEnabled(DS_COMBAT,'fade') then
+      if l.debugEnabled(DS_COMBAT,'fade', action.ability.name) then
         l.debug('[C-]cancel channeling %s', action:toLogString())
       end
       action.channelStartTime = 0
@@ -745,7 +715,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
     end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
-      if not logged and l.debugEnabled(DS_COMBAT,'fade') then
+      if l.debugEnabled(DS_COMBAT,'fade', action.ability.name) then
         l.debug('[C-]cancel tick %s', action:toLogString())
       end
       l.removeAction(action)
@@ -772,11 +742,6 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   -- filter by keywords
   if not l.checkAbilityIdAndNameOk(abilityId, abilityName) then
     return
-  end
-  local logging = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and abilityName:match(filterPattern) then
-    logging = true
   end
 
   -- handle stackCount2 consumption for triggered bonus stacks (e.g. Stone Giant, Flame Lash)
@@ -834,7 +799,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           l.cacheOfActionMatchingAction[abilityOnBar.id .. '/' .. action.ability.id] = true
           l.cacheOfActionMatchingAction[action.ability.id .. '/' .. abilityOnBar.id] = true
         end
-        if logging then
+        if l.debugEnabled(DS_COMBAT,'duration', abilityName) then
           df('[Activate Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
         end
         local duration = action.duration
@@ -872,7 +837,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         GetSlotBoundId(action.slotNum,action.hotbarCategory),
         GetSlotName(action.slotNum,action.hotbarCategory),
         GetSlotTexture(action.slotNum,action.hotbarCategory))
-      if logging then
+      if l.debugEnabled(DS_COMBAT,'duration', abilityName) then
         df('[Endure Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
       end
       if (
@@ -945,11 +910,6 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   effectType,abilityType,statusEffectType,unitName,unitId,abilityId,sourceType)
   local now = GetGameTimeMilliseconds()
   effectName = effectName:gsub('^.*< (.*) >$','%1'):gsub('%^%w','')
-  local logging = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and effectName:match(filterPattern) then
-    logging = true
-  end
   -- Map changeType to subswitch and prefix
   local changeTypeMap = {
     [EFFECT_RESULT_GAINED] = {'gain','E+'},
@@ -1579,11 +1539,6 @@ l.saveAction -- #(Models#Action:action)->()
       names = names..' '..key
     end
     return names
-  end
-  local logging = false
-  local filterPattern = l.getSavedVars().coreDebugFilterPattern
-  if filterPattern ~= '' and action.ability.name:match(filterPattern) then
-    logging = true
   end
   if l.debugEnabled(DS_ACTION,'save',action.ability.name) then
     l.debug('[AS]%s\n>idActionMap:%s\n>timeActionMap:%s\n>cacheOfActionMatchingAction:%s',
