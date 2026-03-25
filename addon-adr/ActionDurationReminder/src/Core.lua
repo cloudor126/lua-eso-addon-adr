@@ -249,7 +249,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
     if not notMatched[l.lastAction.sn] and l.lastAction:matchesNewEffect(effect) then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
       end
       return l.lastAction
@@ -259,7 +259,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   -- try last effect action
   if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>effect.startTime then
     if not notMatched[l.lastEffectAction.sn] and l.lastEffectAction.ability:matches(effect.ability,false) then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
       end
       return l.lastEffectAction
@@ -270,13 +270,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i] --Models#Action
     if not notMatched[action.sn] and action:matchesNewEffect(effect) then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found one of queue by new match:%s', action:toLogString())
       end
       return action
     end
     notMatched[action.sn] = true
-    if l.debugEnabled(DS_ACTION,'find') then
+    if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
       l.debug('[AFX]not found one of queue by new match:%s', action:toLogString())
     end
   end
@@ -284,13 +284,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   for key, var in pairs(l.idActionMap) do
     local action=var --Models#Action
     if  not notMatched[action.sn] and action:matchesNewEffect(effect) then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
     notMatched[action.sn] = true
-    if l.debugEnabled(DS_ACTION,'find') then
+    if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
       l.debug('[AFX]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
@@ -300,7 +300,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
     if action then return action end
   end
   -- not found
-  if l.debugEnabled(DS_ACTION,'find') then
+  if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
     l.debug('[AF?]not found new match in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
       l.lastEffectAction and l.lastEffectAction.ability.name or 'nil')
   end
@@ -314,7 +314,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
       if action.newAction then action = action:getNewest() end
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found one of queue by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -322,7 +322,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
   end
   for key, action in pairs(l.idActionMap) do
     if action:matchesOldEffect(effect) then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
         l.debug('[AFA]found one of saved by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -333,14 +333,14 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     for i = 1,#l.actionQueue do
       local action = l.actionQueue[i]
       if action:matchesNewEffect(effect) then
-        if l.debugEnabled(DS_ACTION,'find') then
+        if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
           l.debug('[AFA]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
         end
         return action,true
       end
     end
   end
-  if l.debugEnabled(DS_ACTION,'find') then
+  if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
     l.debug('[AF?]not found old match in %i actions, last:%s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil')
   end
   return nil
@@ -352,7 +352,7 @@ l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
     if action.tickEffect and action.tickEffect.ability.id == tickEffectId
       and action.tickEffect.unitId == unitId
     then
-      if l.debugEnabled(DS_ACTION,'find') then
+      if l.debugEnabled(DS_ACTION,'find', action.ability.name) then
         l.debug('[AFA]found action by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -411,12 +411,12 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   if matchSlotNum then
     local action = models.newAction(matchSlotNum,matchHotbarCategory)
     action.fake = true
-    if l.debugEnabled(DS_ACTION,'find') then
+    if l.debugEnabled(DS_ACTION,'find', action.ability.name) then
       l.debug('[AFA]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
     return action
   end
-  if l.debugEnabled(DS_ACTION,'find') then
+  if l.debugEnabled(DS_ACTION,'find', effect.ability.name) then
     l.debug('[AF?]not found in bar actions')
   end
   return nil
@@ -459,7 +459,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
-        if l.debugEnabled(DS_ACTION,'match') then
+        if l.debugEnabled(DS_ACTION,'match', a.ability.name) then
           l.debug('[AMI]related name')
         end
         l.cacheOfActionMatchingAction[cacheKey] = true
@@ -476,7 +476,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
       and a.inCombat and action.inCombat -- only match if both in combat (auto-swap)
     then
-      if l.debugEnabled(DS_ACTION,'match') then
+      if l.debugEnabled(DS_ACTION,'match', action.ability.name) then
         l.debug('[AMI]slot')
       end
       l.cacheOfActionMatchingAction[cacheKey] = true
@@ -537,7 +537,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
   local action = models.newAction(slotNum,GetActiveHotbarCategory())
-  if l.debugEnabled(DS_ACTION,'new') then
+  if l.debugEnabled(DS_ACTION,'new', action.ability.name) then
     l.debug('[AN]%s', action:toLogString())
   end
   if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
@@ -548,7 +548,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
   -- 3. filter by keywords
   if not l.checkAbilityIdAndNameOk(action.ability.id, action.ability.name) then
-    if l.debugEnabled(DS_ACTION,'new') then
+    if l.debugEnabled(DS_ACTION,'new', action.ability.name) then
       l.debug('[AN-]filtered by keywords')
     end
     return
@@ -557,7 +557,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if l.idDurationMap[action.ability.id] then
     action.configDuration = l.idDurationMap[action.ability.id]
     action.endTime = action.startTime + action.configDuration
-    if l.debugEnabled(DS_ACTION,'new') then
+    if l.debugEnabled(DS_ACTION,'new', action.ability.name) then
       l.debug('[AN=]modified to %d, %s', action.configDuration, action:toLogString())
     end
   end
@@ -568,12 +568,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
 
     if not sameNameAction then
-      if l.debugEnabled(DS_ACTION,'match') then
+      if l.debugEnabled(DS_ACTION,'match', action.ability.name) then
         l.debug('[AM-]none')
       end
     elseif sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
-      if l.debugEnabled(DS_ACTION,'match') then
+      if l.debugEnabled(DS_ACTION,'match', sameNameAction.ability.name) then
         l.debug('[AMA]%s', sameNameAction:toLogString())
       end
       sameNameAction.newAction = action
@@ -609,7 +609,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       = function(relatedAbility)
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
-          if l.debugEnabled(DS_ACTION,'match') then
+          if l.debugEnabled(DS_ACTION,'match', action.ability.name) then
             l.debug('[AMI]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
           end
         end
@@ -754,7 +754,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         if action.stackEffect2.stackCount and action.stackEffect2.stackCount > 0 then
           action.stackEffect2.stackCount = action.stackEffect2.stackCount - 1
         end
-        if l.debugEnabled(DS_COMBAT,'stack') then
+        if l.debugEnabled(DS_COMBAT,'stack', action.ability.name) then
           l.debug('[CS-]consumed %s:%d', action.ability.name, action.stackCount2)
         end
       end
@@ -769,7 +769,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     if tickRate > l.getSavedVars().coreMinimumDurationSeconds*1000 then
       local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
       local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, 0, tickRate);
-      if l.debugEnabled(DS_COMBAT,'tick') then
+      if l.debugEnabled(DS_COMBAT,'tick', effect.ability.name) then
         l.debug('[CT]%s', effect:toLogString())
       end
       local action = l.findActionByNewEffect(effect) -- Models#Action
@@ -828,7 +828,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   -- justify recorded actions
   if result == ACTION_RESULT_EFFECT_GAINED_DURATION then
     local _ = nil
-    if l.debugEnabled(DS_COMBAT,'duration') then
+    if l.debugEnabled(DS_COMBAT,'duration', abilityName) then
       l.debug('[CD]%s(%d)+%d', abilityName, abilityId, hitValue)
     end
     -- for not saved actions, i.e. ground action
@@ -891,7 +891,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           action.channelStartTime = now
           action.channelEndTime = now+duration
           action.channelUnitId = targetUnitId
-          if l.debugEnabled(DS_COMBAT,'channel') then
+          if l.debugEnabled(DS_COMBAT,'channel', action.ability.name) then
             l.debug('[CC]%s', action:toLogString())
           end
           return
@@ -919,7 +919,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     [EFFECT_RESULT_TRANSFER] = {'transfer','E/'},
   }
   local ctInfo = changeTypeMap[changeType] or {'unknown','E?'}
-  if l.debugEnabled(DS_EFFECT,ctInfo[1]) then
+  if l.debugEnabled(DS_EFFECT,ctInfo[1], effectName) then
     l.debug('[%s%s]%s(%s)@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
       ctInfo[2],
       stackCount > 0 and tostring(stackCount) or '',
@@ -1014,7 +1014,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 150000 then return end -- ignore effects that last longer than 150 seconds
   if l.lastAction and not l.lastAction.flags.forGround and startTime and
     startTime - (l.lastAction.startTime + l.lastAction.castTime)>2000 then
-    if l.debugEnabled(DS_ACTION,'unref') then
+    if l.debugEnabled(DS_ACTION,'unref', l.lastAction.ability.name) then
       l.debug('[AU]unref lastAction by time')
     end
     l.lastAction = nil
@@ -1037,19 +1037,19 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
       if stackInfoUpdated then
-        if l.debugEnabled(DS_ACTION,'stack') then
+        if l.debugEnabled(DS_ACTION,'stack', action.ability.name) then
           l.debug('[AKC]purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
         end
         if action:getEndTime() <= now+20 and action:getStartTime()>now-500   -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
           and not action.oldAction -- check those with old action i.e. Assassin Will replacing Merciless Resolve
         then
-          if l.debugEnabled(DS_ACTION,'remove') then
+          if l.debugEnabled(DS_ACTION,'remove', action.ability.name) then
             l.debug('[ARP]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
           end
           l.removeAction(action)
         end
       else
-        if l.debugEnabled(DS_ACTION,'stack') then
+        if l.debugEnabled(DS_ACTION,'stack', action.ability.name) then
           l.debug('[AKC]purged ignored stack info %s', action:toLogString())
         end
       end
@@ -1057,13 +1057,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       action = l.findActionByNewEffect(effect, true)
       if not action then
         l.ignoredCache:mark(notFoundKey)
-        if l.debugEnabled(DS_EFFECT,'match') then
+        if l.debugEnabled(DS_EFFECT,'match', effect.ability.name) then
           l.debug('[]New stack effect action not found.')
         end
         return
       end
       if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-        if l.debugEnabled(DS_FILTER,'reject') then
+        if l.debugEnabled(DS_FILTER,'reject', effect.ability.name) then
           l.debug('[FRB]New stack effect filtered.')
         end
         return
@@ -1079,12 +1079,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
       action:saveEffect(effect)
       if stackInfoUpdated then
-        if l.debugEnabled(DS_ACTION,'stack') then
+        if l.debugEnabled(DS_ACTION,'stack', action.ability.name) then
           l.debug('[AKU]updated stack info %s', action:toLogString())
         end
         l.saveAction(action)
       else
-        if l.debugEnabled(DS_ACTION,'stack') then
+        if l.debugEnabled(DS_ACTION,'stack', action.ability.name) then
           l.debug('[AK~]updated ignored stack info %s', action:toLogString())
         end
       end
@@ -1105,7 +1105,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         duration = 6000
         endTime = startTime+duration
       else
-        if l.debugEnabled(DS_FILTER,'reject') then
+        if l.debugEnabled(DS_FILTER,'reject', effect.ability.name) then
           l.debug('[FR0]New effect without duration.')
         end
         --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
@@ -1113,7 +1113,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
     end
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-      if l.debugEnabled(DS_FILTER,'reject') then
+      if l.debugEnabled(DS_FILTER,'reject', effect.ability.name) then
         l.debug('[FRB]New effect filtered.')
       end
       return
@@ -1121,7 +1121,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByNewEffect(effect)
     if not action then
       l.ignoredCache:mark(notFoundKey)
-      if l.debugEnabled(DS_EFFECT,'miss') then
+      if l.debugEnabled(DS_EFFECT,'miss', effect.ability.name) then
         l.debug('[EM?]new effect action not found')
       end
       return
@@ -1168,7 +1168,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
               if stackInfoUpdated then
                 action:saveEffect(effect)
                 l.saveAction(action)
-                if l.debugEnabled(DS_ACTION,'stack') then
+                if l.debugEnabled(DS_ACTION,'stack', action.ability.name) then
                   l.debug('[AKU]updated stack info %s', action:toLogString())
                 end
               end
@@ -1187,7 +1187,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-      if l.debugEnabled(DS_FILTER,'reject') then
+      if l.debugEnabled(DS_FILTER,'reject', effect.ability.name) then
         l.debug('[FRB]Update effect filtered.')
       end
       return
@@ -1196,7 +1196,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action,isNew = l.findActionByOldEffect(effect, effect.duration>0 and not effect.ability.icon:find('ability_buff_',1,true))
     if not action then
       l.ignoredCache:mark(notFoundKey)
-      if l.debugEnabled(DS_EFFECT,'miss') then
+      if l.debugEnabled(DS_EFFECT,'miss', effect.ability.name) then
         l.debug('[EM?]update effect action not found')
       end
       return
@@ -1235,7 +1235,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake then
         if now < action:getStartTime()+1100 then
-          if l.debugEnabled(DS_ACTION,'remove') then
+          if l.debugEnabled(DS_ACTION,'remove', action.ability.name) then
             l.debug('[ART]%s', action:toLogString())
           end
           l.removeAction(action)
@@ -1312,7 +1312,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   -- 1. remove all enemy actions from self.idActionMap
   local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
-    if l.debugEnabled(DS_TARGET,'track') then
+    if l.debugEnabled(DS_TARGET,'track', action.ability.name) then
       l.debug('[TC]processing %s,%s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
     end
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
@@ -1324,7 +1324,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
       if not l.getSavedVars().coreMultipleTargetTrackingWithoutClearing then
         l.idActionMap[key] = nil
       end
-      if l.debugEnabled(DS_TARGET,'track') then
+      if l.debugEnabled(DS_TARGET,'track', action.ability.name) then
         l.debug('[TCO]%s@%.2f<%.2f>%s', action.ability:toLogString(), action:getStartTime()/1000,
           action:getDuration()/1000, action:getFlagsInfo())
       end
@@ -1346,19 +1346,19 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
           action.targetOut = false
           l.idActionMap[action.ability.id] = action
           numRestored = numRestored+1
-          if l.debugEnabled(DS_TARGET,'track') then
+          if l.debugEnabled(DS_TARGET,'track', action.ability.name) then
             l.debug('[TCI]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
           if action.flags.forEnemy and action.targetId and action.targetId>0 then
             l.targetId = action.targetId
           end
         else
-          if l.debugEnabled(DS_TARGET,'track') then
+          if l.debugEnabled(DS_TARGET,'track', action.ability.name) then
             l.debug('[TCX]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
         end
       else
-        if l.debugEnabled(DS_TARGET,'track') then
+        if l.debugEnabled(DS_TARGET,'track', buffName) then
           l.debug('[T?]%s(%i)@%.2f<%.2f> not found', buffName, abilityId, timeStarted,timeEnding-timeStarted)
         end
       end
@@ -1446,7 +1446,7 @@ l.refineActions -- #()->()
     if action.stackCount==0 -- i.e. Grim Focus triggered by weapon attack
       and endTime < (action.fake and now or endLimit)
     then
-      if l.debugEnabled(DS_ACTION,'remove') then
+      if l.debugEnabled(DS_ACTION,'remove', action.ability.name) then
         l.debug('[ARR]%s,endTime:%d<endLimit:%d', action:toLogString(),
           endTime, endLimit)
       end
@@ -1459,7 +1459,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.timeActionMap) do
     if action:getEndTime() < endLimit then
       l.timeActionMap[key] = nil
-      if l.debugEnabled(DS_ACTION,'delete') then
+      if l.debugEnabled(DS_ACTION,'delete', action.ability.name) then
         l.debug('[ADT]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
       end
     end
@@ -1474,7 +1474,7 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   if old and old.sn == action.sn then
     l.idActionMap[action.ability.id] = nil
     removed = true
-    if l.debugEnabled(DS_ACTION,'delete') then
+    if l.debugEnabled(DS_ACTION,'delete', action.ability.name) then
       l.debug('[ADI]idActionMap:%s',action:toLogString())
     end
   end
