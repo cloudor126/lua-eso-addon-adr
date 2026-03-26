@@ -159,11 +159,11 @@ l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolea
         checkOk = zo_strformat("<<1>>", abilityName):lower():find(line,1,true)
       end
       if checkOk then
-        if l.debugEnabled(DSS_FILTER_ACCEPT,left) then
+        if l.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
           l.debug('[FA]%s', left)
         end
         if dur then
-          if l.debugEnabled(DSS_FILTER_ACCEPT,left) then
+          if l.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
             l.debug('[FA=]%s=%s', left, dur)
           end
           dur = tonumber(dur)
@@ -246,23 +246,16 @@ l.debugSettingMap = {
   },
 }
 
-l.debugEnabled -- #(#table|string:dss,#string:abilityName)->(#boolean)
+l.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
 = function(dss, abilityName)
   local sv = l.getSavedVars()
   -- check if fine-grained debug logging is enabled
   if not sv.coreDebugLoggingEnabled then return false end
   -- unpack DSS constant or use legacy parameters
   local switch, subSwitch
-  if type(dss) == 'table' then
-    switch = dss[1]
-    subSwitch = dss[2]
-  else
-    -- legacy support: first param is switch, second is subSwitch
-    switch = dss
-    subSwitch = abilityName
-    abilityName = nil
-  end
-  -- if abilityName provided, check filter pattern first
+  if type(dss) ~= 'table' then return false end
+  switch = dss[1]
+  subSwitch = dss[2]
   if abilityName and sv.coreDebugFilterPattern ~= '' then
     if not abilityName:match(sv.coreDebugFilterPattern) then
       return false
