@@ -268,13 +268,6 @@ l.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
       return sv[settingKey]
     end
   end
-  -- if no subSwitch specified, check if any sub-switch is enabled
-  local subSwitches = l.debugSettingMap[switch]
-  if subSwitches then
-    for _, settingKey in pairs(subSwitches) do
-      if sv[settingKey] then return true end
-    end
-  end
   return false
 end
 
