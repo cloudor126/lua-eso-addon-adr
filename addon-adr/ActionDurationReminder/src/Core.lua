@@ -1667,12 +1667,6 @@ addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
 end)
 
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
-  -- helper to check if detailed debug options should be shown
-  local function shouldShowDetailedDebug()
-    local sv = l.getSavedVars()
-    return sv.coreDebugLoggingEnabled or (sv.coreDebugFilterPattern ~= '')
-  end
-
   settings.addMenuOptions(
     {
       type = "submenu",
@@ -1688,16 +1682,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
         },
         {
-          type = "editbox",
-          name = addon.text("Ability Name Filter"),
-          tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
-          getFunc = function() return l.getSavedVars().coreDebugFilterPattern end,
-          setFunc = function(text) l.getSavedVars().coreDebugFilterPattern = text end,
-          isMultiline = false,
-          width = "full",
-          default = coreSavedVarsDefaults.coreDebugFilterPattern,
-        },
-        {
           type = "checkbox",
           name = addon.text("Enable Debug Logging"),
           tooltip = addon.text("Enable fine-grained debug logging without using console commands"),
@@ -1709,8 +1693,19 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         {
           type = "submenu",
           name = addon.text("Detailed Debug Options"),
-          disabled = function() return not shouldShowDetailedDebug() end,
+          disabled = function() return not l.getSavedVars().coreDebugLoggingEnabled end,
           controls = {
+            {
+              type = "editbox",
+              name = addon.text("Ability Name Filter"),
+              tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
+              getFunc = function() return l.getSavedVars().coreDebugFilterPattern end,
+              setFunc = function(text) l.getSavedVars().coreDebugFilterPattern = text end,
+              isMultiline = false,
+              width = "full",
+              disabled = function() return not l.getSavedVars().coreDebugLoggingEnabled end,
+              default = coreSavedVarsDefaults.coreDebugFilterPattern,
+            },
             {
               type = "header",
               name = addon.text("Action Debug"),
