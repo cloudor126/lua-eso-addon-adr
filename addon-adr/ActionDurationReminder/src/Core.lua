@@ -20,7 +20,7 @@ local DS_TARGET = "target" -- debug switch for target
 local DS_FILTER = "filter" -- debug switch for filter
 local DS_ALL = "all" -- debug switch for all
 
--- DSS (Debug Switch + SubSwitch) constants for l.debugEnabled
+-- DSS (Debug Switch + SubSwitch) constants for addon.debugEnabled
 -- Filter
 local DSS_FILTER_ACCEPT = {DS_FILTER, 'accept'}
 local DSS_FILTER_REJECT = {DS_FILTER, 'reject'}
@@ -159,11 +159,11 @@ l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolea
         checkOk = zo_strformat("<<1>>", abilityName):lower():find(line,1,true)
       end
       if checkOk then
-        if l.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
+        if addon.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
           l.debug('[FA]%s', left)
         end
         if dur then
-          if l.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
+          if addon.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
             l.debug('[FA=]%s=%s', left, dur)
           end
           dur = tonumber(dur)
@@ -207,69 +207,213 @@ l.debug -- #(#string:format, #string:...)->()
 =function(format, ...)
   d(os.date()..'>', string.format(format, ...))
 end
+-- Register Core debug switches with the addon framework
+addon.registerDebugSwitch(DS_ACTION, addon.text("Action Debug"))
+addon.registerDebugSubSwitch(DS_ACTION, 'find', 'debugActionFind')
+addon.registerDebugSubSwitch(DS_ACTION, 'new', 'debugActionNew')
+addon.registerDebugSubSwitch(DS_ACTION, 'match', 'debugActionMatch')
+addon.registerDebugSubSwitch(DS_ACTION, 'unref', 'debugActionUnref')
+addon.registerDebugSubSwitch(DS_ACTION, 'stack', 'debugActionStack')
+addon.registerDebugSubSwitch(DS_ACTION, 'remove', 'debugActionRemove')
+addon.registerDebugSubSwitch(DS_ACTION, 'delete', 'debugActionDelete')
+addon.registerDebugSubSwitch(DS_ACTION, 'save', 'debugActionSave')
+addon.registerDebugSubSwitch(DS_ACTION, 'clear', 'debugActionClear')
 
--- map debug switches to fine-grained settings
-l.debugSettingMap = {
-  [DS_ACTION] = {
-    find = 'debugActionFind',
-    new = 'debugActionNew',
-    match = 'debugActionMatch',
-    unref = 'debugActionUnref',
-    stack = 'debugActionStack',
-    remove = 'debugActionRemove',
-    delete = 'debugActionDelete',
-    save = 'debugActionSave',
-    clear = 'debugActionClear',
-  },
-  [DS_EFFECT] = {
-    gain = 'debugEffectGain',
-    fade = 'debugEffectFade',
-    update = 'debugEffectUpdate',
-    refresh = 'debugEffectRefresh',
-    transfer = 'debugEffectTransfer',
-    miss = 'debugEffectMiss',
-  },
-  [DS_COMBAT] = {
-    event = 'debugCombatEvent',
-    fade = 'debugCombatFade',
-    stack = 'debugCombatStack',
-    tick = 'debugCombatTick',
-    duration = 'debugCombatDuration',
-    channel = 'debugCombatChannel',
-  },
-  [DS_FILTER] = {
-    accept = 'debugFilterAccept',
-    reject = 'debugFilterReject',
-  },
-  [DS_TARGET] = {
-    track = 'debugTargetTrack',
-  },
-}
+addon.registerDebugSwitch(DS_EFFECT, addon.text("Effect Debug"))
+addon.registerDebugSubSwitch(DS_EFFECT, 'gain', 'debugEffectGain')
+addon.registerDebugSubSwitch(DS_EFFECT, 'fade', 'debugEffectFade')
+addon.registerDebugSubSwitch(DS_EFFECT, 'update', 'debugEffectUpdate')
+addon.registerDebugSubSwitch(DS_EFFECT, 'refresh', 'debugEffectRefresh')
+addon.registerDebugSubSwitch(DS_EFFECT, 'transfer', 'debugEffectTransfer')
+addon.registerDebugSubSwitch(DS_EFFECT, 'miss', 'debugEffectMiss')
 
-l.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
-= function(dss, abilityName)
-  local sv = l.getSavedVars()
-  -- check if fine-grained debug logging is enabled
-  if not sv.coreDebugLoggingEnabled then return false end
-  -- unpack DSS constant or use legacy parameters
-  local switch, subSwitch
-  if type(dss) ~= 'table' then return false end
-  switch = dss[1]
-  subSwitch = dss[2]
-  if abilityName and sv.coreDebugFilterPattern ~= '' then
-    if not abilityName:match(sv.coreDebugFilterPattern) then
-      return false
-    end
-  end
-  -- check switch/subSwitch settings
-  if subSwitch then
-    local settingKey = l.debugSettingMap[switch] and l.debugSettingMap[switch][subSwitch]
-    if settingKey then
-      return sv[settingKey]
-    end
-  end
-  return false
-end
+addon.registerDebugSwitch(DS_COMBAT, addon.text("Combat Debug"))
+addon.registerDebugSubSwitch(DS_COMBAT, 'event', 'debugCombatEvent')
+addon.registerDebugSubSwitch(DS_COMBAT, 'fade', 'debugCombatFade')
+addon.registerDebugSubSwitch(DS_COMBAT, 'stack', 'debugCombatStack')
+addon.registerDebugSubSwitch(DS_COMBAT, 'tick', 'debugCombatTick')
+addon.registerDebugSubSwitch(DS_COMBAT, 'duration', 'debugCombatDuration')
+addon.registerDebugSubSwitch(DS_COMBAT, 'channel', 'debugCombatChannel')
+
+addon.registerDebugSwitch(DS_FILTER, addon.text("Filter Debug"))
+addon.registerDebugSubSwitch(DS_FILTER, 'accept', 'debugFilterAccept')
+addon.registerDebugSubSwitch(DS_FILTER, 'reject', 'debugFilterReject')
+
+addon.registerDebugSwitch(DS_TARGET, addon.text("Target Debug"))
+addon.registerDebugSubSwitch(DS_TARGET, 'track', 'debugTargetTrack')
+
+-- Register Core debug options for the settings menu
+addon.extend(addon.EXTKEY_DEBUG_OPTIONS, function(controls)
+  table.insert(controls, { type = "header", name = addon.text("Core Debug") })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Find [AF*]"),
+    getFunc = function() return l.getSavedVars().debugActionFind end,
+    setFunc = function(value) l.getSavedVars().debugActionFind = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action New [AN*]"),
+    getFunc = function() return l.getSavedVars().debugActionNew end,
+    setFunc = function(value) l.getSavedVars().debugActionNew = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Match [AM*]"),
+    getFunc = function() return l.getSavedVars().debugActionMatch end,
+    setFunc = function(value) l.getSavedVars().debugActionMatch = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Unref [AU]"),
+    getFunc = function() return l.getSavedVars().debugActionUnref end,
+    setFunc = function(value) l.getSavedVars().debugActionUnref = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Stack [AK*]"),
+    getFunc = function() return l.getSavedVars().debugActionStack end,
+    setFunc = function(value) l.getSavedVars().debugActionStack = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Remove [AR*]"),
+    getFunc = function() return l.getSavedVars().debugActionRemove end,
+    setFunc = function(value) l.getSavedVars().debugActionRemove = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Delete [AD*]"),
+    getFunc = function() return l.getSavedVars().debugActionDelete end,
+    setFunc = function(value) l.getSavedVars().debugActionDelete = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Save [AS]"),
+    getFunc = function() return l.getSavedVars().debugActionSave end,
+    setFunc = function(value) l.getSavedVars().debugActionSave = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Action Clear [AC*]"),
+    getFunc = function() return l.getSavedVars().debugActionClear end,
+    setFunc = function(value) l.getSavedVars().debugActionClear = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Event [CE]"),
+    getFunc = function() return l.getSavedVars().debugCombatEvent end,
+    setFunc = function(value) l.getSavedVars().debugCombatEvent = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Fade [C-]"),
+    getFunc = function() return l.getSavedVars().debugCombatFade end,
+    setFunc = function(value) l.getSavedVars().debugCombatFade = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Stack [CS-]"),
+    getFunc = function() return l.getSavedVars().debugCombatStack end,
+    setFunc = function(value) l.getSavedVars().debugCombatStack = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Tick [CT]"),
+    getFunc = function() return l.getSavedVars().debugCombatTick end,
+    setFunc = function(value) l.getSavedVars().debugCombatTick = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Duration [CD]"),
+    getFunc = function() return l.getSavedVars().debugCombatDuration end,
+    setFunc = function(value) l.getSavedVars().debugCombatDuration = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Combat Channel [CC]"),
+    getFunc = function() return l.getSavedVars().debugCombatChannel end,
+    setFunc = function(value) l.getSavedVars().debugCombatChannel = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Gain [E+]"),
+    getFunc = function() return l.getSavedVars().debugEffectGain end,
+    setFunc = function(value) l.getSavedVars().debugEffectGain = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Fade [E-]"),
+    getFunc = function() return l.getSavedVars().debugEffectFade end,
+    setFunc = function(value) l.getSavedVars().debugEffectFade = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Update [E=]"),
+    getFunc = function() return l.getSavedVars().debugEffectUpdate end,
+    setFunc = function(value) l.getSavedVars().debugEffectUpdate = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Refresh [E*]"),
+    getFunc = function() return l.getSavedVars().debugEffectRefresh end,
+    setFunc = function(value) l.getSavedVars().debugEffectRefresh = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Transfer [E/]"),
+    getFunc = function() return l.getSavedVars().debugEffectTransfer end,
+    setFunc = function(value) l.getSavedVars().debugEffectTransfer = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Effect Miss [EM?]"),
+    getFunc = function() return l.getSavedVars().debugEffectMiss end,
+    setFunc = function(value) l.getSavedVars().debugEffectMiss = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Filter Accept [FA*]"),
+    getFunc = function() return l.getSavedVars().debugFilterAccept end,
+    setFunc = function(value) l.getSavedVars().debugFilterAccept = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Filter Reject [FR*]"),
+    getFunc = function() return l.getSavedVars().debugFilterReject end,
+    setFunc = function(value) l.getSavedVars().debugFilterReject = value end,
+    width = "full",
+  })
+  table.insert(controls, {
+    type = "checkbox",
+    name = addon.text("Target Track"),
+    getFunc = function() return l.getSavedVars().debugTargetTrack end,
+    setFunc = function(value) l.getSavedVars().debugTargetTrack = value end,
+    width = "full",
+  })
+end)
 
 l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect,stacking)
@@ -278,7 +422,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
     if not notMatched[l.lastAction.sn] and l.lastAction:matchesNewEffect(effect) then
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
       end
       return l.lastAction
@@ -288,7 +432,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   -- try last effect action
   if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>effect.startTime then
     if not notMatched[l.lastEffectAction.sn] and l.lastEffectAction.ability:matches(effect.ability,false) then
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
       end
       return l.lastEffectAction
@@ -299,13 +443,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i] --Models#Action
     if not notMatched[action.sn] and action:matchesNewEffect(effect) then
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found one of queue by new match:%s', action:toLogString())
       end
       return action
     end
     notMatched[action.sn] = true
-    if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
       l.debug('[AFX]not found one of queue by new match:%s', action:toLogString())
     end
   end
@@ -313,13 +457,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   for key, var in pairs(l.idActionMap) do
     local action=var --Models#Action
     if  not notMatched[action.sn] and action:matchesNewEffect(effect) then
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
     notMatched[action.sn] = true
-    if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
       l.debug('[AFX]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
@@ -329,7 +473,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
     if action then return action end
   end
   -- not found
-  if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+  if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
     l.debug('[AF?]not found new match in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
       l.lastEffectAction and l.lastEffectAction.ability.name or 'nil')
   end
@@ -343,7 +487,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
       if action.newAction then action = action:getNewest() end
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found one of queue by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -351,7 +495,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
   end
   for key, action in pairs(l.idActionMap) do
     if action:matchesOldEffect(effect) then
-      if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
         l.debug('[AFA]found one of saved by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -362,14 +506,14 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     for i = 1,#l.actionQueue do
       local action = l.actionQueue[i]
       if action:matchesNewEffect(effect) then
-        if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
           l.debug('[AFA]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
         end
         return action,true
       end
     end
   end
-  if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+  if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
     l.debug('[AF?]not found old match in %i actions, last:%s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil')
   end
   return nil
@@ -381,7 +525,7 @@ l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
     if action.tickEffect and action.tickEffect.ability.id == tickEffectId
       and action.tickEffect.unitId == unitId
     then
-      if l.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
         l.debug('[AFA]found action by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
@@ -440,12 +584,12 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   if matchSlotNum then
     local action = models.newAction(matchSlotNum,matchHotbarCategory)
     action.fake = true
-    if l.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
       l.debug('[AFA]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
     return action
   end
-  if l.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
+  if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
     l.debug('[AF?]not found in bar actions')
   end
   return nil
@@ -488,7 +632,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
-        if l.debugEnabled(DSS_ACTION_MATCH, a.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_MATCH, a.ability.name) then
           l.debug('[AMI]related name')
         end
         l.cacheOfActionMatchingAction[cacheKey] = true
@@ -505,7 +649,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
       and a.inCombat and action.inCombat -- only match if both in combat (auto-swap)
     then
-      if l.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
         l.debug('[AMI]slot')
       end
       l.cacheOfActionMatchingAction[cacheKey] = true
@@ -566,7 +710,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
   local action = models.newAction(slotNum,GetActiveHotbarCategory())
-  if l.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
+  if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
     l.debug('[AN]%s', action:toLogString())
   end
   if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
@@ -577,7 +721,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
   -- 3. filter by keywords
   if not l.checkAbilityIdAndNameOk(action.ability.id, action.ability.name) then
-    if l.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
       l.debug('[AN-]filtered by keywords')
     end
     return
@@ -586,7 +730,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   if l.idDurationMap[action.ability.id] then
     action.configDuration = l.idDurationMap[action.ability.id]
     action.endTime = action.startTime + action.configDuration
-    if l.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
       l.debug('[AN=]modified to %d, %s', action.configDuration, action:toLogString())
     end
   end
@@ -597,12 +741,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     local sameNameAction = l.getActionByNewAction(action) -- Models#Action
 
     if not sameNameAction then
-      if l.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
         l.debug('[AM-]none')
       end
     elseif sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
-      if l.debugEnabled(DSS_ACTION_MATCH, sameNameAction.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_MATCH, sameNameAction.ability.name) then
         l.debug('[AMA]%s', sameNameAction:toLogString())
       end
       sameNameAction.newAction = action
@@ -638,7 +782,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       = function(relatedAbility)
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
-          if l.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
+          if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
             l.debug('[AMI]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
           end
         end
@@ -696,7 +840,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
-  if l.debugEnabled(DSS_COMBAT_EVENT, abilityName) then
+  if addon.debugEnabled(DSS_COMBAT_EVENT, abilityName) then
     l.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
       GetAbilityIcon(abilityId),
       abilityName,
@@ -727,13 +871,13 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
   if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
     local _=nil
-    if l.debugEnabled(DSS_COMBAT_FADE, abilityName) then
+    if addon.debugEnabled(DSS_COMBAT_FADE, abilityName) then
       l.debug('[C-]EFFECT_FADED,%s(%d),target:%s(%d),source:%s(%d)',
         abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
-      if l.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
+      if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
         l.debug('[C-]cancel channeling %s', action:toLogString())
       end
       action.channelStartTime = 0
@@ -744,7 +888,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
     end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
-      if l.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
+      if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
         l.debug('[C-]cancel tick %s', action:toLogString())
       end
       l.removeAction(action)
@@ -783,7 +927,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         if action.stackEffect2.stackCount and action.stackEffect2.stackCount > 0 then
           action.stackEffect2.stackCount = action.stackEffect2.stackCount - 1
         end
-        if l.debugEnabled(DSS_COMBAT_STACK, action.ability.name) then
+        if addon.debugEnabled(DSS_COMBAT_STACK, action.ability.name) then
           l.debug('[CS-]consumed %s:%d', action.ability.name, action.stackCount2)
         end
       end
@@ -798,7 +942,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     if tickRate > l.getSavedVars().coreMinimumDurationSeconds*1000 then
       local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
       local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, 0, tickRate);
-      if l.debugEnabled(DSS_COMBAT_TICK, effect.ability.name) then
+      if addon.debugEnabled(DSS_COMBAT_TICK, effect.ability.name) then
         l.debug('[CT]%s', effect:toLogString())
       end
       local action = l.findActionByNewEffect(effect) -- Models#Action
@@ -828,7 +972,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           l.cacheOfActionMatchingAction[abilityOnBar.id .. '/' .. action.ability.id] = true
           l.cacheOfActionMatchingAction[action.ability.id .. '/' .. abilityOnBar.id] = true
         end
-        if l.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+        if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
           df('[Activate Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
         end
         local duration = action.duration
@@ -857,7 +1001,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   -- justify recorded actions
   if result == ACTION_RESULT_EFFECT_GAINED_DURATION then
     local _ = nil
-    if l.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+    if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
       l.debug('[CD]%s(%d)+%d', abilityName, abilityId, hitValue)
     end
     -- for not saved actions, i.e. ground action
@@ -866,7 +1010,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         GetSlotBoundId(action.slotNum,action.hotbarCategory),
         GetSlotName(action.slotNum,action.hotbarCategory),
         GetSlotTexture(action.slotNum,action.hotbarCategory))
-      if l.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+      if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
         df('[Endure Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
       end
       if (
@@ -920,7 +1064,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           action.channelStartTime = now
           action.channelEndTime = now+duration
           action.channelUnitId = targetUnitId
-          if l.debugEnabled(DSS_COMBAT_CHANNEL, action.ability.name) then
+          if addon.debugEnabled(DSS_COMBAT_CHANNEL, action.ability.name) then
             l.debug('[CC]%s', action:toLogString())
           end
           return
@@ -948,7 +1092,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     [EFFECT_RESULT_TRANSFER] = {'transfer','E/'},
   }
   local ctInfo = changeTypeMap[changeType] or {'unknown','E?'}
-  if l.debugEnabled({DS_EFFECT, ctInfo[1]}, effectName) then
+  if addon.debugEnabled({DS_EFFECT, ctInfo[1]}, effectName) then
     l.debug('[%s%s]%s(%s)@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
       ctInfo[2],
       stackCount > 0 and tostring(stackCount) or '',
@@ -983,14 +1127,14 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
 
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
-    if l.debugEnabled(DSS_FILTER_REJECT,effectName) then
+    if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
       l.debug('[FRI]%s(%d),%s', effectName, abilityId, l.ignoredIds[abilityId])
     end
     return
   end
 
   if not l.checkAbilityIdAndNameOk(abilityId, effectName) then
-    if l.debugEnabled(DSS_FILTER_REJECT,effectName) then
+    if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
       l.debug('[FRB]%s', effectName)
     end
     return
@@ -999,7 +1143,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local notFoundKey = ('%d:%s:not found'):format(abilityId,effectName)
   local notFoundCount = l.ignoredCache:get(notFoundKey)
   if notFoundCount>=3 then
-    if l.debugEnabled(DSS_FILTER_REJECT,effectName) then
+    if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
       l.debug('[FNC]%s', notFoundKey)
     end
     l.ignoredCache:mark(notFoundKey)
@@ -1012,7 +1156,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   l.ignoredCache:mark(key)
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=12 then
-    if l.debugEnabled(DSS_FILTER_REJECT,effectName) then
+    if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
       l.debug('[FRN]%s', key)
     end
     return
@@ -1043,7 +1187,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if duration > 150000 then return end -- ignore effects that last longer than 150 seconds
   if l.lastAction and not l.lastAction.flags.forGround and startTime and
     startTime - (l.lastAction.startTime + l.lastAction.castTime)>2000 then
-    if l.debugEnabled(DSS_ACTION_UNREF, l.lastAction.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_UNREF, l.lastAction.ability.name) then
       l.debug('[AU]unref lastAction by time')
     end
     l.lastAction = nil
@@ -1066,19 +1210,19 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
       if stackInfoUpdated then
-        if l.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
           l.debug('[AKC]purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
         end
         if action:getEndTime() <= now+20 and action:getStartTime()>now-500   -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
           and not action.oldAction -- check those with old action i.e. Assassin Will replacing Merciless Resolve
         then
-          if l.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
+          if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
             l.debug('[ARP]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
           end
           l.removeAction(action)
         end
       else
-        if l.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
           l.debug('[AKC]purged ignored stack info %s', action:toLogString())
         end
       end
@@ -1086,13 +1230,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       action = l.findActionByNewEffect(effect, true)
       if not action then
         l.ignoredCache:mark(notFoundKey)
-        if l.debugEnabled(DSS_EFFECT_MATCH, effect.ability.name) then
+        if addon.debugEnabled(DSS_EFFECT_MATCH, effect.ability.name) then
           l.debug('[]New stack effect action not found.')
         end
         return
       end
       if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-        if l.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
+        if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
           l.debug('[FRB]New stack effect filtered.')
         end
         return
@@ -1108,12 +1252,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
       action:saveEffect(effect)
       if stackInfoUpdated then
-        if l.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
           l.debug('[AKU]updated stack info %s', action:toLogString())
         end
         l.saveAction(action)
       else
-        if l.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+        if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
           l.debug('[AK~]updated ignored stack info %s', action:toLogString())
         end
       end
@@ -1134,7 +1278,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         duration = 6000
         endTime = startTime+duration
       else
-        if l.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
+        if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
           l.debug('[FR0]New effect without duration.')
         end
         --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
@@ -1142,7 +1286,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
     end
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-      if l.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
+      if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
         l.debug('[FRB]New effect filtered.')
       end
       return
@@ -1150,7 +1294,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action = l.findActionByNewEffect(effect)
     if not action then
       l.ignoredCache:mark(notFoundKey)
-      if l.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
+      if addon.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
         l.debug('[EM?]new effect action not found')
       end
       return
@@ -1161,7 +1305,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       --        and not action.descriptionNums[effect.duration/1000] -- This line should be commented out because it conflicts with option *coreIgnoreLongDebuff*
       and not action.ability.icon:find('ability_arcanist_011',1,true) -- some debuff is useful, i.e. Rune of Edric Horror has a useful vulnerability
     then
-      if l.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
+      if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
         l.debug('[FRD]ignore longer debuff %s for %s',effect:toLogString(), action:toLogString())
       end
       return
@@ -1197,7 +1341,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
               if stackInfoUpdated then
                 action:saveEffect(effect)
                 l.saveAction(action)
-                if l.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+                if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
                   l.debug('[AKU]updated stack info %s', action:toLogString())
                 end
               end
@@ -1216,7 +1360,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- 3. update
   if changeType == EFFECT_RESULT_UPDATED then
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
-      if l.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
+      if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
         l.debug('[FRB]Update effect filtered.')
       end
       return
@@ -1225,7 +1369,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     local action,isNew = l.findActionByOldEffect(effect, effect.duration>0 and not effect.ability.icon:find('ability_buff_',1,true))
     if not action then
       l.ignoredCache:mark(notFoundKey)
-      if l.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
+      if addon.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
         l.debug('[EM?]update effect action not found')
       end
       return
@@ -1234,13 +1378,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       and effect.ability.icon:find('ability_debuff_',1,true)
       and not action.ability.icon:find('ability_arcanist_011',1,true) -- some debuff is useful, i.e. Rune of Edric Horror has a useful vulnerability
     then
-      if l.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
+      if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
         l.debug('[FRD]ignore update long debuff %s for %s',effect:toLogString(), action:toLogString())
       end
       return
     end
     if isNew and effect.duration==0 then
-      if l.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
+      if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
         l.debug('[FR0]ignore 0ms effect %s for %s',effect:toLogString(), action:toLogString())
       end
       return
@@ -1264,7 +1408,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       --  action trigger effect's end i.e. Crystal Fragment/Molten Whip
       if action.oldAction and action.oldAction.fake then
         if now < action:getStartTime()+1100 then
-          if l.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
+          if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
             l.debug('[ART]%s', action:toLogString())
           end
           l.removeAction(action)
@@ -1322,7 +1466,7 @@ l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
       if not IsUnitInCombat('player') then
         for key,action in pairs(l.idActionMap) do
           l.idActionMap[key] = nil
-          if l.debugEnabled(DSS_ACTION_CLEAR) then
+          if addon.debugEnabled(DSS_ACTION_CLEAR) then
             l.debug('[ACC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
               action:getDuration()/1000, action:getFlagsInfo())
           end
@@ -1341,7 +1485,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   -- 1. remove all enemy actions from self.idActionMap
   local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
-    if l.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
+    if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
       l.debug('[TC]processing %s,%s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
     end
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
@@ -1353,7 +1497,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
       if not l.getSavedVars().coreMultipleTargetTrackingWithoutClearing then
         l.idActionMap[key] = nil
       end
-      if l.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
+      if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
         l.debug('[TCO]%s@%.2f<%.2f>%s', action.ability:toLogString(), action:getStartTime()/1000,
           action:getDuration()/1000, action:getFlagsInfo())
       end
@@ -1375,19 +1519,19 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
           action.targetOut = false
           l.idActionMap[action.ability.id] = action
           numRestored = numRestored+1
-          if l.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
+          if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
             l.debug('[TCI]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
           if action.flags.forEnemy and action.targetId and action.targetId>0 then
             l.targetId = action.targetId
           end
         else
-          if l.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
+          if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
             l.debug('[TCX]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
         end
       else
-        if l.debugEnabled(DSS_TARGET_TRACK, buffName) then
+        if addon.debugEnabled(DSS_TARGET_TRACK, buffName) then
           l.debug('[T?]%s(%i)@%.2f<%.2f> not found', buffName, abilityId, timeStarted,timeEnding-timeStarted)
         end
       end
@@ -1475,7 +1619,7 @@ l.refineActions -- #()->()
     if action.stackCount==0 -- i.e. Grim Focus triggered by weapon attack
       and endTime < (action.fake and now or endLimit)
     then
-      if l.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
         l.debug('[ARR]%s,endTime:%d<endLimit:%d', action:toLogString(),
           endTime, endLimit)
       end
@@ -1488,7 +1632,7 @@ l.refineActions -- #()->()
   for key,action in pairs(l.timeActionMap) do
     if action:getEndTime() < endLimit then
       l.timeActionMap[key] = nil
-      if l.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
+      if addon.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
         l.debug('[ADT]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
       end
     end
@@ -1503,7 +1647,7 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   if old and old.sn == action.sn then
     l.idActionMap[action.ability.id] = nil
     removed = true
-    if l.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
+    if addon.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
       l.debug('[ADI]idActionMap:%s',action:toLogString())
     end
   end
@@ -1569,7 +1713,7 @@ l.saveAction -- #(Models#Action:action)->()
     end
     return names
   end
-  if l.debugEnabled(DSS_ACTION_SAVE,action.ability.name) then
+  if addon.debugEnabled(DSS_ACTION_SAVE,action.ability.name) then
     l.debug('[AS]%s\n>idActionMap:%s\n>timeActionMap:%s\n>cacheOfActionMatchingAction:%s',
       action:toLogString(),
       getValueAbilityNames(l.idActionMap),
@@ -1595,7 +1739,7 @@ m.getActionBySlot = l.getActionBySlot-- #(#number:hotbarCategory,#number:slotNum
 
 m.clearActions -- #()->()
 = function()
-  if l.debugEnabled(DSS_ACTION_CLEAR) then
+  if addon.debugEnabled(DSS_ACTION_CLEAR) then
     l.debug('[AC]')
   end
   l.actionQueue = {}
@@ -1608,7 +1752,7 @@ addon.clear = m.clearActions
 
 m.clearAreaActions -- #()->()
 = function()
-  if l.debugEnabled(DSS_ACTION_CLEAR) then
+  if addon.debugEnabled(DSS_ACTION_CLEAR) then
     l.debug('[ACA]')
   end
   local newQueue = {}
@@ -1666,322 +1810,6 @@ addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(coreSavedVarsDefaults)
 end)
 
-addon.extend(settings.EXTKEY_ADD_MENUS, function()
-  settings.addMenuOptions(
-    {
-      type = "submenu",
-      name = addon.text("Debug"),
-      controls = {
-        {
-          type = "checkbox",
-          name = addon.text("Log Tracked Effects"),
-          tooltip = addon.text("Print tracked effects to chat when they are applied"),
-          getFunc = function() return l.getSavedVars().coreLogTrackedEffectsInChat end,
-          setFunc = function(value) l.getSavedVars().coreLogTrackedEffectsInChat = value end,
-          width = "full",
-          default = coreSavedVarsDefaults.coreLogTrackedEffectsInChat,
-        },
-        {
-          type = "checkbox",
-          name = addon.text("Enable Debug Logging"),
-          tooltip = addon.text("Enable fine-grained debug logging without using console commands"),
-          getFunc = function() return l.getSavedVars().coreDebugLoggingEnabled end,
-          setFunc = function(value) l.getSavedVars().coreDebugLoggingEnabled = value end,
-          width = "full",
-          default = coreSavedVarsDefaults.coreDebugLoggingEnabled,
-        },
-        {
-          type = "submenu",
-          name = addon.text("Detailed Debug Options"),
-          disabled = function() return not l.getSavedVars().coreDebugLoggingEnabled end,
-          controls = {
-            {
-              type = "editbox",
-              name = addon.text("Ability Name Filter"),
-              tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
-              getFunc = function() return l.getSavedVars().coreDebugFilterPattern end,
-              setFunc = function(text) l.getSavedVars().coreDebugFilterPattern = text end,
-              isMultiline = false,
-              width = "full",
-              disabled = function() return not l.getSavedVars().coreDebugLoggingEnabled end,
-              default = coreSavedVarsDefaults.coreDebugFilterPattern,
-            },
-            {
-              type = "button",
-              name = addon.text("Enable All"),
-              tooltip = addon.text("Enable all debug sub-switches"),
-              func = function()
-                local sv = l.getSavedVars()
-                for _, settings in pairs(l.debugSettingMap) do
-                  for _, key in pairs(settings) do
-                    sv[key] = true
-                  end
-                end
-                settings.refreshMenu()
-              end,
-              width = "half",
-            },
-            {
-              type = "button",
-              name = addon.text("Disable All"),
-              tooltip = addon.text("Disable all debug sub-switches"),
-              func = function()
-                local sv = l.getSavedVars()
-                for _, settings in pairs(l.debugSettingMap) do
-                  for _, key in pairs(settings) do
-                    sv[key] = false
-                  end
-                end
-                settings.refreshMenu()
-              end,
-              width = "half",
-            },
-            {
-              type = "header",
-              name = addon.text("Action Debug"),
-              width = "full",
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Find [AF*]"),
-              tooltip = addon.text("Log action finding operations"),
-              getFunc = function() return l.getSavedVars().debugActionFind end,
-              setFunc = function(value) l.getSavedVars().debugActionFind = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionFind,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action New [AN*]"),
-              tooltip = addon.text("Log action creation"),
-              getFunc = function() return l.getSavedVars().debugActionNew end,
-              setFunc = function(value) l.getSavedVars().debugActionNew = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionNew,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Match [AM*]"),
-              tooltip = addon.text("Log action matching operations"),
-              getFunc = function() return l.getSavedVars().debugActionMatch end,
-              setFunc = function(value) l.getSavedVars().debugActionMatch = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionMatch,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Unref [AU]"),
-              tooltip = addon.text("Log unref operations"),
-              getFunc = function() return l.getSavedVars().debugActionUnref end,
-              setFunc = function(value) l.getSavedVars().debugActionUnref = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionUnref,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Stack [AK*]"),
-              tooltip = addon.text("Log stack count updates"),
-              getFunc = function() return l.getSavedVars().debugActionStack end,
-              setFunc = function(value) l.getSavedVars().debugActionStack = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionStack,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Remove [AR*]"),
-              tooltip = addon.text("Log action removals"),
-              getFunc = function() return l.getSavedVars().debugActionRemove end,
-              setFunc = function(value) l.getSavedVars().debugActionRemove = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionRemove,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Delete [AD*]"),
-              tooltip = addon.text("Log action deletions from maps"),
-              getFunc = function() return l.getSavedVars().debugActionDelete end,
-              setFunc = function(value) l.getSavedVars().debugActionDelete = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionDelete,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Save [AS]"),
-              tooltip = addon.text("Log when actions are saved"),
-              getFunc = function() return l.getSavedVars().debugActionSave end,
-              setFunc = function(value) l.getSavedVars().debugActionSave = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionSave,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Action Clear [AC*]"),
-              tooltip = addon.text("Log action clearing"),
-              getFunc = function() return l.getSavedVars().debugActionClear end,
-              setFunc = function(value) l.getSavedVars().debugActionClear = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugActionClear,
-            },
-            {
-              type = "header",
-              name = addon.text("Combat Debug"),
-              width = "full",
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Event [CE]"),
-              tooltip = addon.text("Log combat events"),
-              getFunc = function() return l.getSavedVars().debugCombatEvent end,
-              setFunc = function(value) l.getSavedVars().debugCombatEvent = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatEvent,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Fade [C-]"),
-              tooltip = addon.text("Log combat fade/cancel"),
-              getFunc = function() return l.getSavedVars().debugCombatFade end,
-              setFunc = function(value) l.getSavedVars().debugCombatFade = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatFade,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Stack [CS-]"),
-              tooltip = addon.text("Log combat stack consumption"),
-              getFunc = function() return l.getSavedVars().debugCombatStack end,
-              setFunc = function(value) l.getSavedVars().debugCombatStack = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatStack,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Tick [CT]"),
-              tooltip = addon.text("Log tick effects"),
-              getFunc = function() return l.getSavedVars().debugCombatTick end,
-              setFunc = function(value) l.getSavedVars().debugCombatTick = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatTick,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Duration [CD]"),
-              tooltip = addon.text("Log duration gained"),
-              getFunc = function() return l.getSavedVars().debugCombatDuration end,
-              setFunc = function(value) l.getSavedVars().debugCombatDuration = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatDuration,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Combat Channel [CC]"),
-              tooltip = addon.text("Log channel duration"),
-              getFunc = function() return l.getSavedVars().debugCombatChannel end,
-              setFunc = function(value) l.getSavedVars().debugCombatChannel = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugCombatChannel,
-            },
-            {
-              type = "header",
-              name = addon.text("Effect Debug"),
-              width = "full",
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Gain [E+]"),
-              tooltip = addon.text("Log effect gained events"),
-              getFunc = function() return l.getSavedVars().debugEffectGain end,
-              setFunc = function(value) l.getSavedVars().debugEffectGain = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectGain,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Fade [E-]"),
-              tooltip = addon.text("Log effect faded events"),
-              getFunc = function() return l.getSavedVars().debugEffectFade end,
-              setFunc = function(value) l.getSavedVars().debugEffectFade = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectFade,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Update [E=]"),
-              tooltip = addon.text("Log effect updated events"),
-              getFunc = function() return l.getSavedVars().debugEffectUpdate end,
-              setFunc = function(value) l.getSavedVars().debugEffectUpdate = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectUpdate,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Refresh [E*]"),
-              tooltip = addon.text("Log effect refresh events"),
-              getFunc = function() return l.getSavedVars().debugEffectRefresh end,
-              setFunc = function(value) l.getSavedVars().debugEffectRefresh = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectRefresh,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Transfer [E/]"),
-              tooltip = addon.text("Log effect transferred events"),
-              getFunc = function() return l.getSavedVars().debugEffectTransfer end,
-              setFunc = function(value) l.getSavedVars().debugEffectTransfer = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectTransfer,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Effect Miss [EM?]"),
-              tooltip = addon.text("Log effect action not found"),
-              getFunc = function() return l.getSavedVars().debugEffectMiss end,
-              setFunc = function(value) l.getSavedVars().debugEffectMiss = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugEffectMiss,
-            },
-            {
-              type = "header",
-              name = addon.text("Filter Debug"),
-              width = "full",
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Filter Accept [FA*]"),
-              tooltip = addon.text("Log accepted effects/actions"),
-              getFunc = function() return l.getSavedVars().debugFilterAccept end,
-              setFunc = function(value) l.getSavedVars().debugFilterAccept = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugFilterAccept,
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Filter Reject [FR*]"),
-              tooltip = addon.text("Log rejected effects/actions"),
-              getFunc = function() return l.getSavedVars().debugFilterReject end,
-              setFunc = function(value) l.getSavedVars().debugFilterReject = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugFilterReject,
-            },
-            {
-              type = "header",
-              name = addon.text("Target Debug"),
-              width = "full",
-            },
-            {
-              type = "checkbox",
-              name = addon.text("Target Track"),
-              tooltip = addon.text("Log target tracking changes"),
-              getFunc = function() return l.getSavedVars().debugTargetTrack end,
-              setFunc = function(value) l.getSavedVars().debugTargetTrack = value end,
-              width = "full",
-              default = coreSavedVarsDefaults.debugTargetTrack,
-            },
-          },
-        },
-      }
-    }
-  )
   settings.addMenuOptions(
     {
       type = "submenu",

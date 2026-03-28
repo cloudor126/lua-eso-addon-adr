@@ -60,6 +60,7 @@ put("Print tracked effects to chat when they are applied", "Mostrar efeitos rast
 put("Enable Debug Logging", "Habilitar Registro de Debug")
 put("Enable fine-grained debug logging without using console commands", "Habilitar registro de debug detalhado sem usar comandos de console")
 put("Detailed Debug Options", "Opções Detalhadas de Debug")
+put("Core Debug", "Debug do Core")
 put("Enable All", "Ativar tudo")
 put("Enable all debug sub-switches", "Ativar todas as sub-opções de debug")
 put("Disable All", "Desativar tudo")
