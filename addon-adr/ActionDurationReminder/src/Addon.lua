@@ -133,10 +133,10 @@ m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
 = function(dss, abilityName)
   if type(dss) ~= 'table' then return false end
   local sv = m.getSavedVars()
-  if not sv.coreDebugLoggingEnabled then return false end
+  if not sv.addonDebugLoggingEnabled then return false end
   local switch, subSwitch = dss[1], dss[2]
-  if abilityName and sv.coreDebugFilterPattern ~= '' then
-    if not abilityName:match(sv.coreDebugFilterPattern) then
+  if abilityName and sv.addonDebugFilterPattern ~= '' then
+    if not abilityName:match(sv.addonDebugFilterPattern) then
       return false
     end
   end
@@ -170,32 +170,32 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       type = "checkbox",
       name = addon.text("Log Tracked Effects"),
       tooltip = addon.text("Print tracked effects to chat when they are applied"),
-      getFunc = function() return m.getSavedVars().coreLogTrackedEffectsInChat end,
-      setFunc = function(value) m.getSavedVars().coreLogTrackedEffectsInChat = value end,
+      getFunc = function() return m.getSavedVars().addonLogTrackedEffectsInChat end,
+      setFunc = function(value) m.getSavedVars().addonLogTrackedEffectsInChat = value end,
       width = "full",
     },
     {
       type = "checkbox",
       name = addon.text("Enable Debug Logging"),
       tooltip = addon.text("Enable fine-grained debug logging without using console commands"),
-      getFunc = function() return m.getSavedVars().coreDebugLoggingEnabled end,
-      setFunc = function(value) m.getSavedVars().coreDebugLoggingEnabled = value end,
+      getFunc = function() return m.getSavedVars().addonDebugLoggingEnabled end,
+      setFunc = function(value) m.getSavedVars().addonDebugLoggingEnabled = value end,
       width = "full",
     },
     {
       type = "submenu",
       name = addon.text("Detailed Debug Options"),
-      disabled = function() return not m.getSavedVars().coreDebugLoggingEnabled end,
+      disabled = function() return not m.getSavedVars().addonDebugLoggingEnabled end,
       controls = {
         {
           type = "editbox",
           name = addon.text("Ability Name Filter"),
           tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
-          getFunc = function() return m.getSavedVars().coreDebugFilterPattern end,
-          setFunc = function(text) m.getSavedVars().coreDebugFilterPattern = text end,
+          getFunc = function() return m.getSavedVars().addonDebugFilterPattern end,
+          setFunc = function(text) m.getSavedVars().addonDebugFilterPattern = text end,
           isMultiline = false,
           width = "full",
-          disabled = function() return not m.getSavedVars().coreDebugLoggingEnabled end,
+          disabled = function() return not m.getSavedVars().addonDebugLoggingEnabled end,
         },
         {
           type = "button",
@@ -208,10 +208,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
                 sv[key] = true
               end
             end
-            local settingsModule = l.registry["Settings#M"]
-            if settingsModule and settingsModule.refreshMenu then
-              settingsModule.refreshMenu()
-            end
+            m.refreshMenu()
           end,
           width = "half",
         },
@@ -226,10 +223,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
                 sv[key] = false
               end
             end
-            local settingsModule = l.registry["Settings#M"]
-            if settingsModule and settingsModule.refreshMenu then
-              settingsModule.refreshMenu()
-            end
+            m.refreshMenu()
           end,
           width = "half",
         },
@@ -250,6 +244,18 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     controls = controls,
   })
 end)
+
+-- Addon-level defaults (Settings will pick these up directly)
+m.addonDefaults = {
+  addonLogTrackedEffectsInChat = false,
+  addonDebugFilterPattern = '',
+  addonDebugLoggingEnabled = false,
+}
+
+m.refreshMenu -- #()->()
+= function()
+  LAM2:RefreshPanel('ADRAddonOptions')
+end
 
 --========================================
 --        register

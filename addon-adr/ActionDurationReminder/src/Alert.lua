@@ -226,7 +226,7 @@ l.onCoreUpdate -- #()->()
     for id, cnt in pairs(cntMap) do
       if cnt > addon.alertLogCntValve then
         didLog = true
-        if savedVars.coreLogTrackedEffectsInChat then
+        if savedVars.addonLogTrackedEffectsInChat then
           df("[!ADR!] |t24:24:%s|t%s(%d) #%d", GetAbilityIcon(id), GetAbilityName(id), id, cnt)
         end
         -- also remove potential leaked actions

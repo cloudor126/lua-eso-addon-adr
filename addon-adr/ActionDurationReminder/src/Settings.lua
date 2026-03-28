@@ -32,6 +32,11 @@ l.menuOptions = {} --#list<#MenuOption>
 l.onStart -- #()->()
 = function()
   -- load saved vars with defaults
+  -- first, pick up addon-level defaults directly from addon
+  if addon.addonDefaults then
+    zo_mixin(savedVarsDefaults, addon.addonDefaults)
+  end
+  -- then let modules add their own defaults
   addon.callExtension(m.EXTKEY_ADD_DEFAULTS)
   l.accountSavedVars = ZO_SavedVars:NewAccountWide(SV_NAME, SV_VER, nil, savedVarsDefaults)
   l.characterSavedVars = ZO_SavedVars:New(SV_NAME, SV_VER, nil, savedVarsDefaults)
@@ -98,11 +103,6 @@ end
 m.getSavedVars -- #()->(#SavedVars)
 = function()
   return l.characterSavedVars.settingsAccountWide and l.accountSavedVars or l.characterSavedVars
-end
-
-m.refreshMenu -- #()->()
-= function()
-  LAM2:RefreshPanel('ADRAddonOptions')
 end
 
 --========================================

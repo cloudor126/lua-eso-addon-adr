@@ -8,11 +8,6 @@ local models = addon.load("Models#M")
 local l = {} -- #L
 local m = {l=l} -- #M
 
--- In Game Debug Usage:
--- Enable debug logging: /script ActionDurationReminder.getSavedVars().coreDebugLoggingEnabled=true
--- Set filter pattern: /script ActionDurationReminder.getSavedVars().coreDebugFilterPattern="Lash$"
--- Empty pattern matches all abilities. Pattern uses Lua string.match() syntax.
-
 local DS_ACTION = "action" -- debug switch for action
 local DS_EFFECT = "effect" -- debug switch for effect
 local DS_COMBAT = "combat" -- debug switch for combat events
@@ -63,9 +58,6 @@ local coreSavedVarsDefaults = {
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
-  coreLogTrackedEffectsInChat = false,
-  coreDebugFilterPattern = '', -- empty means no filter, e.g. " Lash$" for abilities ending with " Lash"
-  coreDebugLoggingEnabled = false, -- enable fine-grained debug logging
   -- fine-grained debug options (default all true when logging enabled)
   -- DS_ACTION
   debugActionFind = true,
@@ -1247,7 +1239,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         effect.endTime = action.endTime
       end
       local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
-      if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
+      if l.getSavedVars().addonLogTrackedEffectsInChat and effect.duration>0 then
         df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
       end
       action:saveEffect(effect)
@@ -1310,7 +1302,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       end
       return
     end
-    if l.getSavedVars().coreLogTrackedEffectsInChat and effect.duration>0 then
+    if l.getSavedVars().addonLogTrackedEffectsInChat and effect.duration>0 then
       df(' |t24:24:%s|t%s (id: %d) %ds',effect.ability.icon, effect.ability.name,effect.ability.id, effect.duration/1000)
     end
     action:saveEffect(effect)
