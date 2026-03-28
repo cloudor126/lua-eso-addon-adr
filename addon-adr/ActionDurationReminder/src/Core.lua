@@ -1707,6 +1707,36 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
               default = coreSavedVarsDefaults.coreDebugFilterPattern,
             },
             {
+              type = "button",
+              name = addon.text("Enable All"),
+              tooltip = addon.text("Enable all debug sub-switches"),
+              func = function()
+                local sv = l.getSavedVars()
+                for _, settings in pairs(l.debugSettingMap) do
+                  for _, key in pairs(settings) do
+                    sv[key] = true
+                  end
+                end
+                settings.refreshMenu()
+              end,
+              width = "half",
+            },
+            {
+              type = "button",
+              name = addon.text("Disable All"),
+              tooltip = addon.text("Disable all debug sub-switches"),
+              func = function()
+                local sv = l.getSavedVars()
+                for _, settings in pairs(l.debugSettingMap) do
+                  for _, key in pairs(settings) do
+                    sv[key] = false
+                  end
+                end
+                settings.refreshMenu()
+              end,
+              width = "half",
+            },
+            {
               type = "header",
               name = addon.text("Action Debug"),
               width = "full",

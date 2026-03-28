@@ -100,6 +100,11 @@ m.getSavedVars -- #()->(#SavedVars)
   return l.characterSavedVars.settingsAccountWide and l.accountSavedVars or l.characterSavedVars
 end
 
+m.refreshMenu -- #()->()
+= function()
+  LAM2:RefreshPanel('ADRAddonOptions')
+end
+
 --========================================
 --        register
 --========================================
