@@ -1,7 +1,7 @@
 local addon = ActionDurationReminder
 local settings = addon.load("Settings#M")
 local l = {
-  getSavedVars = function() return l.getSavedVars() end,
+  getSavedVars = function() return settings.getSavedVars() end,
 }
 local m = {l=l}
 
@@ -9,42 +9,10 @@ local m = {l=l}
 --        m
 --========================================
 
--- Debug module defaults
-m.debugDefaults = {
-  debugLogTrackedEffectsInChat = false,
-  debugFilterPattern = '',
-  debugLoggingEnabled = false,
-  -- fine-grained debug options (default all true when logging enabled)
-  -- DS_ACTION
-  debugActionFind = true,
-  debugActionNew = true,
-  debugActionMatch = true,
-  debugActionUnref = true,
-  debugActionStack = true,
-  debugActionRemove = true,
-  debugActionDelete = true,
-  debugActionSave = true,
-  debugActionClear = true,
-  -- DS_COMBAT
-  debugCombatEvent = true,
-  debugCombatFade = true,
-  debugCombatStack = true,
-  debugCombatTick = true,
-  debugCombatDuration = true,
-  debugCombatChannel = true,
-  -- DS_EFFECT
-  debugEffectGain = true,
-  debugEffectFade = true,
-  debugEffectUpdate = true,
-  debugEffectRefresh = true,
-  debugEffectTransfer = true,
-  debugEffectMiss = true,
-  -- DS_FILTER
-  debugFilterAccept = true,
-  debugFilterReject = true,
-  -- DS_TARGET
-  debugTargetTrack = true,
-}
+m.refreshMenu -- #()->()
+= function()
+  LAM2:RefreshPanel('ADRAddonOptions')
+end
 
 m.refreshMenu -- #()->()
 = function()
@@ -77,21 +45,57 @@ end
 l.debugSwitchMap = {}
 l.debugSettingMap = {}
 
+-- Debug module defaults
+local debugSavedVarsDefaults
+  = {
+    debugLogTrackedEffectsInChat = false,
+    debugFilterPattern = '',
+    debugLoggingEnabled = false,
+    -- fine-grained debug options (default all true when logging enabled)
+    -- DS_ACTION
+    debugActionFind = true,
+    debugActionNew = true,
+    debugActionMatch = true,
+    debugActionUnref = true,
+    debugActionStack = true,
+    debugActionRemove = true,
+    debugActionDelete = true,
+    debugActionSave = true,
+    debugActionClear = true,
+    -- DS_COMBAT
+    debugCombatEvent = true,
+    debugCombatFade = true,
+    debugCombatStack = true,
+    debugCombatTick = true,
+    debugCombatDuration = true,
+    debugCombatChannel = true,
+    -- DS_EFFECT
+    debugEffectGain = true,
+    debugEffectFade = true,
+    debugEffectUpdate = true,
+    debugEffectRefresh = true,
+    debugEffectTransfer = true,
+    debugEffectMiss = true,
+    -- DS_FILTER
+    debugFilterAccept = true,
+    debugFilterReject = true,
+    -- DS_TARGET
+    debugTargetTrack = true,
+  }
+
 --========================================
 --        init
 --========================================
 addon.hookStart(function()
-  -- Pick up addon defaults from Addon module
-  if addon.debugDefaults then
-    for k, v in pairs(addon.debugDefaults) do
-      m.debugDefaults[k] = v
-    end
-  end
-
   -- Get references to Addon's debug registration tables
   local addonModule = addon.load("Addon#M")
   l.debugSwitchMap = addonModule.l.debugSwitchMap or {}
   l.debugSettingMap = addonModule.l.debugSettingMap or {}
+end)
+
+-- Register debug defaults
+addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
+  settings.addDefaults(debugSavedVarsDefaults)
 end)
 
 -- Build Debug submenu in settings menu
