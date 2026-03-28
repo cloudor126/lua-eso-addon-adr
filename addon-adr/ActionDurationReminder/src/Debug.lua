@@ -14,11 +14,6 @@ m.refreshMenu -- #()->()
   LAM2:RefreshPanel('ADRAddonOptions')
 end
 
-m.refreshMenu -- #()->()
-= function()
-  LAM2:RefreshPanel('ADRAddonOptions')
-end
-
 -- Override addon.debugEnabled with full implementation using Settings
 addon.debugEnabled = function(dss, abilityName)
   if type(dss) ~= 'table' then return false end
@@ -190,11 +185,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     name = addon.text("Debug"),
     controls = controls,
   })
-end)
-
--- Add debug defaults
-addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
-  return m.debugDefaults
 end)
 
 --========================================
