@@ -57,36 +57,6 @@ local coreSavedVarsDefaults = {
   coreKeyWords = '',
   coreBlackKeyWords = '',
   coreClearWhenCombatEnd = false,
-  -- fine-grained debug options (default all true when logging enabled)
-  -- DS_ACTION
-  debugActionFind = true,
-  debugActionNew = true,
-  debugActionMatch = true,
-  debugActionUnref = true,
-  debugActionStack = true,
-  debugActionRemove = true,
-  debugActionDelete = true,
-  debugActionSave = true,
-  debugActionClear = true,
-  -- DS_COMBAT
-  debugCombatEvent = true,
-  debugCombatFade = true,
-  debugCombatStack = true,
-  debugCombatTick = true,
-  debugCombatDuration = true,
-  debugCombatChannel = true,
-  -- DS_EFFECT
-  debugEffectGain = true,
-  debugEffectFade = true,
-  debugEffectUpdate = true,
-  debugEffectRefresh = true,
-  debugEffectTransfer = true,
-  debugEffectMiss = true,
-  -- DS_FILTER
-  debugFilterAccept = true,
-  debugFilterReject = true,
-  -- DS_TARGET
-  debugTargetTrack = true,
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
