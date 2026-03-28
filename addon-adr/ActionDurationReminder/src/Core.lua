@@ -13,7 +13,6 @@ local DS_EFFECT = "effect" -- debug switch for effect
 local DS_COMBAT = "combat" -- debug switch for combat events
 local DS_TARGET = "target" -- debug switch for target
 local DS_FILTER = "filter" -- debug switch for filter
-local DS_ALL = "all" -- debug switch for all
 
 -- DSS (Debug Switch + SubSwitch) constants for addon.debugEnabled
 -- Filter
@@ -152,11 +151,11 @@ l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolea
       end
       if checkOk then
         if addon.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
-          l.debug('[FA]%s', left)
+          addon.debug('[FA]%s', left)
         end
         if dur then
           if addon.debugEnabled(DSS_FILTER_ACCEPT,abilityName) then
-            l.debug('[FA=]%s=%s', left, dur)
+            addon.debug('[FA=]%s=%s', left, dur)
           end
           dur = tonumber(dur)
           if dur then
@@ -195,12 +194,8 @@ l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolea
   return true
 end
 
-l.debug -- #(#string:format, #string:...)->()
-=function(format, ...)
-  d(os.date()..'>', string.format(format, ...))
-end
 -- Register Core debug switches with the addon framework
-addon.registerDebugSwitch(DS_ACTION, addon.text("Action Debug"))
+addon.registerDebugSwitch(DS_ACTION, "Action Debug")
 addon.registerDebugSubSwitch(DS_ACTION, 'find', 'debugActionFind', 'Action Find [AF*]', 'Log action finding operations')
 addon.registerDebugSubSwitch(DS_ACTION, 'new', 'debugActionNew', 'Action New [AN*]', 'Log action creation')
 addon.registerDebugSubSwitch(DS_ACTION, 'match', 'debugActionMatch', 'Action Match [AM*]', 'Log action matching operations')
@@ -211,7 +206,7 @@ addon.registerDebugSubSwitch(DS_ACTION, 'delete', 'debugActionDelete', 'Action D
 addon.registerDebugSubSwitch(DS_ACTION, 'save', 'debugActionSave', 'Action Save [AS]', 'Log when actions are saved')
 addon.registerDebugSubSwitch(DS_ACTION, 'clear', 'debugActionClear', 'Action Clear [AC*]', 'Log action clearing')
 
-addon.registerDebugSwitch(DS_EFFECT, addon.text("Effect Debug"))
+addon.registerDebugSwitch(DS_EFFECT, "Effect Debug")
 addon.registerDebugSubSwitch(DS_EFFECT, 'gain', 'debugEffectGain', 'Effect Gain [E+]', 'Log effect gained events')
 addon.registerDebugSubSwitch(DS_EFFECT, 'fade', 'debugEffectFade', 'Effect Fade [E-]', 'Log effect faded events')
 addon.registerDebugSubSwitch(DS_EFFECT, 'update', 'debugEffectUpdate', 'Effect Update [E=]', 'Log effect updated events')
@@ -219,7 +214,7 @@ addon.registerDebugSubSwitch(DS_EFFECT, 'refresh', 'debugEffectRefresh', 'Effect
 addon.registerDebugSubSwitch(DS_EFFECT, 'transfer', 'debugEffectTransfer')
 addon.registerDebugSubSwitch(DS_EFFECT, 'miss', 'debugEffectMiss')
 
-addon.registerDebugSwitch(DS_COMBAT, addon.text("Combat Debug"))
+addon.registerDebugSwitch(DS_COMBAT, "Combat Debug")
 addon.registerDebugSubSwitch(DS_COMBAT, 'event', 'debugCombatEvent', 'Combat Event [CE]', 'Log combat events')
 addon.registerDebugSubSwitch(DS_COMBAT, 'fade', 'debugCombatFade', 'Combat Fade [C-]', 'Log combat fade/cancel')
 addon.registerDebugSubSwitch(DS_COMBAT, 'stack', 'debugCombatStack', 'Combat Stack [CS-]', 'Log combat stack consumption')
@@ -227,11 +222,11 @@ addon.registerDebugSubSwitch(DS_COMBAT, 'tick', 'debugCombatTick', 'Combat Tick 
 addon.registerDebugSubSwitch(DS_COMBAT, 'duration', 'debugCombatDuration', 'Combat Duration [CD]', 'Log duration gained')
 addon.registerDebugSubSwitch(DS_COMBAT, 'channel', 'debugCombatChannel', 'Combat Channel [CC]', 'Log channel duration')
 
-addon.registerDebugSwitch(DS_FILTER, addon.text("Filter Debug"))
+addon.registerDebugSwitch(DS_FILTER, "Filter Debug")
 addon.registerDebugSubSwitch(DS_FILTER, 'accept', 'debugFilterAccept', 'Filter Accept [FA*]', 'Log accepted effects/actions')
 addon.registerDebugSubSwitch(DS_FILTER, 'reject', 'debugFilterReject', 'Filter Reject [FR*]', 'Log rejected effects/actions')
 
-addon.registerDebugSwitch(DS_TARGET, addon.text("Target Debug"))
+addon.registerDebugSwitch(DS_TARGET, "Target Debug")
 addon.registerDebugSubSwitch(DS_TARGET, 'track', 'debugTargetTrack', 'Target Track', 'Log target tracking changes')
 
 -- Register Core debug options for the settings menu
@@ -244,7 +239,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   if l.lastAction and l.lastAction.flags.forGround then
     if not notMatched[l.lastAction.sn] and l.lastAction:matchesNewEffect(effect) then
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
+        addon.debug('[AFA]found last action by new match:%s@%.2f', l.lastAction.ability.name, l.lastAction.startTime/1000)
       end
       return l.lastAction
     end
@@ -254,7 +249,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   if l.lastEffectAction and l.lastEffectAction.lastEffectTime+50>effect.startTime then
     if not notMatched[l.lastEffectAction.sn] and l.lastEffectAction.ability:matches(effect.ability,false) then
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
+        addon.debug('[AFA]found last effect action by new match:%s@%.2f', l.lastEffectAction.ability.name, l.lastEffectAction.startTime/1000)
       end
       return l.lastEffectAction
     end
@@ -265,13 +260,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
     local action = l.actionQueue[i] --Models#Action
     if not notMatched[action.sn] and action:matchesNewEffect(effect) then
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found one of queue by new match:%s', action:toLogString())
+        addon.debug('[AFA]found one of queue by new match:%s', action:toLogString())
       end
       return action
     end
     notMatched[action.sn] = true
     if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-      l.debug('[AFX]not found one of queue by new match:%s', action:toLogString())
+      addon.debug('[AFX]not found one of queue by new match:%s', action:toLogString())
     end
   end
   -- try saved actions
@@ -279,13 +274,13 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
     local action=var --Models#Action
     if  not notMatched[action.sn] and action:matchesNewEffect(effect) then
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+        addon.debug('[AFA]found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
     notMatched[action.sn] = true
     if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-      l.debug('[AFX]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+      addon.debug('[AFX]not found one of saved by new match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
   end
   -- try slotted actions for non minor buff effects
@@ -295,7 +290,7 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   end
   -- not found
   if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-    l.debug('[AF?]not found new match in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
+    addon.debug('[AF?]not found new match in %i actions, lastAction: %s, lastEffectAction: %s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil',
       l.lastEffectAction and l.lastEffectAction.ability.name or 'nil')
   end
   return nil
@@ -309,7 +304,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
     if action:matchesOldEffect(effect) then
       if action.newAction then action = action:getNewest() end
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found one of queue by old match:%s@%.2f', action.ability.name, action.startTime/1000)
+        addon.debug('[AFA]found one of queue by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
@@ -317,7 +312,7 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
   for key, action in pairs(l.idActionMap) do
     if action:matchesOldEffect(effect) then
       if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-        l.debug('[AFA]found one of saved by old match:%s@%.2f', action.ability.name, action.startTime/1000)
+        addon.debug('[AFA]found one of saved by old match:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
@@ -328,14 +323,14 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
       local action = l.actionQueue[i]
       if action:matchesNewEffect(effect) then
         if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-          l.debug('[AFA]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
+          addon.debug('[AFA]found one of queue by new match:%s@%.2f', action.ability.name, action.startTime/1000)
         end
         return action,true
       end
     end
   end
   if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-    l.debug('[AF?]not found old match in %i actions, last:%s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil')
+    addon.debug('[AF?]not found old match in %i actions, last:%s', #l.actionQueue, l.lastAction and l.lastAction.ability.name or 'nil')
   end
   return nil
 end
@@ -347,7 +342,7 @@ l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
       and action.tickEffect.unitId == unitId
     then
       if addon.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
-        l.debug('[AFA]found action by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
+        addon.debug('[AFA]found action by tickEffectId:%s@%.2f', action.ability.name, action.startTime/1000)
       end
       return action
     end
@@ -406,12 +401,12 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
     local action = models.newAction(matchSlotNum,matchHotbarCategory)
     action.fake = true
     if addon.debugEnabled(DSS_ACTION_FIND, action.ability.name) then
-      l.debug('[AFA]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
+      addon.debug('[AFA]found one by bar match:%s@%.2f', action.ability.name, action.startTime/1000)
     end
     return action
   end
   if addon.debugEnabled(DSS_ACTION_FIND, effect.ability.name) then
-    l.debug('[AF?]not found in bar actions')
+    addon.debug('[AF?]not found in bar actions')
   end
   return nil
 end
@@ -454,7 +449,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
         if addon.debugEnabled(DSS_ACTION_MATCH, a.ability.name) then
-          l.debug('[AMI]related name')
+          addon.debug('[AMI]related name')
         end
         l.cacheOfActionMatchingAction[cacheKey] = true
         l.cacheOfActionMatchingAction[reverseKey] = true
@@ -471,7 +466,7 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
       and a.inCombat and action.inCombat -- only match if both in combat (auto-swap)
     then
       if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
-        l.debug('[AMI]slot')
+        addon.debug('[AMI]slot')
       end
       l.cacheOfActionMatchingAction[cacheKey] = true
       l.cacheOfActionMatchingAction[reverseKey] = true
@@ -532,7 +527,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 2. create action
   local action = models.newAction(slotNum,GetActiveHotbarCategory())
   if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
-    l.debug('[AN]%s', action:toLogString())
+    addon.debug('[AN]%s', action:toLogString())
   end
   if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
     or action.ability.icon:find('dark_haze',1,true) -- rune cage
@@ -543,7 +538,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 3. filter by keywords
   if not l.checkAbilityIdAndNameOk(action.ability.id, action.ability.name) then
     if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
-      l.debug('[AN-]filtered by keywords')
+      addon.debug('[AN-]filtered by keywords')
     end
     return
   end
@@ -552,7 +547,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
     action.configDuration = l.idDurationMap[action.ability.id]
     action.endTime = action.startTime + action.configDuration
     if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
-      l.debug('[AN=]modified to %d, %s', action.configDuration, action:toLogString())
+      addon.debug('[AN=]modified to %d, %s', action.configDuration, action:toLogString())
     end
   end
   -- 4. queue it
@@ -563,12 +558,12 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
 
     if not sameNameAction then
       if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
-        l.debug('[AM-]none')
+        addon.debug('[AM-]none')
       end
     elseif sameNameAction.saved then
       sameNameAction = sameNameAction:getNewest()
       if addon.debugEnabled(DSS_ACTION_MATCH, sameNameAction.ability.name) then
-        l.debug('[AMA]%s', sameNameAction:toLogString())
+        addon.debug('[AMA]%s', sameNameAction:toLogString())
       end
       sameNameAction.newAction = action
       action.effectList = {}
@@ -604,7 +599,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
           if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
-            l.debug('[AMI]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
+            addon.debug('[AMI]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
           end
         end
       end
@@ -662,7 +657,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
   if addon.debugEnabled(DSS_COMBAT_EVENT, abilityName) then
-    l.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
+    addon.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
       GetAbilityIcon(abilityId),
       abilityName,
       abilityId,
@@ -693,13 +688,13 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
     local _=nil
     if addon.debugEnabled(DSS_COMBAT_FADE, abilityName) then
-      l.debug('[C-]EFFECT_FADED,%s(%d),target:%s(%d),source:%s(%d)',
+      addon.debug('[C-]EFFECT_FADED,%s(%d),target:%s(%d),source:%s(%d)',
         abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
-        l.debug('[C-]cancel channeling %s', action:toLogString())
+        addon.debug('[C-]cancel channeling %s', action:toLogString())
       end
       action.channelStartTime = 0
       action.channelEndTime = 0
@@ -710,7 +705,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
-        l.debug('[C-]cancel tick %s', action:toLogString())
+        addon.debug('[C-]cancel tick %s', action:toLogString())
       end
       l.removeAction(action)
     end
@@ -749,7 +744,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           action.stackEffect2.stackCount = action.stackEffect2.stackCount - 1
         end
         if addon.debugEnabled(DSS_COMBAT_STACK, action.ability.name) then
-          l.debug('[CS-]consumed %s:%d', action.ability.name, action.stackCount2)
+          addon.debug('[CS-]consumed %s:%d', action.ability.name, action.stackCount2)
         end
       end
     end
@@ -764,7 +759,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
       local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
       local effect = models.newEffect(ability, 'player', sourceUnitId, now, now, 0, tickRate);
       if addon.debugEnabled(DSS_COMBAT_TICK, effect.ability.name) then
-        l.debug('[CT]%s', effect:toLogString())
+        addon.debug('[CT]%s', effect:toLogString())
       end
       local action = l.findActionByNewEffect(effect) -- Models#Action
       if action then
@@ -823,7 +818,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   if result == ACTION_RESULT_EFFECT_GAINED_DURATION then
     local _ = nil
     if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
-      l.debug('[CD]%s(%d)+%d', abilityName, abilityId, hitValue)
+      addon.debug('[CD]%s(%d)+%d', abilityName, abilityId, hitValue)
     end
     -- for not saved actions, i.e. ground action
     for key, action in pairs(l.actionQueue) do
@@ -886,7 +881,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           action.channelEndTime = now+duration
           action.channelUnitId = targetUnitId
           if addon.debugEnabled(DSS_COMBAT_CHANNEL, action.ability.name) then
-            l.debug('[CC]%s', action:toLogString())
+            addon.debug('[CC]%s', action:toLogString())
           end
           return
         end
@@ -914,7 +909,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   }
   local ctInfo = changeTypeMap[changeType] or {'unknown','E?'}
   if addon.debugEnabled({DS_EFFECT, ctInfo[1]}, effectName) then
-    l.debug('[%s%s]%s(%s)@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
+    addon.debug('[%s%s]%s(%s)@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
       ctInfo[2],
       stackCount > 0 and tostring(stackCount) or '',
       effectName,
@@ -949,14 +944,14 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   -- ignore rubbish effects
   if l.ignoredIds[abilityId] then
     if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
-      l.debug('[FRI]%s(%d),%s', effectName, abilityId, l.ignoredIds[abilityId])
+      addon.debug('[FRI]%s(%d),%s', effectName, abilityId, l.ignoredIds[abilityId])
     end
     return
   end
 
   if not l.checkAbilityIdAndNameOk(abilityId, effectName) then
     if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
-      l.debug('[FRB]%s', effectName)
+      addon.debug('[FRB]%s', effectName)
     end
     return
   end
@@ -965,7 +960,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   local notFoundCount = l.ignoredCache:get(notFoundKey)
   if notFoundCount>=3 then
     if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
-      l.debug('[FNC]%s', notFoundKey)
+      addon.debug('[FNC]%s', notFoundKey)
     end
     l.ignoredCache:mark(notFoundKey)
     return
@@ -978,7 +973,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   --  df(' |t24:24:%s|t%s (id: %d) mark: %d',iconName, effectName,abilityId,numMarks)
   if numMarks>=12 then
     if addon.debugEnabled(DSS_FILTER_REJECT,effectName) then
-      l.debug('[FRN]%s', key)
+      addon.debug('[FRN]%s', key)
     end
     return
   end
@@ -1009,7 +1004,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if l.lastAction and not l.lastAction.flags.forGround and startTime and
     startTime - (l.lastAction.startTime + l.lastAction.castTime)>2000 then
     if addon.debugEnabled(DSS_ACTION_UNREF, l.lastAction.ability.name) then
-      l.debug('[AU]unref lastAction by time')
+      addon.debug('[AU]unref lastAction by time')
     end
     l.lastAction = nil
   end
@@ -1032,19 +1027,19 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       l.timeActionMap[oldEffect.startTime] = nil
       if stackInfoUpdated then
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-          l.debug('[AKC]purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
+          addon.debug('[AKC]purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
         end
         if action:getEndTime() <= now+20 and action:getStartTime()>now-500   -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
           and not action.oldAction -- check those with old action i.e. Assassin Will replacing Merciless Resolve
         then
           if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
-            l.debug('[ARP]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
+            addon.debug('[ARP]%s@%.2f~%.2f', action.ability:toLogString(), action.startTime/1000, action:getEndTime()/1000)
           end
           l.removeAction(action)
         end
       else
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-          l.debug('[AKC]purged ignored stack info %s', action:toLogString())
+          addon.debug('[AKC]purged ignored stack info %s', action:toLogString())
         end
       end
     else
@@ -1052,13 +1047,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       if not action then
         l.ignoredCache:mark(notFoundKey)
         if addon.debugEnabled(DSS_EFFECT_MATCH, effect.ability.name) then
-          l.debug('[]New stack effect action not found.')
+          addon.debug('[]New stack effect action not found.')
         end
         return
       end
       if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
         if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
-          l.debug('[FRB]New stack effect filtered.')
+          addon.debug('[FRB]New stack effect filtered.')
         end
         return
       end
@@ -1074,12 +1069,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       action:saveEffect(effect)
       if stackInfoUpdated then
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-          l.debug('[AKU]updated stack info %s', action:toLogString())
+          addon.debug('[AKU]updated stack info %s', action:toLogString())
         end
         l.saveAction(action)
       else
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-          l.debug('[AK~]updated ignored stack info %s', action:toLogString())
+          addon.debug('[AK~]updated ignored stack info %s', action:toLogString())
         end
       end
     end
@@ -1100,7 +1095,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
         endTime = startTime+duration
       else
         if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
-          l.debug('[FR0]New effect without duration.')
+          addon.debug('[FR0]New effect without duration.')
         end
         --      l.ignoredIds[abilityId] = 'new effect without duration' -- NOTE: This could happen very frequently
         return
@@ -1108,7 +1103,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     end
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
       if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
-        l.debug('[FRB]New effect filtered.')
+        addon.debug('[FRB]New effect filtered.')
       end
       return
     end
@@ -1116,7 +1111,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     if not action then
       l.ignoredCache:mark(notFoundKey)
       if addon.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
-        l.debug('[EM?]new effect action not found')
+        addon.debug('[EM?]new effect action not found')
       end
       return
     end
@@ -1127,7 +1122,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       and not action.ability.icon:find('ability_arcanist_011',1,true) -- some debuff is useful, i.e. Rune of Edric Horror has a useful vulnerability
     then
       if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
-        l.debug('[FRD]ignore longer debuff %s for %s',effect:toLogString(), action:toLogString())
+        addon.debug('[FRD]ignore longer debuff %s for %s',effect:toLogString(), action:toLogString())
       end
       return
     end
@@ -1163,7 +1158,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
                 action:saveEffect(effect)
                 l.saveAction(action)
                 if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-                  l.debug('[AKU]updated stack info %s', action:toLogString())
+                  addon.debug('[AKU]updated stack info %s', action:toLogString())
                 end
               end
             end
@@ -1182,7 +1177,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   if changeType == EFFECT_RESULT_UPDATED then
     if not l.checkAbilityIdAndNameOk(effect.ability.id, effect.ability.name) then
       if addon.debugEnabled(DSS_FILTER_REJECT, effect.ability.name) then
-        l.debug('[FRB]Update effect filtered.')
+        addon.debug('[FRB]Update effect filtered.')
       end
       return
     end
@@ -1191,7 +1186,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     if not action then
       l.ignoredCache:mark(notFoundKey)
       if addon.debugEnabled(DSS_EFFECT_MISS, effect.ability.name) then
-        l.debug('[EM?]update effect action not found')
+        addon.debug('[EM?]update effect action not found')
       end
       return
     end
@@ -1200,13 +1195,13 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       and not action.ability.icon:find('ability_arcanist_011',1,true) -- some debuff is useful, i.e. Rune of Edric Horror has a useful vulnerability
     then
       if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
-        l.debug('[FRD]ignore update long debuff %s for %s',effect:toLogString(), action:toLogString())
+        addon.debug('[FRD]ignore update long debuff %s for %s',effect:toLogString(), action:toLogString())
       end
       return
     end
     if isNew and effect.duration==0 then
       if addon.debugEnabled(DSS_FILTER_REJECT,effect.ability.name) then
-        l.debug('[FR0]ignore 0ms effect %s for %s',effect:toLogString(), action:toLogString())
+        addon.debug('[FR0]ignore 0ms effect %s for %s',effect:toLogString(), action:toLogString())
       end
       return
     end
@@ -1230,7 +1225,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       if action.oldAction and action.oldAction.fake then
         if now < action:getStartTime()+1100 then
           if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
-            l.debug('[ART]%s', action:toLogString())
+            addon.debug('[ART]%s', action:toLogString())
           end
           l.removeAction(action)
         end
@@ -1288,7 +1283,7 @@ l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
         for key,action in pairs(l.idActionMap) do
           l.idActionMap[key] = nil
           if addon.debugEnabled(DSS_ACTION_CLEAR) then
-            l.debug('[ACC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
+            addon.debug('[ACC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
               action:getDuration()/1000, action:getFlagsInfo())
           end
         end
@@ -1307,7 +1302,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   local ignoredEffectIds = {}
   for key,action in pairs(l.idActionMap) do
     if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
-      l.debug('[TC]processing %s,%s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
+      addon.debug('[TC]processing %s,%s',action.ability.name, action.flags.onlyOneTarget and 'onlyOneTarget' or 'normal')
     end
     if action.flags.onlyOneTarget then -- e.g. daedric curse, rune cage,  we do not switch on target changing
       for i, effect in ipairs(action.effectList) do
@@ -1319,7 +1314,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
         l.idActionMap[key] = nil
       end
       if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
-        l.debug('[TCO]%s@%.2f<%.2f>%s', action.ability:toLogString(), action:getStartTime()/1000,
+        addon.debug('[TCO]%s@%.2f<%.2f>%s', action.ability:toLogString(), action:getStartTime()/1000,
           action:getDuration()/1000, action:getFlagsInfo())
       end
     end
@@ -1341,19 +1336,19 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
           l.idActionMap[action.ability.id] = action
           numRestored = numRestored+1
           if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
-            l.debug('[TCI]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
+            addon.debug('[TCI]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
           if action.flags.forEnemy and action.targetId and action.targetId>0 then
             l.targetId = action.targetId
           end
         else
           if addon.debugEnabled(DSS_TARGET_TRACK, action.ability.name) then
-            l.debug('[TCX]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
+            addon.debug('[TCX]%s@%.2f<%.2f>', action.ability:toLogString(), action:getStartTime()/1000, action:getDuration()/1000)
           end
         end
       else
         if addon.debugEnabled(DSS_TARGET_TRACK, buffName) then
-          l.debug('[T?]%s(%i)@%.2f<%.2f> not found', buffName, abilityId, timeStarted,timeEnding-timeStarted)
+          addon.debug('[T?]%s(%i)@%.2f<%.2f> not found', buffName, abilityId, timeStarted,timeEnding-timeStarted)
         end
       end
     end
@@ -1441,7 +1436,7 @@ l.refineActions -- #()->()
       and endTime < (action.fake and now or endLimit)
     then
       if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
-        l.debug('[ARR]%s,endTime:%d<endLimit:%d', action:toLogString(),
+        addon.debug('[ARR]%s,endTime:%d<endLimit:%d', action:toLogString(),
           endTime, endLimit)
       end
       l.removeAction(action)
@@ -1454,7 +1449,7 @@ l.refineActions -- #()->()
     if action:getEndTime() < endLimit then
       l.timeActionMap[key] = nil
       if addon.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
-        l.debug('[ADT]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
+        addon.debug('[ADT]%s@%.2f<%i>',action.ability:toLogString(),action.startTime/1000, action:getDuration()/1000)
       end
     end
   end
@@ -1469,7 +1464,7 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
     l.idActionMap[action.ability.id] = nil
     removed = true
     if addon.debugEnabled(DSS_ACTION_DELETE, action.ability.name) then
-      l.debug('[ADI]idActionMap:%s',action:toLogString())
+      addon.debug('[ADI]idActionMap:%s',action:toLogString())
     end
   end
   -- remove from timeActionMap
@@ -1535,7 +1530,7 @@ l.saveAction -- #(Models#Action:action)->()
     return names
   end
   if addon.debugEnabled(DSS_ACTION_SAVE,action.ability.name) then
-    l.debug('[AS]%s\n>idActionMap:%s\n>timeActionMap:%s\n>cacheOfActionMatchingAction:%s',
+    addon.debug('[AS]%s\n>idActionMap:%s\n>timeActionMap:%s\n>cacheOfActionMatchingAction:%s',
       action:toLogString(),
       getValueAbilityNames(l.idActionMap),
       getValueAbilityNames(l.timeActionMap),
@@ -1561,7 +1556,7 @@ m.getActionBySlot = l.getActionBySlot-- #(#number:hotbarCategory,#number:slotNum
 m.clearActions -- #()->()
 = function()
   if addon.debugEnabled(DSS_ACTION_CLEAR) then
-    l.debug('[AC]')
+    addon.debug('[AC]')
   end
   l.actionQueue = {}
   l.idActionMap = {}
@@ -1574,7 +1569,7 @@ addon.clear = m.clearActions
 m.clearAreaActions -- #()->()
 = function()
   if addon.debugEnabled(DSS_ACTION_CLEAR) then
-    l.debug('[ACA]')
+    addon.debug('[ACA]')
   end
   local newQueue = {}
   for key, var in ipairs(l.actionQueue) do
@@ -1593,14 +1588,6 @@ m.clearAreaActions -- #()->()
   l.timeActionMap = newMap
 end
 addon.clearAreaActions = m.clearAreaActions
-
-m.debug
-= function() --#()->()
-  for key, var in pairs(l.idActionMap) do
-    df('%s(%d)@%d:%s',var.ability.name,var.ability.id,var.startTime,var:getEffectsInfo())
-end
-end
-addon.debug = m.debug
 
 m.getIdActionMap -- #()->(#map<#number,Models#Action>)
 = function()
