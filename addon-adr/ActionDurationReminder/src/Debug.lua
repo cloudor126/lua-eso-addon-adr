@@ -26,7 +26,7 @@ addon.debugEnabled = function(dss, abilityName)
     end
   end
   if subSwitch then
-    local info = addon.getDebugSettingMap[switch] and addon.getDebugSettingMap[switch][subSwitch]
+    local info = addon.getDebugSettingMap()[switch] and addon.getDebugSettingMap()[switch][subSwitch]
     if info then
       return sv[info[1]]
     end
@@ -55,7 +55,7 @@ addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   -- Add Debug module's own defaults
   settings.addDefaults(debugSavedVarsDefaults)
   -- Add all DSS defaults (all true)
-  for _, subs in pairs(addon.getDebugSettingMap) do
+  for _, subs in pairs(addon.getDebugSettingMap()) do
     for _, info in pairs(subs) do
       local settingKey = info[1]
       settings.addDefaults({[settingKey] = true})
@@ -103,7 +103,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           tooltip = addon.text("Enable all debug sub-switches"),
           func = function()
             local sv = l.getSavedVars()
-            for _, settings in pairs(addon.getDebugSettingMap) do
+            for _, settings in pairs(addon.getDebugSettingMap()) do
               for _, info in pairs(settings) do
                 sv[info[1]] = true
               end
@@ -118,7 +118,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           tooltip = addon.text("Disable all debug sub-switches"),
           func = function()
             local sv = l.getSavedVars()
-            for _, settings in pairs(addon.getDebugSettingMap) do
+            for _, settings in pairs(addon.getDebugSettingMap()) do
               for _, info in pairs(settings) do
                 sv[info[1]] = false
               end
@@ -132,9 +132,9 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
   }
 
   -- Build debug option controls from registered switches/subswitches
-  for switch, displayName in pairs(addon.getDebugSwitchMap) do
+  for switch, displayName in pairs(addon.getDebugSwitchMap()) do
     table.insert(controls[3].controls, { type = "header", name = addon.text(displayName) })
-    local subs = addon.getDebugSettingMap[switch] or {}
+    local subs = addon.getDebugSettingMap()[switch] or {}
     for subSwitch, info in pairs(subs) do
       local settingKey = info[1]
       local subDisplayName = info[2]
