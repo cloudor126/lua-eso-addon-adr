@@ -145,7 +145,7 @@ end
 
 m.debug -- #(#string:format, #string:...)->()
 = function(format, ...)
-  df('[ADR] ' .. format, ...)
+  df(os.date() .. ' [ADR] ' .. format, ...)
 end
 
 --========================================
