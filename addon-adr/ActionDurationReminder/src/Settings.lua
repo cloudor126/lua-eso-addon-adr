@@ -33,8 +33,8 @@ l.onStart -- #()->()
 = function()
   -- load saved vars with defaults
   -- first, pick up addon-level defaults directly from addon
-  if addon.addonDefaults then
-    zo_mixin(savedVarsDefaults, addon.addonDefaults)
+  if addon.debugDefaults then
+    zo_mixin(savedVarsDefaults, addon.debugDefaults)
   end
   -- then let modules add their own defaults
   addon.callExtension(m.EXTKEY_ADD_DEFAULTS)
