@@ -129,31 +129,6 @@ m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:setting
   l.debugSettingMap[switch][subSwitch] = {settingKey, displayName, tooltip}
 end
 
-m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
-= function(dss, abilityName)
-  if type(dss) ~= 'table' then return false end
-  local sv = m.getSavedVars()
-  if not sv.addonDebugLoggingEnabled then return false end
-  local switch, subSwitch = dss[1], dss[2]
-  if abilityName and sv.addonDebugFilterPattern ~= '' then
-    if not abilityName:match(sv.addonDebugFilterPattern) then
-      return false
-    end
-  end
-  if subSwitch then
-    local settingKey = l.debugSettingMap[switch] and l.debugSettingMap[switch][subSwitch]
-    if settingKey then
-      return sv[settingKey]
-    end
-  end
-  return false
-end
-
-m.debug -- #(#string:format, #string:...)->()
-= function(format, ...)
-  df('[ADR] ' .. format, ...)
-end
-
 m.getSavedVars -- #()->(#SavedVars)
 = function()
   local settings = l.registry["Settings#M"]
