@@ -40,6 +40,7 @@ local barSavedVarsDefaults
     barCooldownEndingColor = {1,0,0},
     barCooldownOpacity = 100,
     barCooldownThickness = 2,
+    barLowPriorityLabelColor = {0.6, 0.6, 0.6}, -- gray for low priority effects
   }
 
 --========================================
@@ -535,6 +536,19 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             r = barSavedVarsDefaults.barCooldownEndingColor[1],
             g = barSavedVarsDefaults.barCooldownEndingColor[2],
             b = barSavedVarsDefaults.barCooldownEndingColor[3],
+          }
+        },{
+          type = "colorpicker",
+          name = text("Low Priority Effect Color"),
+          tooltip = text("Color for low priority effects (tail effects, Crux, etc.) displayed with angle brackets"),
+          getFunc = function() return unpack(l.getSavedVars().barLowPriorityLabelColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barLowPriorityLabelColor={r,g,b} end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
+          default = {
+            r = barSavedVarsDefaults.barLowPriorityLabelColor[1],
+            g = barSavedVarsDefaults.barLowPriorityLabelColor[2],
+            b = barSavedVarsDefaults.barLowPriorityLabelColor[3],
           }
         }
       }})

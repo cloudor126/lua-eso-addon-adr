@@ -421,9 +421,12 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
     if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
       hint = string.format('%d', remain/1000)
     end
-    -- Show brackets for secondary effects (tail effects, Crux, etc.)
-    if optEffect and (optEffect.staticLavelIsSecondary or optEffect.isCrux) then
+    -- Show brackets for low priority effects (tail effects, Crux, etc.)
+    if optEffect and (optEffect.levelIsLow or optEffect.isCrux) then
       hint = string.format('<%d>', remain/1000)
+      self.label:SetColor(unpack(l.getSavedVars().barLowPriorityLabelColor))
+    else
+      self.label:SetColor(1, 1, 1)
     end
     self.label:SetText(hint)
     self.label:SetHidden(false)
