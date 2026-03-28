@@ -118,15 +118,15 @@ l.debugSettingMap = {} -- #map<#string,#map<#string,#string>> switch -> subSwitc
 m.registerDebugSwitch -- #(#string:switch, #string:displayName)->()
 = function(switch, displayName)
   l.debugSwitchMap[switch] = displayName
-  l.debugSettingMap[switch] = {}
 end
 
-m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:settingKey, #string:displayName, #string:tooltip)->()
-= function(switch, subSwitch, settingKey, displayName, tooltip)
-  if not l.debugSettingMap[switch] then
-    l.debugSettingMap[switch] = {}
+m.registerDebugSubSwitch -- #(#list<string>:dss, #string:settingKey, #string:displayName, #string:tooltip)->()
+= function(dss, settingKey, displayName, tooltip)
+  if not dss[2] then return end
+  if not l.debugSettingMap[dss[1]] then
+    l.debugSettingMap[dss[1]] = {}
   end
-  l.debugSettingMap[switch][subSwitch] = {settingKey, displayName, tooltip}
+  l.debugSettingMap[dss[1]][dss[2]] = {settingKey, displayName, tooltip}
 end
 
 m.getDebugSwitchMap -- #()->(#table)
