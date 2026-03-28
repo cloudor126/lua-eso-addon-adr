@@ -1808,7 +1808,7 @@ addon.hookStart(l.onStart)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(coreSavedVarsDefaults)
-end)
+
 
   settings.addMenuOptions(
     {
@@ -1889,7 +1889,10 @@ end)
           name = addon.text("Blacklist Patterns"),
           tooltip = addon.text("Skills to never track. One pattern per line. Use skill name substring or numeric ability ID"),
           getFunc = function() return l.getSavedVars().coreBlackKeyWords end,
-          setFunc = function(text) l.getSavedVars().coreBlackKeyWords = text l.idFilteringMap={} end,
+          setFunc = function(text)
+            l.getSavedVars().coreBlackKeyWords = text
+            l.idFilteringMap = {}
+          end,
           isMultiline = true,
           isExtraWide = true,
           width = "full",
