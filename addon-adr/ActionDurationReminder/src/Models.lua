@@ -8,11 +8,11 @@ local mAction = {} -- #Action
 local mAbility = {} -- #Ability
 local mEffect = {} -- #Effect
 
--- /script ActionDurationReminder.debugLevels.model=2
--- /script ActionDurationReminder.debugLevels.all=2
-
 local DS_MODEL = "model" -- debug switch for model
-local DS_ALL = "all" -- debug switch for all
+
+-- DSS (Debug Switch + SubSwitch) constants for addon.debugEnabled
+local DSS_MODEL_STACK = {DS_MODEL, 'stack'}
+local DSS_MODEL_PURGE = {DS_MODEL, 'purge'}
 
 --========================================
 --        Effect Priority Levels
@@ -70,20 +70,6 @@ end
 --========================================
 --        l
 --========================================
-l.debug -- #(#string:switch,#number:level)->(#(#string:format, #string:...)->())
-=function(switch, level)
-  return function(format, ...)
-    if l.debugEnabled(switch,level) then
-      d(os.date()..'>', string.format(format, ...))
-    end
-  end
-end
-
-l.debugEnabled -- #(#string:switch,#number:level)->(#boolean)
-= function(switch, level)
-  return (addon.debugLevels[switch] and addon.debugLevels[switch]>=level) or
-    (addon.debugLevels[DS_ALL] and addon.debugLevels[DS_ALL]>=level)
-end
 
 --========================================
 --        m
@@ -1117,8 +1103,10 @@ mAction.optEffectOf -- #(#Action:self,#Effect:effect1,#Effect:effect2)->(#Effect
     local minorEffect = p12>p22 and effect2 or effect1 -- #Effect
     -- ignore same start minor e.g.
     if math.abs(majorEffect.startTime - minorEffect.startTime) <300 then
-      l.debug(DS_MODEL,1)("[m.ignore] %s<%d>(%d), px2:%d(%d) ",minorEffect.ability.name, minorEffect.duration,
-        minorEffect.ability.id, math.min(p12,p22),math.max(p12,p22))
+      if addon.debugEnabled(DSS_MODEL_PURGE, minorEffect.ability.name) then
+        addon.debug("[MPi]ignore %s<%d>(%d), px2:%d(%d) ",minorEffect.ability.name, minorEffect.duration,
+          minorEffect.ability.id, math.min(p12,p22),math.max(p12,p22))
+      end
       minorEffect.ignored = true
     end
     return majorEffect,"px2"
@@ -1174,12 +1162,16 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   if self.tickEffect and self.tickEffect.ability.id==oldEffect.ability.id then
     if self.tickEffectDoubled then
       self.tickEffectDoubled = false
-      l.debug(DS_MODEL,1)("[m.purged double tick] %s",  self:toLogString())
+      if addon.debugEnabled(DSS_MODEL_PURGE) then
+        addon.debug("[MPx]purged double tick %s", self:toLogString())
+      end
       return
     end
     oldEffect = self.tickEffect
     self.tickEffect = nil
-    l.debug(DS_MODEL,1)("[m.purged tick] %s",  self:toLogString())
+    if addon.debugEnabled(DSS_MODEL_PURGE) then
+      addon.debug("[MPx]purged tick %s", self:toLogString())
+    end
     return
   end
   -- process effectList
@@ -1194,20 +1186,20 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
           effect.purgingTime = now
           -- do it later
           zo_callLater(function() self:purgeEffect(effect) end, 50)
-          if l.debugEnabled(DS_MODEL,1) then
-            l.debug(DS_MODEL,1)("[m.purging] %s, from %s, #effectList:%d(-1)", e:toLogString(),self:toLogString(), #self.effectList)
+          if addon.debugEnabled(DSS_MODEL_PURGE, e.ability.name) then
+            addon.debug("[MP~]purging %s, from %s, #effectList:%d(-1)", e:toLogString(),self:toLogString(), #self.effectList)
           end
           return e
         elseif e.saveTime and e.saveTime >= effect.purgingTime then
-          if l.debugEnabled(DS_MODEL,1) then
-            l.debug(DS_MODEL,1)("[m.purge-renewed] %s, in %s",  e:toLogString(), self:toLogString())
+          if addon.debugEnabled(DSS_MODEL_PURGE, e.ability.name) then
+            addon.debug("[MP!]purge-renewed %s, in %s", e:toLogString(), self:toLogString())
           end
           return e
         end
       end
       table.remove(self.effectList,i)
-      if l.debugEnabled(DS_MODEL,1) then
-        l.debug(DS_MODEL,1)("[m.purged] %s, from %s",e:toLogString(), self:toLogString())
+      if addon.debugEnabled(DSS_MODEL_PURGE, e.ability.name) then
+        addon.debug("[MP-]purged %s, from %s",e:toLogString(), self:toLogString())
       end
       oldEffect = e -- we need duration info to end action
       break
@@ -1256,10 +1248,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
     )
   then
-    l.debug(DS_MODEL,1)("[m.purge end] %s, %s", reason, self:toLogString())
+    if addon.debugEnabled(DSS_MODEL_PURGE) then
+      addon.debug("[MP$]purge end %s, %s", reason, self:toLogString())
+    end
     self.endTime = now
   else
-    l.debug(DS_MODEL,1)("[m.purge not end] %s, %s", reason, self:toLogString())
+    if addon.debugEnabled(DSS_MODEL_PURGE) then
+      addon.debug("[MP.]purge not end %s, %s", reason, self:toLogString())
+    end
   end
   return oldEffect
 end
@@ -1390,8 +1386,8 @@ end
 
 mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
 = function(self, stackCount, effect)
-  if l.debugEnabled(DS_MODEL,1) then
-    l.debug(DS_MODEL,1)('[m.us]updating stackCount to %d from %s in %s',stackCount, effect:toLogString(), self:toLogString());
+  if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
+    addon.debug('[MS~]updating stackCount to %d from %s in %s',stackCount, effect:toLogString(), self:toLogString());
   end
   -- stackEffect/stackCount: actively accumulated stacks (gradually build up via attacks, e.g. Grim Focus, Bound Armaments)
   -- stackEffect2/stackCount2: triggered bonus stacks (suddenly granted by conditions, then consumed one by one)
@@ -1407,7 +1403,9 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
       addType = 2
       if self.stackEffect2 and self.stackEffect2.ability.id~= effect.ability.id then
         addType = 0
-        l.debug(DS_MODEL,1)('[m.us.filtered] ingored because old stackEffect2 existed: %s ',self.stackEffect2:toLogString());
+        if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
+          addon.debug('[MSx]ingored because old stackEffect2 existed: %s ',self.stackEffect2:toLogString());
+        end
       end
     end
   elseif self.stackEffect.ability.id == effect.ability.id then
@@ -1462,3 +1460,8 @@ end
 --        register
 --========================================
 addon.register("Models#M", m)
+
+-- Register Models debug switches
+addon.registerDebugSwitch(DS_MODEL, "Model Debug")
+addon.registerDebugSubSwitch(DSS_MODEL_STACK, 'Model Stack [MS*]', 'Log stack count updates')
+addon.registerDebugSubSwitch(DSS_MODEL_PURGE, 'Model Purge [MP*]', 'Log effect purge operations')

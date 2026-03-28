@@ -91,18 +91,20 @@ Stored in `ADRSV` with account-wide option. Each module adds its defaults via th
 
 ## Debugging
 
-In-game debug commands:
+Debug logging is controlled via the Settings menu under Debug section:
+- Enable "Debug Logging" master switch
+- Use "Ability Name Filter" to filter by ability name (Lua pattern)
+- Enable/disable individual debug sub-switches
 
-```lua
-/script ActionDurationReminder.debugLevels.action = 2
-/script ActionDurationReminder.debugLevels.effect = 2
-/script ActionDurationReminder.debugLevels.target = 2
-/script ActionDurationReminder.debugLevels.model = 2
-/script ActionDurationReminder.debugLevels.all = 3
-/script ActionDurationReminder.debugLevels.all = 0  -- disable
-```
+Debug switches and sub-switches are defined in Core.lua and Models.lua:
+- `DS_ACTION` - Action debug (find, new, match, unref, stack, remove, delete, save, clear)
+- `DS_EFFECT` - Effect debug (gain, fade, update, refresh, transfer, miss, match)
+- `DS_COMBAT` - Combat debug (event, fade, stack, tick, duration, channel)
+- `DS_FILTER` - Filter debug (accept, reject)
+- `DS_TARGET` - Target debug (track)
+- `DS_MODEL` - Model debug (stack, purge)
 
-Debug levels: 1=basic, 2=detailed, 3=verbose
+Log format: `[XX*]` where XX is the debug marker (e.g., `[AFA]` = Action Find Action found)
 
 ## Key Files
 
