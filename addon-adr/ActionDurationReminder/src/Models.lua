@@ -27,7 +27,7 @@ local LEVEL_LONGER_DURATION = 6      -- normal longer duration effect
 local LEVEL_TAIL_EFFECT = 7          -- effect significantly longer than action (tail effect, secondary)
 local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
 
-local SECONDARY_THRESHOLD = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
+local LEVEL_THRESHOLD_LOW = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
 
 
 
@@ -262,7 +262,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.stackCount = stackCount or 0 -- #number
   effect.tickRate = tickRate or 0 -- #number
   effect.combatEventId = nil -- #number can be used to track one more special combat event
-  effect.staticLevel = 99 -- #number
+  effect.level = 99 -- #number
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -567,7 +567,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '@'
   end
   if self.targetOut then
-    return '#'
+    return '~'
   end
   -- tail effect
   local duration = self.duration or 0
@@ -853,7 +853,7 @@ end
 --        Effect Priority Level Methods
 --========================================
 
-mAction.calcStaticLevel -- #(#Action:self, #Effect:effect)->(#number)
+mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
 = function(self, effect)
   -- Level 8: Crux (lowest priority)
   if effect.isCrux then
@@ -912,8 +912,8 @@ end
 mAction.sortEffectList -- #(#Action:self)->()
 = function(self)
   table.sort(self.effectList, function(a, b)
-    if a.staticLevel ~= b.staticLevel then
-      return a.staticLevel < b.staticLevel
+    if a.level ~= b.level then
+      return a.level < b.level
     end
     -- Same level: prefer longer duration
     if a.duration ~= b.duration then
@@ -928,8 +928,8 @@ mAction.recalcEffectLevels -- #(#Action:self)->()
 = function(self)
   -- Recalculate static level for all effects
   for _, effect in ipairs(self.effectList) do
-    effect.staticLevel = self:calcStaticLevel(effect) -- #number
-    effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD -- #boolean
+    effect.level = self:calclevel(effect) -- #number
+    effect.levelIsLow = effect.level >= LEVEL_THRESHOLD_LOW -- #boolean
   end
   -- Re-sort the list
   self:sortEffectList()
@@ -998,9 +998,9 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
     -- Dynamic filter check
     if not self:isFilteredByDynamic(effect, now) then
       if debugging then
-        df('[DBG] optEffect: %s, level=%d', effect:toLogString(), effect.staticLevel or 0)
+        df('[DBG] optEffect: %s, level=%d', effect:toLogString(), effect.level or 0)
       end
-      return effect, 'level:'..(effect.staticLevel or 0)
+      return effect, 'level:'..(effect.level or 0)
     end
   end
 
@@ -1242,13 +1242,13 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   end
 
   self.lastEffectTime = effect.startTime
+  -- Calculate static level before inserting
+  effect.level = self:calclevel(effect)
+  effect.levelIsLow = effect.level >= LEVEL_THRESHOLD_LOW
   for i, e in ipairs(self.effectList) do
     if e.ability.id == effect.ability.id and e.unitId == effect.unitId then
       local now = GetGameTimeMilliseconds()
       if math.abs(e.endTime-effect.endTime)>1000 then
-        -- Calculate static level before inserting
-        effect.staticLevel = self:calcStaticLevel(effect)
-        effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
         self.effectList[i] = effect
         -- save effect end time to aid judgement on the strictness of following effects
         if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
@@ -1261,9 +1261,6 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
       return e
     end
   end
-  -- Calculate static level before inserting
-  effect.staticLevel = self:calcStaticLevel(effect)
-  effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
   table.insert(self.effectList, effect)
   -- save effect end time to aid judgement on the strictness of following effects
   if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
@@ -1370,7 +1367,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if addType == 1 then
     self.stackCount = stackCount
     self.stackEffect = effect
-    self.stackEffect.staticLevel = LEVEL_STACK_EFFECT
+    self.stackEffect.level = LEVEL_STACK_EFFECT
     self.stackCountMatch = false -- #boolean
     self.stackCountMatch = stackCount>=3 and #self.effectList==0 and self.descriptionNums[stackCount]
     local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
@@ -1379,7 +1376,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   elseif addType == 2 then
     self.stackCount2 = stackCount
     self.stackEffect2 = effect
-    self.stackEffect2.staticLevel = LEVEL_STACK_EFFECT_2
+    self.stackEffect2.level = LEVEL_STACK_EFFECT_2
     local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
     m.cacheOfActionMatchingEffect[cacheKey] = true
     return true
@@ -1411,7 +1408,7 @@ mEffect.toLogString --#(#Effect:self)->(#string)
   return string.format("%s, %.2f~%.2f<%d>, L%d, S%d, %sUnit:%s(%d)%s",
     self.ability:toLogString(),
     self.startTime/1000, self.endTime/1000, self.duration/1000,
-    self.staticLevel,
+    self.level,
     self.stackCount, self.tickRate==0 and '' or string.format('tickRate:%d, ',self.tickRate),
     self.unitTag, self.unitId,
     self.ignored and ' [ignored]' or '')
