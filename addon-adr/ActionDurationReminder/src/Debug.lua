@@ -46,36 +46,6 @@ local debugSavedVarsDefaults
     debugLogTrackedEffectsInChat = false,
     debugFilterPattern = '',
     debugLoggingEnabled = false,
-    -- fine-grained debug options (default all true when logging enabled)
-    -- DS_ACTION
-    debugActionFind = true,
-    debugActionNew = true,
-    debugActionMatch = true,
-    debugActionUnref = true,
-    debugActionStack = true,
-    debugActionRemove = true,
-    debugActionDelete = true,
-    debugActionSave = true,
-    debugActionClear = true,
-    -- DS_COMBAT
-    debugCombatEvent = true,
-    debugCombatFade = true,
-    debugCombatStack = true,
-    debugCombatTick = true,
-    debugCombatDuration = true,
-    debugCombatChannel = true,
-    -- DS_EFFECT
-    debugEffectGain = true,
-    debugEffectFade = true,
-    debugEffectUpdate = true,
-    debugEffectRefresh = true,
-    debugEffectTransfer = true,
-    debugEffectMiss = true,
-    -- DS_FILTER
-    debugFilterAccept = true,
-    debugFilterReject = true,
-    -- DS_TARGET
-    debugTargetTrack = true,
   }
 
 --========================================
@@ -90,7 +60,15 @@ end)
 
 -- Register debug defaults
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
+  -- Add Debug module's own defaults
   settings.addDefaults(debugSavedVarsDefaults)
+  -- Add all DSS defaults (all true)
+  for _, subs in pairs(l.debugSettingMap) do
+    for _, info in pairs(subs) do
+      local settingKey = info[1]
+      settings.addDefaults({[settingKey] = true})
+    end
+  end
 end)
 
 -- Build Debug submenu in settings menu
