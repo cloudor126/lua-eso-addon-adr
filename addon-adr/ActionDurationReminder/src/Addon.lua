@@ -129,6 +129,16 @@ m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:setting
   l.debugSettingMap[switch][subSwitch] = {settingKey, displayName, tooltip}
 end
 
+m.getDebugSwitchMap -- #()->(#table)
+= function()
+  return l.debugSwitchMap
+end
+
+m.getDebugSettingMap -- #()->(#table)
+= function()
+  return l.debugSettingMap
+end
+
 -- Debug module will provide debugEnabled, debugDefaults, refreshMenu implementations
 -- For now, provide no-op implementations that Debug module will override
 
