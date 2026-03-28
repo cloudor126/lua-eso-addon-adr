@@ -1009,7 +1009,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       l.timeActionMap[oldEffect.startTime] = nil
       if stackInfoUpdated then
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
-          addon.debug('[AKC]purged stack info %s (%s)%s', action.ability:toLogString(), action:hasEffect() and 'other effect exists' or 'no other effect',action:getEffectsInfo())
+          addon.debug('[AKC]purged stack info for %s', action:toLogString())
         end
         if action:getEndTime() <= now+20 and action:getStartTime()>now-500   -- action trigger effect's end i.e. Crystal Fragment/Molten Whip
           and not action.oldAction -- check those with old action i.e. Assassin Will replacing Merciless Resolve

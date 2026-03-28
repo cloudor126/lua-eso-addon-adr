@@ -379,25 +379,6 @@ mAction.getDuration -- #(#Action:self)->(#number)
   return 0
 end
 
-mAction.getEffectsInfo -- #(#Action:self)->(#string)
-= function(self)
-  local info = ''
-  for key, var in ipairs(self.effectList) do
-    info = info.. var.ability.id..'<'..var.duration..'>('..var.startTime..'~'..var.endTime..')'
-    if var.ignored then
-      info = info..'!ignored'
-    end
-    info = info..','
-  end
-  local oe = self:optEffect()
-  if oe then
-    info = info..'opt:'..oe.ability.id
-  else
-    info = info..'no opt effect'
-  end
-  return info
-end
-
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
 = function(self, debugging)
   if self.tickEffect and self.duration==0 then
