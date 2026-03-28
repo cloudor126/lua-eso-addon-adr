@@ -1629,8 +1629,9 @@ addon.hookStart(l.onStart)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(coreSavedVarsDefaults)
+end)
 
-
+addon.extend(settings.EXTKEY_ADD_MENUS, function()
   settings.addMenuOptions(
     {
       type = "submenu",
