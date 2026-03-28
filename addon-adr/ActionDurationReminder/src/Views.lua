@@ -422,8 +422,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       hint = string.format('%d', remain/1000)
     end
     -- Show brackets for secondary effects (tail effects, Crux, etc.)
-    if optEffect and (optEffect.isSecondary or optEffect.isCrux) then
-      hint = string.format('[%d]', remain/1000)
+    if optEffect and (optEffect.staticLavelIsSecondary or optEffect.isCrux) then
+      hint = string.format('<%d>', remain/1000)
     end
     self.label:SetText(hint)
     self.label:SetHidden(false)

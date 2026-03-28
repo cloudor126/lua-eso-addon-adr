@@ -408,7 +408,7 @@ end
 l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
 = function(action)
   local abilityName = action.ability.name
-  local matcher -- #(Models#Action:a)->(#boolean)
+  local matcher -- #(Models#Action:a)->(#boolean, #string)
   = function(a)
     if a:getDuration() > 0 and a:getEndTime(false) < action.startTime then return false end
     if a.ability.id == action.ability.id then return true end
@@ -419,9 +419,6 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     -- i.e. Merciless Resolve name can match Assissin's Will action by its related ability list
     for key, var in ipairs(a.relatedAbilityList) do
       if abilityName:find(var.name,1,true) then
-        if addon.debugEnabled(DSS_ACTION_MATCH, a.ability.name) then
-          addon.debug('[AMI]related name')
-        end
         l.cacheOfActionMatchingAction[cacheKey] = true
         l.cacheOfActionMatchingAction[reverseKey] = true
         return true
@@ -436,9 +433,6 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
     if action.hotbarCategory == a.hotbarCategory and action.slotNum == a.slotNum
       and a.inCombat and action.inCombat -- only match if both in combat (auto-swap)
     then
-      if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
-        addon.debug('[AMI]slot')
-      end
       l.cacheOfActionMatchingAction[cacheKey] = true
       l.cacheOfActionMatchingAction[reverseKey] = true
       return true
@@ -564,13 +558,15 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         action.inheritDuration = sameNameAction.duration
       elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
         action.inheritDuration = sameNameAction.inheritDuration
+      elseif action.duration == 0 and sameNameAction.descriptionDuration >0 then
+        action.inheritDuration = sameNameAction.descriptionDuration
       end
       local abilityAccepter -- # (#Ability:relatedAbility)->()
       = function(relatedAbility)
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
           if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
-            addon.debug('[AMI]%s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
+            addon.debug('[AMI] relating %s, total:%d', relatedAbility:toLogString(), #action.relatedAbilityList)
           end
         end
       end
@@ -627,9 +623,10 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
+  local abilityIcon = GetAbilityIcon(abilityId)
   if addon.debugEnabled(DSS_COMBAT_EVENT, abilityName) then
     addon.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
-      GetAbilityIcon(abilityId),
+      abilityIcon,
       abilityName,
       abilityId,
       now/1000,
@@ -652,20 +649,22 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   -- ACTION_RESULT_EFFECT_GAINED_DURATION  2245
   -- 2240? TODO GetAbilityFrequencyMS
   if result == ACTION_RESULT_DIED_XP then --2262
+    local _= nil
     for key, var in pairs(l.idActionMap) do
       var:purgeEffectByTargetUnitId(targetUnitId)
-  end
+    end
   end
   if result == ACTION_RESULT_EFFECT_FADED and abilityName~='' then --2250
-    local _=nil
+    local ability = models.newAbility(abilityId,abilityName,abilityIcon)
     if addon.debugEnabled(DSS_COMBAT_FADE, abilityName) then
-      addon.debug('[C-]EFFECT_FADED,%s(%d),target:%s(%d),source:%s(%d)',
-        abilityName, abilityId,targetName,targetUnitId, sourceName, sourceUnitId)
+      addon.debug('[C-]EFFECT_FADED,%s,target:%s(%d),source:%s(%d)',
+        ability:toLogString(),
+        targetName,targetUnitId, sourceName, sourceUnitId)
     end
     local action = l.idActionMap[abilityId]
-    if action and action.channelUnitId == targetUnitId then
+    if action  and action.channelUnitId == targetUnitId then
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
-        addon.debug('[C-]cancel channeling %s', action:toLogString())
+        addon.debug('[C-c]cancel channeling %s', action:toLogString())
       end
       action.channelStartTime = 0
       action.channelEndTime = 0
@@ -673,10 +672,20 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
         action.endTime = now
       end
     end
+    for key, var in pairs(l.idActionMap) do
+      if var.stackEffect2 and var.stackEffect2.combatEventId == abilityId then
+        action = var
+        if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
+          addon.debug('[C-s]cancel stack %s', action:toLogString())
+        end
+        local oldEffect = action:purgeEffect(action.stackEffect2)
+        if oldEffect then l.timeActionMap[oldEffect.startTime] = nil end
+      end
+    end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
-        addon.debug('[C-]cancel tick %s', action:toLogString())
+        addon.debug('[C-t]cancel tick %s', action:toLogString())
       end
       l.removeAction(action)
     end
@@ -735,10 +744,8 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
       local action = l.findActionByNewEffect(effect) -- Models#Action
       if action then
         action:saveEffect(effect)
-        if not action.saved then
-          l.saveAction(action)
-          return
-        end
+        l.saveAction(action)
+        return
       end
     end
     -- for not saved actions, i.e. Extended Ritual
@@ -754,13 +761,14 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         or abilityOnBar.name == abilityName
         )
       then
+        local ability = models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
         -- cache action matching when abilityOnBar differs from action.ability
         if abilityOnBar.id ~= action.ability.id then
           l.cacheOfActionMatchingAction[abilityOnBar.id .. '/' .. action.ability.id] = true
           l.cacheOfActionMatchingAction[action.ability.id .. '/' .. abilityOnBar.id] = true
         end
-        if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
-          df('[Activate Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
+        if addon.debugEnabled(DSS_COMBAT_STACK, abilityName) then
+          addon.debug('[CS] hit:%d for %s', hitValue, action:toLogString())
         end
         local duration = action.duration
         -- 为那些ground或者area的 action补上效果
@@ -777,10 +785,9 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           --
         elseif hitValue > 1 then -- hitValue如果大于1，那就是一个stack效果，匹配上就可以加上stack
           local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now, hitValue, 0);
+          effect.combatEventId = abilityId
           action:updateStackInfo(hitValue,effect)
-          if not action.saved then
-            l.saveAction(action)
-          end
+          l.saveAction(action)
         end
       end
     end
@@ -788,8 +795,10 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   -- justify recorded actions
   if result == ACTION_RESULT_EFFECT_GAINED_DURATION then
     local _ = nil
+    local ability = nil -- Models#Ability
     if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
-      addon.debug('[CD]%s(%d)+%d', abilityName, abilityId, hitValue)
+      ability =models.newAbility(abilityId, abilityName, GetAbilityIcon(abilityId))
+      addon.debug('[CD] %s duration %d ', ability:toLogString(), hitValue)
     end
     -- for not saved actions, i.e. ground action
     for key, action in pairs(l.actionQueue) do
@@ -797,9 +806,6 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         GetSlotBoundId(action.slotNum,action.hotbarCategory),
         GetSlotName(action.slotNum,action.hotbarCategory),
         GetSlotTexture(action.slotNum,action.hotbarCategory))
-      if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
-        df('[Endure Action] onBar: %s, inMem: %s',abilityOnBar:toLogString(), action:toLogString())
-      end
       if (
         action.ability.id == abilityId
         or action.ability.name == abilityName
@@ -821,10 +827,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
         if duration > l.getSavedVars().coreMinimumDurationSeconds*1000 then -- 给的duration相对合理
           local _ = nil
           -- 对于有些地面和aoe技能没有普通effect事件所以还没存
-          if  not action.saved and (
-            (action.flags.forArea and now-action.startTime<2000)
-            or action.flags.forGround
-            ) then
+          if (action.flags.forArea and now-action.startTime<2000) or action.flags.forGround then
             action.startTime = now
             action.endTime = now+duration
             if action.flags.forGround then
@@ -832,11 +835,19 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
               action.groundFirstEffectId = -1
             end
             l.saveAction(action)
+            if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+              addon.debug('[CDg] %s ground duration %d for %s',ability:toLogString(), duration, action:toLogString())
+            end
           end
-          -- 有些action还只有纯层数，而不知道层数的期限，例如龙骑的power lash
-          if action:isPureStack() then
-            local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now+duration, 0, 0);
+          -- 有些action还只有stackEffect2层数，而不知道层数的期限，例如龙骑的power lash
+          if action.stackEffect2 and action.stackCount2 > 0 then
+            local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now+duration, action.stackCount2, 0);
+            effect.combatEventId = abilityId
             action:saveEffect(effect)
+            l.saveAction(action)
+            if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+              addon.debug('[CDs] %s stack duration %d for %s',ability:toLogString(), duration, action:toLogString())
+            end
             return
           end
         end
@@ -851,8 +862,8 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           action.channelStartTime = now
           action.channelEndTime = now+duration
           action.channelUnitId = targetUnitId
-          if addon.debugEnabled(DSS_COMBAT_CHANNEL, action.ability.name) then
-            addon.debug('[CC]%s', action:toLogString())
+          if addon.debugEnabled(DSS_COMBAT_DURATION, action.ability.name) then
+            addon.debug('[CDc] %s channel duration %d for %s', ability:toLogString(), duration ,action:toLogString())
           end
           return
         end
@@ -879,12 +890,12 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     [EFFECT_RESULT_TRANSFER] = {'transfer','E/'},
   }
   local ctInfo = changeTypeMap[changeType] or {'unknown','E?'}
+  local effectAbiliy = models.newAbility(abilityId,effectName,iconName)
   if addon.debugEnabled({DS_EFFECT, ctInfo[1]}, effectName) then
-    addon.debug('[%s%s]%s(%s)@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
+    addon.debug('[%s%s]%s@%.2f<%.2f>[%s]for %s(%i:%s),type:%d,abType:%d,seType:%d,src:%d',
       ctInfo[2],
       stackCount > 0 and tostring(stackCount) or '',
-      effectName,
-      abilityId,
+      effectAbiliy:toLogString(),
       beginTimeSec > 0 and beginTimeSec or now/1000,
       endTimeSec-beginTimeSec,
       iconName,
@@ -1363,24 +1374,6 @@ l.onUpdate -- #()->()
 = function()
   l.refineActions()
   addon.callExtension(m.EXTKEY_UPDATE)
-  -- log
-  local now = GetGameTimeMilliseconds()
-  -- input: /script ActionDurationReminder.debugOnUpdate = true
-  if addon.debugOnUpdate and now - l.lastUpdateLog>1000 then
-    l.lastUpdateLog = now
-    d('<<<<<----')
-    for key, action in pairs(l.idActionMap) do
-      d(key..':'..action.ability.name)
-      local optEffect = action:optEffect()
-      for ek, ev in ipairs(action.effectList) do
-        d('effect:'..ev.ability.id..' '..ev.ability.name..', endTime-now'..(ev.endTime-now))
-      end
-      if optEffect then
-        d('opt:'..optEffect.ability.id..', endTime-now:'..(optEffect.endTime-now))
-      end
-    end
-    d('---->>>>')
-  end
 end
 
 l.queueAction -- #(Models#Action:action)->()
@@ -1484,11 +1477,11 @@ l.saveAction -- #(Models#Action:action)->()
   for i, effect in ipairs(action.effectList) do
     l.timeActionMap[effect.startTime] = action
   end
-  local getValueAbilityNames -- #(#map<#any,Models#Action>:t)->(#string)
+  local getValueActionsInfo -- #(#map<#any,Models#Action>:t)->(#string)
   = function(t)
     local names = ''
     for key, var in pairs(t) do
-      names = names..' '..var.ability:toLogString()
+      names = names..' '..var:toLogString_Short()
     end
     return names
   end
@@ -1503,8 +1496,8 @@ l.saveAction -- #(Models#Action:action)->()
   if addon.debugEnabled(DSS_ACTION_SAVE,action.ability.name) then
     addon.debug('[AS]%s\n>idActionMap:%s\n>timeActionMap:%s\n>cacheOfActionMatchingAction:%s',
       action:toLogString(),
-      getValueAbilityNames(l.idActionMap),
-      getValueAbilityNames(l.timeActionMap),
+      getValueActionsInfo(l.idActionMap),
+      getValueActionsInfo(l.timeActionMap),
       getKeyNames(l.cacheOfActionMatchingAction)
     )
   end

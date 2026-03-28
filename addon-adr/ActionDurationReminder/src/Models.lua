@@ -261,6 +261,8 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.ignorableDebuff = false -- #boolean
   effect.stackCount = stackCount or 0 -- #number
   effect.tickRate = tickRate or 0 -- #number
+  effect.combatEventId = nil -- #number can be used to track one more special combat event
+  effect.staticLevel = 99 -- #number
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -346,7 +348,7 @@ end
 
 mAbility.toLogString --#(#Ability:self)->(#string)
 = function(self)
-  return string.format("|t24:24:%s|t %s(%i)", self.icon, self.name, self.id)
+  return string.format("|t24:24:%s|t %s(%i/%s)", self.icon, self.name, self.id, self.icon:match("([^/]+)%.%w+$"))
 end
 
 --========================================
@@ -371,7 +373,10 @@ mAction.getDuration -- #(#Action:self)->(#number)
   end
   if self.configDuration then return self.configDuration end
   local optEffect,reason = self:optEffect() -- #Effect
-  return optEffect and optEffect.duration or self.duration or self.descriptionDuration
+  if optEffect then return optEffect.duration end
+  if self.duration and self.duration>0 then return self.duration end
+  if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration end
+  return 0
 end
 
 mAction.getEffectsInfo -- #(#Action:self)->(#string)
@@ -672,11 +677,6 @@ mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
   return false
 end
 
-mAction.isPureStack  -- #(#Action:self)->(#boolean)
-= function(self)
-  return self.stackEffect and #self.effectList ==0
-end
-
 mAction.isShowingCruxDuration -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
@@ -880,6 +880,7 @@ mAction.calcStaticLevel -- #(#Action:self, #Effect:effect)->(#number)
   end
 
   local duration = self.duration > 0 and self.duration or self.inheritDuration
+  if duration == 0 then duration = self.descriptionDuration or 0 end
 
   -- Level 1: actionId match + duration match
   if effect.ability.id == self.ability.id and effect.duration == duration then
@@ -917,7 +918,8 @@ mAction.calcStaticLevel -- #(#Action:self, #Effect:effect)->(#number)
     return LEVEL_DURATION_MATCH
   end
 
-  -- Level 7: tail effect (significantly longer than action duration)
+  -- Level 7: tail effect (significantly longer than action duration) TODO
+  addon.debug('[calc] dur:%d dd:%d %s ',duration, self.descriptionDuration or 0,effect:toLogString())
   if duration > 0 and effect.duration > duration * 2 and effect.duration > 10000 then
     return LEVEL_TAIL_EFFECT
   end
@@ -945,8 +947,8 @@ mAction.recalcEffectLevels -- #(#Action:self)->()
 = function(self)
   -- Recalculate static level for all effects
   for _, effect in ipairs(self.effectList) do
-    effect.staticLevel = self:calcStaticLevel(effect)
-    effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
+    effect.staticLevel = self:calcStaticLevel(effect) -- #number
+    effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD -- #boolean
   end
   -- Re-sort the list
   self:sortEffectList()
@@ -997,6 +999,13 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   local now = GetGameTimeMilliseconds()
   local reason = ''
 
+  if self.stackEffect and self.stackEffect.duration>0  then
+    return self.stackEffect, 'stackEffect'
+  end
+  if self.stackEffect2 and self.stackEffect2.duration>0 then
+    return self.stackEffect2, 'stackEffect2'
+  end
+
   for i, effect in ipairs(self.effectList) do
     -- Special case: Major Gallop when mounted - return immediately
     if effect.ability.icon:find("major_gallop", 1, true) then
@@ -1015,6 +1024,17 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   end
 
   return nil, 'none'
+end
+
+mAction.optGallopEffect -- #(#Action:self)->(#Effect)
+= function(self)
+  for i, effect in ipairs(self.effectList) do
+    -- filter Major Gallop if not mount
+    if effect.ability.icon:find("major_gallop",1,true) then
+      return effect
+    end
+  end
+  return false
 end
 
 mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
@@ -1052,14 +1072,14 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     if self.tickEffectDoubled then
       self.tickEffectDoubled = false
       if addon.debugEnabled(DSS_MODEL_PURGE) then
-        addon.debug("[MPx]purged double tick %s", self:toLogString())
+        addon.debug("[MPd]purged double tick %s", self:toLogString())
       end
       return
     end
     oldEffect = self.tickEffect
     self.tickEffect = nil
     if addon.debugEnabled(DSS_MODEL_PURGE) then
-      addon.debug("[MPx]purged tick %s", self:toLogString())
+      addon.debug("[MPt]purged tick %s", self:toLogString())
     end
     return
   end
@@ -1097,14 +1117,31 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
     oldEffect = self.stackEffect
     self.stackEffect = nil
+    self.stackCount = 0
     -- Recalculate levels and sort since stackEffect changed
     self:recalcEffectLevels()
+    if addon.debugEnabled(DSS_MODEL_PURGE, oldEffect.ability.name) then
+      addon.debug("[MPS]purged stackEffect %s \n from %s",oldEffect:toLogString(), self:toLogString())
+    end
   end
   if self.stackEffect2 and self.stackEffect2.ability.id == effect.ability.id and self.stackEffect2.unitId==effect.unitId then
     oldEffect = self.stackEffect2
     self.stackEffect2 = nil
+    self.stackCount2 = 0
+    if oldEffect.ability.id == self.ability.id then
+      -- 例如龙骑Power Lash的20秒冷却，当五鞭子层数消失后，应该继续记录冷却
+      oldEffect.stackCount = 0
+      self:saveEffect(oldEffect)
+      if addon.debugEnabled(DSS_MODEL_PURGE, oldEffect.ability.name) then
+        addon.debug("[MPd]purged and downgraded stackEffect %s \n from %s",oldEffect:toLogString(), self:toLogString())
+      end
+      return
+    end
     -- Recalculate levels and sort since stackEffect2 changed
     self:recalcEffectLevels()
+    if addon.debugEnabled(DSS_MODEL_PURGE, oldEffect.ability.name) then
+      addon.debug("[MPs]purged stackEffect2 %s \n from %s",oldEffect:toLogString(), self:toLogString())
+    end
   end
   local availableEffectCount = 0
   local reason = ''
@@ -1138,12 +1175,12 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
   then
     if addon.debugEnabled(DSS_MODEL_PURGE) then
-      addon.debug("[MP$]purge end %s, %s", reason, self:toLogString())
+      addon.debug("[MPe]purge end %s, %s", reason, self:toLogString())
     end
     self.endTime = now
   else
     if addon.debugEnabled(DSS_MODEL_PURGE) then
-      addon.debug("[MP.]purge not end %s, %s", reason, self:toLogString())
+      addon.debug("[MPn]purge not end %s, %s", reason, self:toLogString())
     end
   end
   return oldEffect
@@ -1156,6 +1193,23 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   if effect.stackCount>0 and effect.duration==0 then
     return
   end
+  -- update stack effect duration
+  if self.stackEffect and effect.ability.id == self.stackEffect.ability.id then
+    if effect.duration >0 then
+      self.stackEffect.duration = effect.duration
+      self.stackEffect.endTime = effect.endTime
+      self.stackEffect.startTime = effect.startTime
+    end
+    return
+  end
+  if self.stackEffect2 and effect.ability.id == self.stackEffect2.ability.id then
+    if effect.duration >0 then
+      self.stackEffect2.duration = effect.duration
+      self.stackEffect2.endTime = effect.endTime
+      self.stackEffect2.startTime = effect.startTime
+    end
+    return
+  end
 
   -- process effect with tickRate
   if effect.tickRate >0 then
@@ -1166,7 +1220,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
     self.tickEffect = effect
     return
   end
-  
+
   -- debuff longer than default duration BUT: people think debuf is usefly i.e. Mass Hysteria
   if self.duration and self.duration >0 and effect.duration>self.duration
     and effect.ability.icon:find('ability_debuff_',1,true)
@@ -1213,7 +1267,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
       if math.abs(e.endTime-effect.endTime)>1000 then
         -- Calculate static level before inserting
         effect.staticLevel = self:calcStaticLevel(effect)
-        effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
+        effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
         self.effectList[i] = effect
         -- save effect end time to aid judgement on the strictness of following effects
         if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
@@ -1228,7 +1282,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   end
   -- Calculate static level before inserting
   effect.staticLevel = self:calcStaticLevel(effect)
-  effect.isSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
+  effect.staticLavelIsSecondary = effect.staticLevel >= SECONDARY_THRESHOLD
   table.insert(self.effectList, effect)
   -- save effect end time to aid judgement on the strictness of following effects
   if self.effectEndTimes[#self.effectEndTimes]~= effect.endTime then
@@ -1251,11 +1305,17 @@ end
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
   local effectListLog = #self.effectList>0 and ':' or ''
+  if self.stackEffect then
+    effectListLog= effectListLog ..'\n+ [se] '.. self.stackEffect:toLogString()
+  end
+  if self.stackEffect2 then
+    effectListLog= effectListLog ..'\n+ [se2] '.. self.stackEffect2:toLogString()
+  end
   for key, effect in ipairs(self.effectList) do
     effectListLog= effectListLog ..'\n+ [e] '.. effect:toLogString()
   end
   local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
-  return string.format("$Action%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
+  return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
     self.sn,
     self.fake and '(fake)' or '',
     self.ability:toLogString(),
@@ -1265,11 +1325,35 @@ mAction.toLogString --#(#Action:self)->(#string)
     self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
     self.hotbarCategory,self.slotNum,
     self:getFlagsInfo(),
-    self.oldAction and string.format("\noldAction:$Action%d-%s@%.2f~%.2f(%.2f)<%.2f>%s",self.oldAction.sn, self.oldAction.ability:toLogString(), self.oldAction.startTime/1000,
-      self.oldAction:getEndTime()/1000, self.oldAction.endTime/1000,self.oldAction:getDuration()/1000,
-      self.oldAction.fake and 'fake,' or '') or '\nwithoutOld',
+    self.oldAction and string.format("\noldAction:%s",self.oldAction:toLogString_SingleLine()) or '\nwithoutOld',
     effectListLog,
     tickEffectLog
+  )
+end
+
+mAction.toLogString_Short --#(#Action:self)->(#string)
+= function(self)
+  return string.format("A%d%s-%s@%.2f<%.2f>",
+    self.sn,
+    self.fake and '(fake)' or '',
+    self.ability:toLogString(),
+    self.startTime/1000,
+    self:getDuration()/1000
+  )
+end
+
+mAction.toLogString_SingleLine --#(#Action:self)->(#string)
+= function(self)
+  return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d",
+    self.sn,
+    self.fake and '(fake)' or '',
+    self.ability:toLogString(),
+    self.channelStartTime>0 and string.format('channeling(%d)@',self.channelUnitId or 0) or '',
+    self.startTime/1000,
+    self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
+    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
+    self.hotbarCategory,self.slotNum,
+    self:getFlagsInfo()
   )
 end
 
@@ -1305,6 +1389,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if addType == 1 then
     self.stackCount = stackCount
     self.stackEffect = effect
+    self.stackEffect.staticLevel = LEVEL_STACK_EFFECT
     self.stackCountMatch = false -- #boolean
     self.stackCountMatch = stackCount>=3 and #self.effectList==0 and self.descriptionNums[stackCount]
     local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
@@ -1313,6 +1398,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   elseif addType == 2 then
     self.stackCount2 = stackCount
     self.stackEffect2 = effect
+    self.stackEffect2.staticLevel = LEVEL_STACK_EFFECT_2
     local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
     m.cacheOfActionMatchingEffect[cacheKey] = true
     return true
@@ -1341,8 +1427,12 @@ end
 
 mEffect.toLogString --#(#Effect:self)->(#string)
 = function(self)
-  return string.format("%s, %.2f~%.2f<%d>, stack:%d, %s, unit:%s(%d) %s",  self.ability:toLogString(),self.startTime/1000, self.endTime/1000,
-    self.duration/1000, self.stackCount, self.tickRate==0 and '' or string.format('tickRate:%d',self.tickRate),self.unitTag, self.unitId,
+  return string.format("%s, %.2f~%.2f<%d>, L%d, S%d, %sUnit:%s(%d)%s",
+    self.ability:toLogString(),
+    self.startTime/1000, self.endTime/1000, self.duration/1000,
+    self.staticLevel,
+    self.stackCount, self.tickRate==0 and '' or string.format('tickRate:%d, ',self.tickRate),
+    self.unitTag, self.unitId,
     self.ignored and ' [ignored]' or '')
 end
 --========================================
@@ -1352,5 +1442,5 @@ addon.register("Models#M", m)
 
 -- Register Models debug switches
 addon.registerDebugSwitch(DS_MODEL, "Model Debug")
-addon.registerDebugSubSwitch(DSS_MODEL_STACK, 'Model Stack [MS*]', 'Log stack count updates')
-addon.registerDebugSubSwitch(DSS_MODEL_PURGE, 'Model Purge [MP*]', 'Log effect purge operations')
+addon.registerDebugSubSwitch(DSS_MODEL_STACK, 'Model Stack [MS]', 'Log stack count updates')
+addon.registerDebugSubSwitch(DSS_MODEL_PURGE, 'Model Purge [MP]', 'Log effect purge operations')

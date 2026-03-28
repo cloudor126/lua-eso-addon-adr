@@ -6,6 +6,7 @@ local m = {l=l} -- #M public table for module use
 local NAME = 'ActionDurationReminder'
 local VERSION = '@@ADDON_VERSION@@'
 local TITLE = 'Action Duration Reminder'
+local LINK_TYPE = "ADR_LINK"
 
 --========================================
 --        l
@@ -24,6 +25,14 @@ l.onAddonStarted -- #(#number:eventCode,#string:addonName)->()
   l.start()
 end
 
+-- 1. 定义一个函数，用于在鼠标悬浮时更新工具提示
+local function onTooltipShow(tooltipControl, linkData)
+  -- linkData 就是你在 |H...|h 中传入的自定义数据
+  tooltipControl:ClearLines()
+  tooltipControl:AddLine(linkData.title, 1, 1, 0) -- 标题用黄色
+  tooltipControl:AddLine(linkData.content, 0.8, 0.8, 0.8) -- 内容用灰色
+end
+
 l.start -- #()->()
 = function()
   if l.started then return end
@@ -31,9 +40,10 @@ l.start -- #()->()
   while #l.startListeners > 0 do
     table.remove(l.startListeners,1)()
   end
---  if HodorReflexes and HodorReflexes.users then
---    HodorReflexes.users["@Cloudor"] = {"Cloudor", "|cfffe00Cloudor|r", "ActionDurationReminder/src/cloudor.dds"}
---  end
+
+  --  if HodorReflexes and HodorReflexes.users then
+  --    HodorReflexes.users["@Cloudor"] = {"Cloudor", "|cfffe00Cloudor|r", "ActionDurationReminder/src/cloudor.dds"}
+  --  end
 end
 
 --========================================
@@ -151,7 +161,9 @@ end
 
 m.debug -- #(#string:format, #string:...)->()
 = function(format, ...)
-  df(os.date() .. ' [ADR] ' .. format, ...)
+  local s = string.format( format, ...)
+  s = s:gsub('\n','\n'..string.rep(' ',24)):gsub('%[','|c22dd22[',1):gsub('%]',']|r',1)
+  d('|c0000dd[ADR]|r' ..s)
 end
 
 --========================================
