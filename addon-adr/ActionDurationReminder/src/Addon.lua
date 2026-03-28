@@ -129,13 +129,7 @@ m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:setting
   l.debugSettingMap[switch][subSwitch] = {settingKey, displayName, tooltip}
 end
 
-m.getSavedVars -- #()->(#SavedVars)
-= function()
-  local settings = l.registry["Settings#M"]
-  return settings and settings.getSavedVars() or {}
-end
-
--- Debug module will provide debugEnabled, debug, addonDefaults, refreshMenu implementations
+-- Debug module will provide debugEnabled, debugDefaults, refreshMenu implementations
 -- For now, provide no-op implementations that Debug module will override
 
 m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
