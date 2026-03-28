@@ -120,12 +120,14 @@ m.registerDebugSwitch -- #(#string:switch, #string:displayName)->()
   l.debugSwitchMap[switch] = displayName
 end
 
-m.registerDebugSubSwitch -- #(#list<string>:dss, #string:settingKey, #string:displayName, #string:tooltip)->()
-= function(dss, settingKey, displayName, tooltip)
+m.registerDebugSubSwitch -- #(#list<string>:dss, #string:displayName, #string:tooltip)->()
+= function(dss, displayName, tooltip)
   if not dss[2] then return end
   if not l.debugSettingMap[dss[1]] then
     l.debugSettingMap[dss[1]] = {}
   end
+  -- Auto-generate settingKey: "debug" + capitalize(switch) + capitalize(subSwitch)
+  local settingKey = 'debug' .. dss[1]:sub(1,1):upper() .. dss[1]:sub(2) .. dss[2]:sub(1,1):upper() .. dss[2]:sub(2)
   l.debugSettingMap[dss[1]][dss[2]] = {settingKey, displayName, tooltip}
 end
 
