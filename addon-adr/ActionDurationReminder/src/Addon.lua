@@ -144,7 +144,8 @@ m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
 end
 
 m.debug -- #(#string:format, #string:...)->()
-= function()
+= function(format, ...)
+  df('[ADR] ' .. format, ...)
 end
 
 --========================================

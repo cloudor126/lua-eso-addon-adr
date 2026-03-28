@@ -69,11 +69,6 @@ addon.debugEnabled = function(dss, abilityName)
   return false
 end
 
--- Override addon.debug with full implementation
-addon.debug = function(format, ...)
-  df('[ADR] ' .. format, ...)
-end
-
 --========================================
 --        l
 --========================================
