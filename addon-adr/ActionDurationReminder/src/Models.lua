@@ -567,7 +567,7 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '@'
   end
   if self.targetOut then
-    return '~'
+    return '#'
   end
   -- tail effect
   local duration = self.duration or 0
