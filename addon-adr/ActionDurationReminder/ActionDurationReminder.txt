@@ -21,5 +21,6 @@ src/Views.lua
 src/Bar.lua
 src/Alert.lua
 src/Patch.lua
+src/Debug.lua
 
 

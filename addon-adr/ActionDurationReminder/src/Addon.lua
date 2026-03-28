@@ -121,12 +121,12 @@ m.registerDebugSwitch -- #(#string:switch, #string:displayName)->()
   l.debugSettingMap[switch] = {}
 end
 
-m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:settingKey)->()
-= function(switch, subSwitch, settingKey)
+m.registerDebugSubSwitch -- #(#string:switch, #string:subSwitch, #string:settingKey, #string:displayName, #string:tooltip)->()
+= function(switch, subSwitch, settingKey, displayName, tooltip)
   if not l.debugSettingMap[switch] then
     l.debugSettingMap[switch] = {}
   end
-  l.debugSettingMap[switch][subSwitch] = settingKey
+  l.debugSettingMap[switch][subSwitch] = {settingKey, displayName, tooltip}
 end
 
 m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
@@ -160,101 +160,16 @@ m.getSavedVars -- #()->(#SavedVars)
   return settings and settings.getSavedVars() or {}
 end
 
--- extension for debug options - modules register their debug switches
-m.EXTKEY_DEBUG_OPTIONS = "Debug:addOptions"
+-- Debug module will provide debugEnabled, debug, addonDefaults, refreshMenu implementations
+-- For now, provide no-op implementations that Debug module will override
 
--- Build Debug submenu by collecting options from all modules
-addon.extend(settings.EXTKEY_ADD_MENUS, function()
-  local controls = {
-    {
-      type = "checkbox",
-      name = addon.text("Log Tracked Effects"),
-      tooltip = addon.text("Print tracked effects to chat when they are applied"),
-      getFunc = function() return m.getSavedVars().addonLogTrackedEffectsInChat end,
-      setFunc = function(value) m.getSavedVars().addonLogTrackedEffectsInChat = value end,
-      width = "full",
-    },
-    {
-      type = "checkbox",
-      name = addon.text("Enable Debug Logging"),
-      tooltip = addon.text("Enable fine-grained debug logging without using console commands"),
-      getFunc = function() return m.getSavedVars().addonDebugLoggingEnabled end,
-      setFunc = function(value) m.getSavedVars().addonDebugLoggingEnabled = value end,
-      width = "full",
-    },
-    {
-      type = "submenu",
-      name = addon.text("Detailed Debug Options"),
-      disabled = function() return not m.getSavedVars().addonDebugLoggingEnabled end,
-      controls = {
-        {
-          type = "editbox",
-          name = addon.text("Ability Name Filter"),
-          tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
-          getFunc = function() return m.getSavedVars().addonDebugFilterPattern end,
-          setFunc = function(text) m.getSavedVars().addonDebugFilterPattern = text end,
-          isMultiline = false,
-          width = "full",
-          disabled = function() return not m.getSavedVars().addonDebugLoggingEnabled end,
-        },
-        {
-          type = "button",
-          name = addon.text("Enable All"),
-          tooltip = addon.text("Enable all debug sub-switches"),
-          func = function()
-            local sv = m.getSavedVars()
-            for _, settings in pairs(l.debugSettingMap) do
-              for _, key in pairs(settings) do
-                sv[key] = true
-              end
-            end
-            m.refreshMenu()
-          end,
-          width = "half",
-        },
-        {
-          type = "button",
-          name = addon.text("Disable All"),
-          tooltip = addon.text("Disable all debug sub-switches"),
-          func = function()
-            local sv = m.getSavedVars()
-            for _, settings in pairs(l.debugSettingMap) do
-              for _, key in pairs(settings) do
-                sv[key] = false
-              end
-            end
-            m.refreshMenu()
-          end,
-          width = "half",
-        },
-      },
-    },
-  }
-
-  -- Collect debug options from all modules via extension
-  local moduleControls = {}
-  addon.callExtension(m.EXTKEY_DEBUG_OPTIONS, moduleControls)
-  for _, c in ipairs(moduleControls) do
-    table.insert(controls[3].controls, c)
-  end
-
-  settings.addMenuOptions({
-    type = "submenu",
-    name = addon.text("Debug"),
-    controls = controls,
-  })
-end)
-
--- Addon-level defaults (Settings will pick these up directly)
-m.addonDefaults = {
-  addonLogTrackedEffectsInChat = false,
-  addonDebugFilterPattern = '',
-  addonDebugLoggingEnabled = false,
-}
-
-m.refreshMenu -- #()->()
+m.debugEnabled -- #(#table:dss,#string:abilityName)->(#boolean)
 = function()
-  LAM2:RefreshPanel('ADRAddonOptions')
+  return false
+end
+
+m.debug -- #(#string:format, #string:...)->()
+= function()
 end
 
 --========================================

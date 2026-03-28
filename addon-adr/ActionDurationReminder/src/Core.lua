@@ -201,211 +201,40 @@ l.debug -- #(#string:format, #string:...)->()
 end
 -- Register Core debug switches with the addon framework
 addon.registerDebugSwitch(DS_ACTION, addon.text("Action Debug"))
-addon.registerDebugSubSwitch(DS_ACTION, 'find', 'debugActionFind')
-addon.registerDebugSubSwitch(DS_ACTION, 'new', 'debugActionNew')
-addon.registerDebugSubSwitch(DS_ACTION, 'match', 'debugActionMatch')
-addon.registerDebugSubSwitch(DS_ACTION, 'unref', 'debugActionUnref')
-addon.registerDebugSubSwitch(DS_ACTION, 'stack', 'debugActionStack')
-addon.registerDebugSubSwitch(DS_ACTION, 'remove', 'debugActionRemove')
-addon.registerDebugSubSwitch(DS_ACTION, 'delete', 'debugActionDelete')
-addon.registerDebugSubSwitch(DS_ACTION, 'save', 'debugActionSave')
-addon.registerDebugSubSwitch(DS_ACTION, 'clear', 'debugActionClear')
+addon.registerDebugSubSwitch(DS_ACTION, 'find', 'debugActionFind', 'Action Find [AF*]', 'Log action finding operations')
+addon.registerDebugSubSwitch(DS_ACTION, 'new', 'debugActionNew', 'Action New [AN*]', 'Log action creation')
+addon.registerDebugSubSwitch(DS_ACTION, 'match', 'debugActionMatch', 'Action Match [AM*]', 'Log action matching operations')
+addon.registerDebugSubSwitch(DS_ACTION, 'unref', 'debugActionUnref', 'Action Unref [AU]', 'Log unref operations')
+addon.registerDebugSubSwitch(DS_ACTION, 'stack', 'debugActionStack', 'Action Stack [AK*]', 'Log stack count updates')
+addon.registerDebugSubSwitch(DS_ACTION, 'remove', 'debugActionRemove', 'Action Remove [AR*]', 'Log action removals')
+addon.registerDebugSubSwitch(DS_ACTION, 'delete', 'debugActionDelete', 'Action Delete [AD*]', 'Log action deletions from maps')
+addon.registerDebugSubSwitch(DS_ACTION, 'save', 'debugActionSave', 'Action Save [AS]', 'Log when actions are saved')
+addon.registerDebugSubSwitch(DS_ACTION, 'clear', 'debugActionClear', 'Action Clear [AC*]', 'Log action clearing')
 
 addon.registerDebugSwitch(DS_EFFECT, addon.text("Effect Debug"))
-addon.registerDebugSubSwitch(DS_EFFECT, 'gain', 'debugEffectGain')
-addon.registerDebugSubSwitch(DS_EFFECT, 'fade', 'debugEffectFade')
-addon.registerDebugSubSwitch(DS_EFFECT, 'update', 'debugEffectUpdate')
-addon.registerDebugSubSwitch(DS_EFFECT, 'refresh', 'debugEffectRefresh')
+addon.registerDebugSubSwitch(DS_EFFECT, 'gain', 'debugEffectGain', 'Effect Gain [E+]', 'Log effect gained events')
+addon.registerDebugSubSwitch(DS_EFFECT, 'fade', 'debugEffectFade', 'Effect Fade [E-]', 'Log effect faded events')
+addon.registerDebugSubSwitch(DS_EFFECT, 'update', 'debugEffectUpdate', 'Effect Update [E=]', 'Log effect updated events')
+addon.registerDebugSubSwitch(DS_EFFECT, 'refresh', 'debugEffectRefresh', 'Effect Refresh [E*]', 'Log effect refresh events')
 addon.registerDebugSubSwitch(DS_EFFECT, 'transfer', 'debugEffectTransfer')
 addon.registerDebugSubSwitch(DS_EFFECT, 'miss', 'debugEffectMiss')
 
 addon.registerDebugSwitch(DS_COMBAT, addon.text("Combat Debug"))
-addon.registerDebugSubSwitch(DS_COMBAT, 'event', 'debugCombatEvent')
-addon.registerDebugSubSwitch(DS_COMBAT, 'fade', 'debugCombatFade')
-addon.registerDebugSubSwitch(DS_COMBAT, 'stack', 'debugCombatStack')
-addon.registerDebugSubSwitch(DS_COMBAT, 'tick', 'debugCombatTick')
-addon.registerDebugSubSwitch(DS_COMBAT, 'duration', 'debugCombatDuration')
-addon.registerDebugSubSwitch(DS_COMBAT, 'channel', 'debugCombatChannel')
+addon.registerDebugSubSwitch(DS_COMBAT, 'event', 'debugCombatEvent', 'Combat Event [CE]', 'Log combat events')
+addon.registerDebugSubSwitch(DS_COMBAT, 'fade', 'debugCombatFade', 'Combat Fade [C-]', 'Log combat fade/cancel')
+addon.registerDebugSubSwitch(DS_COMBAT, 'stack', 'debugCombatStack', 'Combat Stack [CS-]', 'Log combat stack consumption')
+addon.registerDebugSubSwitch(DS_COMBAT, 'tick', 'debugCombatTick', 'Combat Tick [CT]', 'Log tick effects')
+addon.registerDebugSubSwitch(DS_COMBAT, 'duration', 'debugCombatDuration', 'Combat Duration [CD]', 'Log duration gained')
+addon.registerDebugSubSwitch(DS_COMBAT, 'channel', 'debugCombatChannel', 'Combat Channel [CC]', 'Log channel duration')
 
 addon.registerDebugSwitch(DS_FILTER, addon.text("Filter Debug"))
-addon.registerDebugSubSwitch(DS_FILTER, 'accept', 'debugFilterAccept')
-addon.registerDebugSubSwitch(DS_FILTER, 'reject', 'debugFilterReject')
+addon.registerDebugSubSwitch(DS_FILTER, 'accept', 'debugFilterAccept', 'Filter Accept [FA*]', 'Log accepted effects/actions')
+addon.registerDebugSubSwitch(DS_FILTER, 'reject', 'debugFilterReject', 'Filter Reject [FR*]', 'Log rejected effects/actions')
 
 addon.registerDebugSwitch(DS_TARGET, addon.text("Target Debug"))
-addon.registerDebugSubSwitch(DS_TARGET, 'track', 'debugTargetTrack')
+addon.registerDebugSubSwitch(DS_TARGET, 'track', 'debugTargetTrack', 'Target Track', 'Log target tracking changes')
 
 -- Register Core debug options for the settings menu
-addon.extend(addon.EXTKEY_DEBUG_OPTIONS, function(controls)
-  table.insert(controls, { type = "header", name = addon.text("Core Debug") })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Find [AF*]"),
-    getFunc = function() return l.getSavedVars().debugActionFind end,
-    setFunc = function(value) l.getSavedVars().debugActionFind = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action New [AN*]"),
-    getFunc = function() return l.getSavedVars().debugActionNew end,
-    setFunc = function(value) l.getSavedVars().debugActionNew = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Match [AM*]"),
-    getFunc = function() return l.getSavedVars().debugActionMatch end,
-    setFunc = function(value) l.getSavedVars().debugActionMatch = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Unref [AU]"),
-    getFunc = function() return l.getSavedVars().debugActionUnref end,
-    setFunc = function(value) l.getSavedVars().debugActionUnref = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Stack [AK*]"),
-    getFunc = function() return l.getSavedVars().debugActionStack end,
-    setFunc = function(value) l.getSavedVars().debugActionStack = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Remove [AR*]"),
-    getFunc = function() return l.getSavedVars().debugActionRemove end,
-    setFunc = function(value) l.getSavedVars().debugActionRemove = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Delete [AD*]"),
-    getFunc = function() return l.getSavedVars().debugActionDelete end,
-    setFunc = function(value) l.getSavedVars().debugActionDelete = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Save [AS]"),
-    getFunc = function() return l.getSavedVars().debugActionSave end,
-    setFunc = function(value) l.getSavedVars().debugActionSave = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Action Clear [AC*]"),
-    getFunc = function() return l.getSavedVars().debugActionClear end,
-    setFunc = function(value) l.getSavedVars().debugActionClear = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Event [CE]"),
-    getFunc = function() return l.getSavedVars().debugCombatEvent end,
-    setFunc = function(value) l.getSavedVars().debugCombatEvent = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Fade [C-]"),
-    getFunc = function() return l.getSavedVars().debugCombatFade end,
-    setFunc = function(value) l.getSavedVars().debugCombatFade = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Stack [CS-]"),
-    getFunc = function() return l.getSavedVars().debugCombatStack end,
-    setFunc = function(value) l.getSavedVars().debugCombatStack = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Tick [CT]"),
-    getFunc = function() return l.getSavedVars().debugCombatTick end,
-    setFunc = function(value) l.getSavedVars().debugCombatTick = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Duration [CD]"),
-    getFunc = function() return l.getSavedVars().debugCombatDuration end,
-    setFunc = function(value) l.getSavedVars().debugCombatDuration = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Combat Channel [CC]"),
-    getFunc = function() return l.getSavedVars().debugCombatChannel end,
-    setFunc = function(value) l.getSavedVars().debugCombatChannel = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Gain [E+]"),
-    getFunc = function() return l.getSavedVars().debugEffectGain end,
-    setFunc = function(value) l.getSavedVars().debugEffectGain = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Fade [E-]"),
-    getFunc = function() return l.getSavedVars().debugEffectFade end,
-    setFunc = function(value) l.getSavedVars().debugEffectFade = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Update [E=]"),
-    getFunc = function() return l.getSavedVars().debugEffectUpdate end,
-    setFunc = function(value) l.getSavedVars().debugEffectUpdate = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Refresh [E*]"),
-    getFunc = function() return l.getSavedVars().debugEffectRefresh end,
-    setFunc = function(value) l.getSavedVars().debugEffectRefresh = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Transfer [E/]"),
-    getFunc = function() return l.getSavedVars().debugEffectTransfer end,
-    setFunc = function(value) l.getSavedVars().debugEffectTransfer = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Effect Miss [EM?]"),
-    getFunc = function() return l.getSavedVars().debugEffectMiss end,
-    setFunc = function(value) l.getSavedVars().debugEffectMiss = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Filter Accept [FA*]"),
-    getFunc = function() return l.getSavedVars().debugFilterAccept end,
-    setFunc = function(value) l.getSavedVars().debugFilterAccept = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Filter Reject [FR*]"),
-    getFunc = function() return l.getSavedVars().debugFilterReject end,
-    setFunc = function(value) l.getSavedVars().debugFilterReject = value end,
-    width = "full",
-  })
-  table.insert(controls, {
-    type = "checkbox",
-    name = addon.text("Target Track"),
-    getFunc = function() return l.getSavedVars().debugTargetTrack end,
-    setFunc = function(value) l.getSavedVars().debugTargetTrack = value end,
-    width = "full",
-  })
-end)
 
 l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect,stacking)
