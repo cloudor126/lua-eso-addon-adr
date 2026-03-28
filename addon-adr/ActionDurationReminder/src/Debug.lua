@@ -9,11 +9,6 @@ local m = {l=l}
 --        m
 --========================================
 
-m.refreshMenu -- #()->()
-= function()
-  LAM2:RefreshPanel('ADRAddonOptions')
-end
-
 -- Override addon.debugEnabled with full implementation using Settings
 addon.debugEnabled = function(dss, abilityName)
   if type(dss) ~= 'table' then return false end
@@ -108,7 +103,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
                 sv[info[1]] = true
               end
             end
-            m.refreshMenu()
           end,
           width = "half",
         },
@@ -123,7 +117,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
                 sv[info[1]] = false
               end
             end
-            m.refreshMenu()
           end,
           width = "half",
         },
