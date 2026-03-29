@@ -382,20 +382,20 @@ mAction.getAreaEffectCount -- #(#Action:self)->(#number)
   return count > 0 and count or nil
 end
 
-mAction.getDuration -- #(#Action:self)->(#number)
+mAction.getDuration -- #(#Action:self)->(#number,#string)
 = function(self)
   if self.tickEffect and self.duration==0 then
-    return self.tickEffect.tickRate
+    return self.tickEffect.tickRate,'T' -- from Tick
   end
   if self.channelStartTime>0 and self.channelEndTime>0 then
-    return self.channelEndTime - self.channelStartTime
+    return self.channelEndTime - self.channelStartTime,'C' -- from Channel
   end
-  if self.configDuration then return self.configDuration end
+  if self.configDuration then return self.configDuration,'F' end -- from Filter
   local optEffect,reason = self:optEffect() -- #Effect
-  if optEffect then return optEffect.duration end
-  if self.duration and self.duration>0 then return self.duration end
-  if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration end
-  return 0
+  if optEffect then return optEffect.duration,'P' end -- from Priority
+  if self.duration and self.duration>0 then return self.duration,'S' end -- from Self
+  if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration,'D' end -- from Description
+  return 0,''
 end
 
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
@@ -1337,13 +1337,14 @@ mAction.toLogString --#(#Action:self)->(#string)
   end
   local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
   local stackCount = stackEffect and stackEffect.stackCount or 0
-  return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
+  local dur,durSource = self:getDuration()
+  return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f%s>%s bar%dslot%d\n%s%s%s%s",
     self.sn,
     self.fake and '(fake)' or '',
     self.ability:toLogString(),
     self.channelStartTime>0 and string.format('channeling(%d)@',self.channelUnitId or 0) or '',
     self.startTime/1000,
-    self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
+    self:getEndTime()/1000, self.endTime/1000,dur/1000,durSource,
     stackCount==0 and '' or string.format("#stackCount:%d",stackCount),
     self.hotbarCategory,self.slotNum,
     self:getFlagsInfo(),
