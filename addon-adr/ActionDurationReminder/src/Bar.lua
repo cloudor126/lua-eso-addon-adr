@@ -200,15 +200,14 @@ l.openShiftBarFrame -- #()->()
   local slot3 = ZO_ActionBar_GetButton(3).slot -- Control#Control
   local slot7 = ZO_ActionBar_GetButton(7).slot -- Control#Control
   if not l.shiftBarFrame then
-    l.shiftBarFrame = WINDOW_MANAGER:CreateControl(nil, slot3, CT_BACKDROP)
     local width = slot7:GetRight() - slot3:GetLeft()
     local _,height = slot7:GetDimensions()
+    -- Create frame as TopLevelWindow for proper mouse handling
+    l.shiftBarFrame = WINDOW_MANAGER:CreateTopLevelWindow()
     l.shiftBarFrame:SetDimensions(width, height)
     l.shiftBarFrame:SetMouseEnabled(true)
     l.shiftBarFrame:SetMovable(true)
     l.shiftBarFrame:SetDrawLayer(DL_COUNT)
-    l.shiftBarFrame:SetCenterColor(0,0,1,0.5)
-    l.shiftBarFrame:SetEdgeTexture('',1,1,1,0)
     l.shiftBarFrame:SetHandler('OnMoveStop', function()
       local left = l.shiftBarFrame:GetLeft()
       local bottom = l.shiftBarFrame:GetBottom()
@@ -219,6 +218,14 @@ l.openShiftBarFrame -- #()->()
         SetGameCameraUIMode(true)
       end, 10)
     end)
+    -- Add backdrop as child of frame
+    local backdrop = WINDOW_MANAGER:CreateControl(nil, l.shiftBarFrame, CT_BACKDROP)
+    backdrop:SetAnchor(TOPLEFT)
+    backdrop:SetAnchor(BOTTOMRIGHT)
+    backdrop:SetCenterColor(0.2, 0.2, 0.2, 0.6)
+    backdrop:SetEdgeTexture('/esoui/art/chatwindow/chat_bg_edge.dds', 256, 256, 32)
+    backdrop:SetDrawLayer(DL_COUNT)
+    backdrop:SetDrawLevel(0)
     local label = WINDOW_MANAGER:CreateControl(nil, l.shiftBarFrame, CT_LABEL) --LabelControl#LabelControl
     label:SetFont('$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin')
     label:SetColor(1,1,1)
@@ -228,23 +235,47 @@ l.openShiftBarFrame -- #()->()
     label:SetDrawLayer(DL_COUNT)
     label:SetDrawLevel(1)
     label:SetText(addon.text("ADR Shift Bar Frame"))
-    local labelClose = WINDOW_MANAGER:CreateControl(nil, l.shiftBarFrame, CT_LABEL) --LabelControl#LabelControl
-    labelClose:SetFont('$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin')
-    labelClose:SetColor(1,1,1)
-    labelClose:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-    labelClose:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
-    labelClose:SetAnchor(TOPRIGHT, nil, TOPRIGHT, -5, 2)
-    labelClose:SetDrawLayer(DL_COUNT)
-    labelClose:SetDrawLevel(1)
-    labelClose:SetText('[X]')
-    labelClose:SetMouseEnabled(true)
-    labelClose:SetHandler('OnMouseUp', function()
-      l.shiftBarFrame:SetHidden(true)
+    -- Close button as a top-level window so it receives mouse events independently
+    local closeBtn = WINDOW_MANAGER:CreateTopLevelWindow()
+    closeBtn:SetDimensions(32, 32)
+    closeBtn:SetDrawLayer(DL_OVERLAY)
+    closeBtn:SetMouseEnabled(true)
+    closeBtn:SetMovable(false)
+    closeBtn.parentFrame = l.shiftBarFrame -- reference for handler
+    -- Use a texture for visual
+    local closeTexture = closeBtn:CreateControl(nil, CT_TEXTURE)
+    closeTexture:SetAnchor(CENTER)
+    closeTexture:SetDimensions(24, 24)
+    closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    closeTexture:SetDrawLayer(DL_OVERLAY)
+    closeBtn.texture = closeTexture
+    -- Mouse handlers
+    closeBtn:SetHandler('OnMouseEnter', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_up.dds')
     end)
+    closeBtn:SetHandler('OnMouseExit', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    end)
+    closeBtn:SetHandler('OnMouseDown', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_down.dds')
+    end)
+    closeBtn:SetHandler('OnMouseUp', function(self, button)
+      if button == 1 then
+        self.parentFrame:SetHidden(true)
+        self:SetHidden(true)
+      end
+    end)
+    l.shiftBarCloseBtn = closeBtn
+    -- Store reference for position calculation
+    l.shiftBarSlot3 = slot3
   end
   l.shiftBarFrame:SetHidden(false)
   l.shiftBarFrame:ClearAnchors()
-  l.shiftBarFrame:SetAnchor(BOTTOMLEFT, slot3, TOPLEFT, l.getSavedVars().barShiftOffsetX, l.getSavedVars().barShiftOffsetY+1)
+  l.shiftBarFrame:SetAnchor(BOTTOMLEFT, l.shiftBarSlot3, TOPLEFT, l.getSavedVars().barShiftOffsetX, l.getSavedVars().barShiftOffsetY+1)
+  -- Position close button relative to frame
+  l.shiftBarCloseBtn:ClearAnchors()
+  l.shiftBarCloseBtn:SetAnchor(TOPRIGHT, l.shiftBarFrame, TOPRIGHT, 4, -4)
+  l.shiftBarCloseBtn:SetHidden(false)
 end
 
 l.updateWidgets -- #(#(Views#Widget:widget)->():func)->()

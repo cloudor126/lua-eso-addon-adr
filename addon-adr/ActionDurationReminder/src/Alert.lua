@@ -512,8 +512,8 @@ l.openAlertFrame -- #()->()
     local backdrop = WINDOW_MANAGER:CreateControl(nil, l.frame, CT_BACKDROP) --BackdropControl#BackdropControl
     backdrop:SetAnchor(TOPLEFT)
     backdrop:SetAnchor(BOTTOMRIGHT)
-    backdrop:SetCenterColor(0,0,1,0.5)
-    backdrop:SetEdgeTexture('',1,1,1,1)
+    backdrop:SetCenterColor(0.2, 0.2, 0.2, 0.6)
+    backdrop:SetEdgeTexture('/esoui/art/chatwindow/chat_bg_edge.dds', 256, 256, 32)
     backdrop:SetDrawLayer(DL_COUNT)
     backdrop:SetDrawLevel(0)
     local label = WINDOW_MANAGER:CreateControl(nil, l.frame, CT_LABEL) --LabelControl#LabelControl
