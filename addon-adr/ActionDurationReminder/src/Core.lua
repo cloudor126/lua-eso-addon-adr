@@ -46,6 +46,13 @@ local DSS_EFFECT_MATCH = {DS_EFFECT, 'match'}
 -- Target
 local DSS_TARGET_TRACK = {DS_TARGET, 'track'}
 
+-- Power Lash Guide constants
+local DRAGONKNIGHT_CLASS_ID = 1
+local FLAME_LASH_ICON_KEYWORD = "dragonknight_001_a"
+local OFF_BALANCE_ICON_KEYWORD = "ability_debuff_offbalance"
+local POWER_LASH_GUIDE_ABILITY_ID = -999001 -- fake ability id for Power Lash guide effect
+local POWER_LASH_GUIDE_DURATION = 5000 -- 5 seconds duration for the guide effect
+
 ---
 --@type CoreSavedVars
 local coreSavedVarsDefaults = {
@@ -96,6 +103,26 @@ l.timeActionMap = {}--#map<#number,Models#Action>
 l.targetId = nil -- #number
 
 l.cacheOfActionMatchingAction = {} -- #map<#string:#boolean>
+
+-- Power Lash Guide state
+---@type PowerLashGuideState
+l.powerLashGuideState = {
+  isDragonknight = nil, -- cached class check
+  lastGuideType = nil, -- 'show' or 'hide', tracks last sent guide type
+}
+
+l.findFlameLashSlot -- #()->(#number:hotbarCategory, #number:slotNum) Find Flame Lash slot in hotbar (returns hotbarCategory, slotNum or nil)
+= function()
+  for hotbarCategory = 0, 1 do
+    for slotNum = 3, 8 do
+      local texture = GetSlotTexture(slotNum, hotbarCategory)
+      if texture and texture:find(FLAME_LASH_ICON_KEYWORD, 1, true) then
+        return hotbarCategory, slotNum
+      end
+    end
+  end
+  return nil, nil
+end
 
 l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolean)
 = function(abilityId, abilityName)
@@ -323,6 +350,24 @@ end
 
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
+  -- Special handling for Power Lash Guide effect
+  if effect.ability.id == POWER_LASH_GUIDE_ABILITY_ID then
+    local hotbarCategory, slotNum = l.findFlameLashSlot()
+    if hotbarCategory then
+      local action = models.newAction(slotNum, hotbarCategory)
+      action.fake = true
+      action.ability.id = POWER_LASH_GUIDE_ABILITY_ID
+      action.ability.name = "Power Lash Guide"
+      action.ability.showName = "Power Lash Guide"
+      action.ability.icon = "/esoui/art/icons/ability_dragonknight_001_b.dds"
+      action.isPowerLashGuide = true
+      if addon.debugEnabled(DSS_ACTION_FIND, "PowerLashGuide") then
+        addon.debug('[AFA]found Flame Lash slot for Power Lash Guide')
+      end
+      return action
+    end
+    return nil
+  end
   -- check if it's a major buff/debuff, e.g. avoid abuse of Major Expedition or Off Balance
   if effect.ability.icon:find('ability_buff_ma',1,true) then return nil end
   if effect.ability.icon:find('ability_debuff_offb',1,true) then return nil end
@@ -558,7 +603,9 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         action.inheritDuration = sameNameAction.duration
       elseif action.duration == 0 and sameNameAction.inheritDuration >0 then
         action.inheritDuration = sameNameAction.inheritDuration
-      elseif action.duration == 0 and sameNameAction.descriptionDuration >0 then
+      elseif action.duration == 0
+        and sameNameAction.descriptionDuration
+        and sameNameAction.descriptionDuration >0 then
         action.inheritDuration = sameNameAction.descriptionDuration
       end
       local abilityAccepter -- # (#Ability:relatedAbility)->()
@@ -1341,6 +1388,7 @@ l.onStart -- #()->()
 = function()
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_ACTION_SLOT_ABILITY_USED, l.onActionSlotAbilityUsed)
   EVENT_MANAGER:RegisterForUpdate(addon.name, 100, l.onUpdate)
+  EVENT_MANAGER:RegisterForUpdate(addon.name..'_PowerLash', 200, l.onUpdateForPowerLash)
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_EFFECT_CHANGED, l.onEffectChanged)
   EVENT_MANAGER:AddFilterForEvent(addon.name, EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
   EVENT_MANAGER:RegisterForEvent(addon.name..'_pet', EVENT_EFFECT_CHANGED, l.onEffectChanged)
@@ -1570,6 +1618,131 @@ m.getTimeActionMap -- #()->(#map<#number,Models#Action>)
   return l.timeActionMap
 end
 addon.getTimeActionMap = m.getTimeActionMap
+
+l.isPlayerDragonknight -- #()->(#boolean)Check if player is Dragonknight (cached)
+ = function()
+  if l.powerLashGuideState.isDragonknight == nil then
+    l.powerLashGuideState.isDragonknight = GetUnitClassId("player") == DRAGONKNIGHT_CLASS_ID
+  end
+  return l.powerLashGuideState.isDragonknight
+end
+
+-- Check if target has Off Balance debuff
+l.targetHasOffBalance = function()
+  if not DoesUnitExist("reticleover") then return false end
+  local numBuffs = GetUnitNumBuffs("reticleover") or 0
+  for i = 1, numBuffs do
+    local _, _, _, _, _, iconFilename = GetUnitBuffInfo("reticleover", i)
+    if iconFilename and iconFilename:find(OFF_BALANCE_ICON_KEYWORD, 1, true) then
+      return true
+    end
+  end
+  return false
+end
+
+-- Get Flame Lash action from idActionMap
+l.getFlameLashAction = function(hotbarCategory, slotNum)
+  return l.getActionBySlot(hotbarCategory, slotNum)
+end
+
+-- Send Power Lash guide effect (simulated onEffectChanged)
+l.sendPowerLashGuide = function(show)
+  -- Avoid sending same type repeatedly
+  if l.powerLashGuideState.lastGuideType == (show and 'show' or 'hide') then
+    return
+  end
+  l.powerLashGuideState.lastGuideType = show and 'show' or 'hide'
+
+  local now = GetGameTimeMilliseconds()
+  local nowSec = now / 1000
+
+  if show then
+    -- Show guide effect (GAINED)
+    if addon.debugEnabled(DSS_EFFECT_GAIN, "PowerLashGuide") then
+      addon.debug('[E+]PowerLashGuide - Off Balance detected, use Power Lash!')
+    end
+    l.onEffectChanged(
+      EVENT_EFFECT_CHANGED,
+      EFFECT_RESULT_GAINED,
+      0, -- effectSlot (fake)
+      "Power Lash Guide", -- effectName
+      "player", -- unitTag
+      nowSec, -- beginTime
+      nowSec + POWER_LASH_GUIDE_DURATION / 1000, -- endTime
+      0, -- stackCount
+      "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName (Power Lash icon)
+      BUFF_TYPE_DEBUFF, -- buffType
+      BUFF_TYPE_DEBUFF, -- effectType
+      ABILITY_TYPE_ABILITY, -- abilityType
+      0, -- statusEffectType
+      GetUnitName("player"), -- unitName
+      0, -- unitId
+      POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
+      COMBAT_UNIT_TYPE_PLAYER -- sourceType
+    )
+  else
+    -- Hide guide effect (FADED)
+    if addon.debugEnabled(DSS_EFFECT_FADE, "PowerLashGuide") then
+      addon.debug('[E-]PowerLashGuide - conditions no longer met')
+    end
+    l.onEffectChanged(
+      EVENT_EFFECT_CHANGED,
+      EFFECT_RESULT_FADED,
+      0, -- effectSlot (fake)
+      "Power Lash Guide", -- effectName
+      "player", -- unitTag
+      nowSec, -- beginTime
+      nowSec, -- endTime
+      0, -- stackCount
+      "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName
+      BUFF_TYPE_DEBUFF, -- buffType
+      BUFF_TYPE_DEBUFF, -- effectType
+      ABILITY_TYPE_ABILITY, -- abilityType
+      0, -- statusEffectType
+      GetUnitName("player"), -- unitName
+      0, -- unitId
+      POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
+      COMBAT_UNIT_TYPE_PLAYER -- sourceType
+    )
+  end
+end
+
+-- Main update function for Power Lash guide (called every 200ms)
+l.onUpdateForPowerLash = function()
+  -- Check if player is Dragonknight
+  if not l.isPlayerDragonknight() then
+    return
+  end
+
+  -- Find Flame Lash in hotbar
+  local hotbarCategory, slotNum = l.findFlameLashSlot()
+  if not hotbarCategory then
+    -- No Flame Lash found, hide guide if was shown
+    l.sendPowerLashGuide(false)
+    return
+  end
+
+  -- Get Flame Lash action and check if in cooldown (20s)
+  local flameLashAction = l.getFlameLashAction(hotbarCategory, slotNum)
+  if flameLashAction then
+    local duration = flameLashAction:getDuration()
+    -- If duration is around 20 seconds (19000-21000ms), it's in Power Lash cooldown
+    if duration >= 19000 and duration <= 21000 then
+      -- In Power Lash cooldown, hide guide if was shown
+      l.sendPowerLashGuide(false)
+      return
+    end
+  end
+
+  -- Check if target has Off Balance
+  if l.targetHasOffBalance() then
+    -- Show guide: Flame Lash available and target has Off Balance
+    l.sendPowerLashGuide(true)
+  else
+    -- Hide guide: target doesn't have Off Balance
+    l.sendPowerLashGuide(false)
+  end
+end
 
 --========================================
 --        register
