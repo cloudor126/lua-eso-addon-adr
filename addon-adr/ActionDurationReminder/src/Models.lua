@@ -254,8 +254,6 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
   }
   action.data = {} -- #table to store data in
   action.effectList = {} -- #list<#Effect>
-  action.stackCount = 0
-  action.stackCount2 = 0 -- for triggered bonus stacks (e.g. Stone Giant triggered stacks, Flame Lash bonus 5 stacks)
   action.stackEffect = nil -- #Effect
   action.stackEffect2 = nil -- #Effect for triggered bonus stacks
   action.tickEffect = nil -- #Effect
@@ -605,9 +603,10 @@ end
 
 mAction.getStageInfo2 -- #(#Action:self)->(#number)
 = function(self)
-  -- fixed value
-  if self.stackCount2 and self.stackCount2>0 then
-    return self.stackCount2
+  -- fixed value from stackEffect2
+  local stackEffect2 = self:getStackEffect2()
+  if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 then
+    return stackEffect2.stackCount
   end
   -- cached value
   if self.flags.forArea then
@@ -660,6 +659,23 @@ mAction.getStartTime -- #(#Action:self)->(#number)
   return optEffect and optEffect.startTime or self.startTime
 end
 
+mAction.getStackEffect -- #(#Action:self)->(#Effect)
+= function(self)
+  -- For crux-consuming actions, return global crux effect if no local stackEffect
+  if self.showCrux then
+    local cruxEffect = m.crux.getEffect()
+    if cruxEffect and (not self.stackEffect or self.stackEffect.duration == 0) then
+      return cruxEffect
+    end
+  end
+  return self.stackEffect
+end
+
+mAction.getStackEffect2 -- #(#Action:self)->(#Effect)
+= function(self)
+  return self.stackEffect2
+end
+
 mAction.hasEffect -- #(#Action:self)->(#boolean)
 = function(self)
   return #self.effectList >0
@@ -686,11 +702,10 @@ end
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
+  local stackEffect = self:getStackEffect()
+  local stackCount = stackEffect and stackEffect.stackCount or 0
   return self.duration==0 and
-    (
-    self.stackCount>0
-    or (self.stackEffect and self.stackEffect.stackCount or 0)>0
-    )
+    stackCount > 0
     and
     (
     optEffect and optEffect.duration==0
@@ -1127,7 +1142,6 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   if self.stackEffect and self.stackEffect.ability.id == effect.ability.id and self.stackEffect.unitId==effect.unitId then
     oldEffect = self.stackEffect
     self.stackEffect = nil
-    self.stackCount = 0
     -- Recalculate levels and sort since stackEffect changed
     self:recalcEffectLevels()
     if addon.debugEnabled(DSS_MODEL_PURGE, oldEffect.ability.name) then
@@ -1137,7 +1151,6 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   if self.stackEffect2 and self.stackEffect2.ability.id == effect.ability.id and self.stackEffect2.unitId==effect.unitId then
     oldEffect = self.stackEffect2
     self.stackEffect2 = nil
-    self.stackCount2 = 0
     if oldEffect.ability.id == self.ability.id then
       -- 例如龙骑Power Lash的20秒冷却，当五鞭子层数消失后，应该继续记录冷却
       oldEffect.stackCount = 0
@@ -1312,8 +1325,9 @@ end
 mAction.toLogString --#(#Action:self)->(#string)
 = function(self)
   local effectListLog = #self.effectList>0 and ':' or ''
-  if self.stackEffect then
-    effectListLog= effectListLog ..'\n+ [se] '.. self.stackEffect:toLogString()
+  local stackEffect = self:getStackEffect()
+  if stackEffect then
+    effectListLog= effectListLog ..'\n+ [se] '.. stackEffect:toLogString()
   end
   if self.stackEffect2 then
     effectListLog= effectListLog ..'\n+ [se2] '.. self.stackEffect2:toLogString()
@@ -1322,6 +1336,7 @@ mAction.toLogString --#(#Action:self)->(#string)
     effectListLog= effectListLog ..'\n+ [e] '.. effect:toLogString()
   end
   local tickEffectLog = self.tickEffect and string.format('\n+ [t] %s',self.tickEffect:toLogString()) or ''
+  local stackCount = stackEffect and stackEffect.stackCount or 0
   return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d\n%s%s%s%s",
     self.sn,
     self.fake and '(fake)' or '',
@@ -1329,7 +1344,7 @@ mAction.toLogString --#(#Action:self)->(#string)
     self.channelStartTime>0 and string.format('channeling(%d)@',self.channelUnitId or 0) or '',
     self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
-    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
+    stackCount==0 and '' or string.format("#stackCount:%d",stackCount),
     self.hotbarCategory,self.slotNum,
     self:getFlagsInfo(),
     self.oldAction and string.format("\noldAction:%s",self.oldAction:toLogString_SingleLine()) or '\nwithoutOld',
@@ -1351,6 +1366,8 @@ end
 
 mAction.toLogString_SingleLine --#(#Action:self)->(#string)
 = function(self)
+  local stackEffect = self:getStackEffect()
+  local stackCount = stackEffect and stackEffect.stackCount or 0
   return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d",
     self.sn,
     self.fake and '(fake)' or '',
@@ -1358,7 +1375,7 @@ mAction.toLogString_SingleLine --#(#Action:self)->(#string)
     self.channelStartTime>0 and string.format('channeling(%d)@',self.channelUnitId or 0) or '',
     self.startTime/1000,
     self:getEndTime()/1000, self.endTime/1000,self:getDuration()/1000,
-    self.stackCount==0 and '' or string.format("#stackCount:%d",self.stackCount),
+    stackCount==0 and '' or string.format("#stackCount:%d",stackCount),
     self.hotbarCategory,self.slotNum,
     self:getFlagsInfo()
   )
@@ -1394,12 +1411,10 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
     addType = 2
   end
   if addType == 1 then
-    self.stackCount = stackCount
     self.stackEffect = effect
     self.stackCountMatch = false -- #boolean
     self.stackCountMatch = stackCount>=3 and self.descriptionNums[stackCount]
   elseif addType == 2 then
-    self.stackCount2 = stackCount
     self.stackEffect2 = effect
   end
   if addType >0 then

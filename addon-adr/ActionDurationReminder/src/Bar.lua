@@ -137,9 +137,11 @@ l.onCoreUpdate -- #()->()
   local toShowIdList = {} --#list<#number>
   for id, action in pairs(core.getIdActionMap()) do
     if not showedActionMap[id] then
-      -- filter removed long-stack action
-      if #action.effectList==0 and action.stackCount > 0 and action.hotbarCategory==hotbarCategory then
-        action.stackCount= 0
+      -- filter removed long-stack action (but keep actions with stackEffect)
+      local stackEffect = action:getStackEffect()
+      local stackCount = stackEffect and stackEffect.stackCount or 0
+      if #action.effectList==0 and stackCount > 0 and action.hotbarCategory==hotbarCategory and not action.showCrux then
+        action.stackEffect = nil
       end
       -- collect
       action.flags.shifted = true

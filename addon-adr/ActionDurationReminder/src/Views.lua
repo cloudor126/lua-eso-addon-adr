@@ -410,12 +410,14 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
   local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
-  local stackEffectHasStageInfo = action.stackEffect and action.stackEffect.stageInfo
-  local stackEffectBlink = action.stackEffect and action.stackEffect.stageInfoBlink
+  local stackEffect = action:getStackEffect()
+  local stackEffectHasStageInfo = stackEffect and stackEffect.stageInfo
+  local stackEffectBlink = stackEffect and stackEffect.stageInfoBlink
   local optEffect = action:optEffect()
+  local stackCount = stackEffect and stackEffect.stackCount or 0
   -- label
   local stackCountOnly = false
-  if #action.effectList==0 and action.stackCount > 0 then
+  if #action.effectList==0 and stackCount > 0 then
     stackCountOnly = true -- i.e. Grim Focus
   end
   if l.getSavedVars().barLabelEnabled and not stackCountOnly then
@@ -438,8 +440,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   -- stack label
   if l.getSavedVars().barStackLabelEnabled then
     -- stackLabel
-    if action.stackCount and action.stackCount > 0 and not stackEffectHasStageInfo then
-      local stackText = string.format(action.stackCountMatch and '%d^' or '%d',action.stackCount)
+    if stackCount > 0 and not stackEffectHasStageInfo then
+      local stackText = string.format(action.stackCountMatch and '%d^' or '%d',stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
     elseif stageInfo then

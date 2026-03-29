@@ -166,10 +166,12 @@ end
 
 l.isActionInstant --#(Models#Action:action)->(#boolean)
 = function(action)
+  local stackEffect = action:getStackEffect()
+  local stackCount = stackEffect and stackEffect.stackCount or 0
   -- check fakeInstant i.e. Crystal Fragment
-  if action.fake and action.stackCount ==0 then return true end
+  if action.fake and stackCount == 0 then return true end
   -- check bound armaments at stack 4
-  if action.stackCount==4 and action.ability.icon:find('bound_armament',35,true)
+  if stackCount == 4 and action.ability.icon:find('bound_armament',35,true)
     and GetGameTimeMilliseconds() > action.startTime + 300 -- don't alert at the moment it being used
   then
     return true
@@ -188,7 +190,7 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
       if oldestAction.ability.id ~= currentId
         and action.data['alert.transmuteRefId'] ~= currentId
       then
-        if action.stackCount <= 1 then -- i.e. Bound Armaments transmute when just getting an attack stack
+        if stackCount <= 1 then -- i.e. Bound Armaments transmute when just getting an attack stack
           action.data['alert.transmuteRefId'] = currentId
           return false
         end

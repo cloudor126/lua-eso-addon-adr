@@ -603,9 +603,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
       end
       sameNameAction.effectList = {}
       action.lastEffectTime = sameNameAction.lastEffectTime
-      action.stackCount = sameNameAction.stackCount
       action.stackEffect = sameNameAction.stackEffect
-      action.stackCount2 = sameNameAction.stackCount2
       action.stackEffect2 = sameNameAction.stackEffect2
       action.tickEffect = sameNameAction.tickEffect
       sameNameAction.stackEffect = nil
@@ -781,15 +779,13 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   -- handle stackCount2 consumption for triggered bonus stacks (e.g. Stone Giant, Flame Lash)
   if result == ACTION_RESULT_DAMAGE or result == ACTION_RESULT_CRITICAL_DAMAGE then
     for key, action in pairs(l.idActionMap) do
-      if action.stackCount2 and action.stackCount2 > 0
-        and action.stackEffect2 and action.stackEffect2.ability.id == abilityId
+      local stackEffect2 = action:getStackEffect2()
+      if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0
+        and stackEffect2.ability.id == abilityId
       then
-        action.stackCount2 = action.stackCount2 - 1
-        if action.stackEffect2.stackCount and action.stackEffect2.stackCount > 0 then
-          action.stackEffect2.stackCount = action.stackEffect2.stackCount - 1
-        end
+        stackEffect2.stackCount = stackEffect2.stackCount - 1
         if addon.debugEnabled(DSS_COMBAT_STACK, action.ability.name) then
-          addon.debug('[CS-]consumed %s:%d', action.ability.name, action.stackCount2)
+          addon.debug('[CS-]consumed %s:%d', action.ability.name, stackEffect2.stackCount)
         end
       end
     end
@@ -905,8 +901,9 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
             end
           end
           -- 有些action还只有stackEffect2层数，而不知道层数的期限，例如龙骑的power lash
-          if action.stackEffect2 and action.stackCount2 > 0 then
-            local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now+duration, action.stackCount2, 0);
+          local stackEffect2 = action:getStackEffect2()
+          if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 then
+            local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now+duration, stackEffect2.stackCount, 0);
             effect.combatEventId = abilityId
             action:saveEffect(effect)
             l.saveAction(action)
@@ -1479,7 +1476,9 @@ l.refineActions -- #()->()
   local endLimit = now - l.getSavedVars().coreSecondsBeforeFade * 1000
   for key,action in pairs(l.idActionMap) do
     local endTime = action:isUnlimited() and endLimit+1 or action:getEndTime()
-    if action.stackCount==0 -- i.e. Grim Focus triggered by weapon attack
+    local stackEffect = action:getStackEffect()
+    local stackCount = stackEffect and stackEffect.stackCount or 0
+    if stackCount == 0 -- i.e. Grim Focus triggered by weapon attack
       and endTime < (action.fake and now or endLimit)
     then
       if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
