@@ -1,3 +1,26 @@
+3.143
+
+### New Features
+- Added Power Lash Guide feature for Dragonknight, showing a prompt icon when Power Lash is ready.
+- Added popup alerts for Arcanist's Crux stacks.
+- Added configurable color for low priority effect labels.
+- Added blinking effect for stackLabel when stageInfoBlink is set.
+
+### Improvements
+- Refactored alert system to rule-based architecture with independent trigger marks.
+- Implemented global crux sharing across multiple Arcanist actions.
+- Refactored stackCount to read from stackEffect as single source of truth.
+- Added duration source tracking to distinguish tick/channel/filter/priority effect durations.
+- Improved positioning frame UI with ESO-style borders.
+- Refactored debug logging system with three-tier marking scheme and ability name filtering.
+- Created standalone Debug.lua module with fine-grained debug control.
+
+### Performance
+- Cached action and effect matching for improved performance.
+
+### Refactor
+- Moved action leak detection from Alert to Core module.
+
 3.142a
 - Fixed a bug where prebuffed actions could wrongly match triggered ground effects after switching skills at combat start.
 
