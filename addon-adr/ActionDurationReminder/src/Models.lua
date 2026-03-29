@@ -413,6 +413,7 @@ mAction.getDuration -- #(#Action:self)->(#number,#string)
   if self.configDuration then return self.configDuration, m.DUR_SOURCE_FILTER end
   local optEffect,reason = self:optEffect() -- #Effect
   if optEffect then return optEffect.duration, m.DUR_SOURCE_PRIORITY end
+  if self.showCrux and not self:getStackEffect() then return 0, m.DUR_SOURCE_NONE end
   if self.duration and self.duration>0 then return self.duration, m.DUR_SOURCE_SELF end
   if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration, m.DUR_SOURCE_DESC end
   return 0, m.DUR_SOURCE_NONE
@@ -443,6 +444,7 @@ mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
     return optEffect.endTime
   end
   if self.endTime>0 then return self.endTime end
+  if self.showCrux and not optEffect and not self:getStackEffect() then return self.startTime end -- 可能曾经有crux单现在一无所有
   local maxEffectEndTime = 0
   for key, var in ipairs(self.effectEndTimes) do
     if var > maxEffectEndTime then maxEffectEndTime = var end

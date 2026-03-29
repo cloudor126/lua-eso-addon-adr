@@ -88,7 +88,7 @@ m.hookStart -- #(#()->():listener)->()
   table.insert(l.startListeners, listener)
 end
 
-m.isSimpleWord -- #(#stirng:s)->(#boolean)
+m.isSimpleWord -- #(#string:s)->(#boolean)
 = function(s)
   if s:find(' ',1,true) then return false end
   if s:find('(',1,true) then return false end

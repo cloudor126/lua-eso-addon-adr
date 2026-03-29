@@ -10,12 +10,13 @@ local m = {l=l} -- #M
 
 local DS_ALERT = "alert" -- debug switch for alert
 
+
 -- DSS (Debug Switch + SubSwitch) constants for addon.debugEnabled
 local DSS_ALERT_SHOW = {DS_ALERT, 'show'}      -- alert shown
 local DSS_ALERT_HIDE = {DS_ALERT, 'hide'}      -- alert hidden
 local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
-local DSS_ALERT_RULE = {DS_ALERT, 'rule'}      -- rule check
 local DSS_ALERT_REMOVE = {DS_ALERT, 'remove'}  -- alert removed by rule
+local DSS_ALERT_CREATE = {DS_ALERT, 'create'}  -- alert created by rule
 
 local zhFlags = {
   zh = true,
@@ -57,7 +58,7 @@ l.showedControls = {} -- #list<Control#Control>
 
 -- Active alerts: alert objects created by rules
 -- Each alert: { rule, action, ability, startTime, control }
-l.activeAlerts = {} -- #list<Alert>
+l.activeAlerts = {} -- #list<#Alert>
 
 l.soundChoices = {} -- #list<#number>
 for k,v in pairs(SOUNDS) do
@@ -65,6 +66,11 @@ for k,v in pairs(SOUNDS) do
 end
 table.sort(l.soundChoices)
 
+local disabledTimeoutAbilityIds = {
+  -- flame lash
+  [20816] = true,
+  [20824] = true,
+}
 -- Check if ability passes whitelist/blacklist filters
 l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
 = function(ability)
@@ -85,7 +91,7 @@ l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
   end
   if checked and not checkOk then
     if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
-      addon.debug("[LSw]skipped by whitelist: %s(%d)", ability.name, ability.id)
+      addon.debug("[L^w]skipped by whitelist: %s(%d)", ability.name, ability.id)
     end
     return false
   end
@@ -96,14 +102,14 @@ l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
       if line:match('^%d+$') then
         if tonumber(line) == ability.id then
           if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
-            addon.debug("[LSb]skipped by blacklist id: %s(%d)", ability.name, ability.id)
+            addon.debug("[L^b]skipped by blacklist id: %s(%d)", ability.name, ability.id)
           end
           return false
         end
       end
       if zo_strformat("<<1>>", ability.name):lower():find(line,1,true) then
         if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
-          addon.debug("[LSb]skipped by blacklist name: %s(%d)", ability.name, ability.id)
+          addon.debug("[L^b]skipped by blacklist name: %s(%d)", ability.name, ability.id)
         end
         return false
       end
@@ -113,7 +119,7 @@ l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
 end
 
 -- Show alert UI for an alert object
-l.showAlert -- #(Alert:alert)->()
+l.showAlert -- #(#Alert:alert)->()
 = function(alert)
   if alert.control then return end -- already shown
 
@@ -121,7 +127,7 @@ l.showAlert -- #(Alert:alert)->()
   local ability = alert.ability
 
   if addon.debugEnabled(DSS_ALERT_SHOW, ability.name) then
-    addon.debug("[L+]showing alert: %s(%d) @%.2f", ability.name, ability.id, alert.startTime/1000)
+    addon.debug("[LS]showing alert: %s", ability:toLogString())
   end
   if savedVars.alertPlaySound then PlaySound(SOUNDS[savedVars.alertSoundName]) end
   local control = l.retrieveControl()
@@ -144,13 +150,6 @@ l.showAlert -- #(Alert:alert)->()
   -- link control to alert
   alert.control = control
 
-  -- set timeout to hide control (alert may be removed earlier by rule)
-  zo_callLater(
-    function()
-      l.returnControl(control)
-    end,
-    savedVars.alertKeepSeconds*1000
-  )
 end
 
 --========================================
@@ -200,7 +199,7 @@ end
 l.shouldSkipAction --#(Models#Action:action)->(#boolean)
 = function(action)
   if action.alertSkipResult ~= nil then return action.alertSkipResult end
-  
+
   local skipReason = nil
   -- check ultimate
   if action.slotNum == 8 then
@@ -210,54 +209,89 @@ l.shouldSkipAction --#(Models#Action:action)->(#boolean)
   end
   -- filter by whitelist/blacklist
   if skipReason then
-    action.alertSkipResult = true 
+    action.alertSkipResult = true
     if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
-      local key = "LSp/" .. action.ability.name
+      local key = "L^p/" .. action.ability.name
       if l.shouldLog(key) then
-        addon.debug("[LSp]skipped %s \n reason: %s", action:toLogString_SingleLine(), skipReason)
+        addon.debug("[L^p]skipped %s \n reason: %s", action:toLogString_SingleLine(), skipReason)
       end
     end
     return true
   end
-     
+
   action.alertSkipResult = false
   return false
 end
 
 -- Alert rule: timeout (near expiration)
-l.alertRuleTimeout -- #table
+l.alertRuleTimeout
 = {
-  name = "timeout",
+  name = "Timeout",
   shouldAlert = function(action, alert)
+    -- check id list
+    if disabledTimeoutAbilityIds[action.ability.id] then return false, 'disabled id' end
     -- check tick
     if action.tickEffect and action.duration==0 then return false,'is tick' end
     -- check action in 1/2
     if action:getStageInfo() == '1/2' then return false,'1/2 stage' end
     -- skip instant actions for timeout rule
     if l.isActionInstant(action) then return false, "is instant" end
+    -- skip channelling action
+    if action.channelStartTime >0 and action.channelEndTime >0 then
+      return false, "is chanelling"
+    end
     -- skip if duration comes from low level effect
     local duration, durSource = action:getDuration()
     if durSource == models.DUR_SOURCE_PRIORITY then
       local optEffect = action:optEffect()
       if optEffect and optEffect.levelIsLow then
-        return false, "low level effect"
+        return false, "low level opted effect"
       end
     end
-    -- remove if action was refreshed (startTime changed)
-    if alert and action.startTime ~= alert.startTime then return false, "action refreshed" end
-    -- check if near expiration (or no longer near if alert exists)
+    -- no duration
+    if not alert and duration==0 then return false,"no duration" end
+
+    local now = GetGameTimeMilliseconds()
+    local startTime = action.startTime
     local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
-    if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
-      return true, "near expiration"
+    local tailTime = l.getSavedVars().alertKeepSeconds*1000
+    local endTime = action:getEndTime()
+
+    -- already ended
+    if not alert and endTime <= now then return false, 'already ended' end
+    -- remove if action was refreshed (startTime changed)
+    if alert and startTime ~= alert.startTime then return false, "action refreshed" end
+    -- check if near expiration (or no longer near if alert exists)
+
+    if now > endTime - aheadTime and now < endTime + tailTime  then
+      return true, string.format("%.2f in expiration(%.2f, %.2f)",
+        now/1000, (endTime - aheadTime)/1000, (endTime+tailTime)/1000)
     else
-      return false, "not near expiration"
+      return false, string.format("%.2f not in expiration(%.2f, %.2f)",
+        now/1000, (endTime - aheadTime)/1000, (endTime+tailTime)/1000)
     end
+  end,
+}
+
+-- Alert rule: crux (full cruxes to use)
+l.alertRuleCrux = {
+  name = "Crux",
+  shouldAlert -- #(Models#Action:action, #Alert:alert)->(#boolean)
+  = function(action, alert)
+    if action.showCrux then
+      local effect = action:getStackEffect()
+      if effect and effect.stackCount == 3 then
+        return true, 'enough crux'
+      end
+      return false, 'not enough crux'
+    end
+    return false, "not showing crux"
   end,
 }
 
 -- Alert rule: instant (ready to trigger)
 l.alertRuleInstant = {
-  name = "instant",
+  name = "Instant",
   shouldAlert = function(action, alert)
     if l.isActionInstant(action) then
       return true, "is instant"
@@ -268,9 +302,10 @@ l.alertRuleInstant = {
 }
 
 -- Alert rule: Power Lash Guide
-l.alertRulePowerLash = {
-  name = "powerLash",
-  shouldAlert -- (Models#Action:action, #any:alert)->(#boolean, #string)
+l.alertRulePowerLash --
+= {
+  name = "PowerLash",
+  shouldAlert -- #(Models#Action:action, #Alert:alert)->(#boolean, #string)
   = function(action, alert)
     local stackEffect = action:getStackEffect() -- Models#Effect
     if stackEffect and stackEffect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
@@ -278,18 +313,20 @@ l.alertRulePowerLash = {
     else
       return false, "no power lash"
     end
-  end,
+  end
+,
 }
 
 l.alertRules = {
   l.alertRuleTimeout,
   l.alertRuleInstant,
   l.alertRulePowerLash,
+  l.alertRuleCrux,
 }
 
 -- Debug log throttle: prevent repeated logs within interval
 local logThrottleInterval = 1 -- seconds
-local logThrottleMap = {} -- #map<#string,#number> key -> lastLogTime
+local logThrottleMap = {} -- #map<#string,#number> key lastLogTime
 
 l.shouldLog -- #(#string:key)->(#boolean)
 = function(key)
@@ -303,7 +340,7 @@ l.shouldLog -- #(#string:key)->(#boolean)
 end
 
 -- Find active alert for action and rule
-l.findActiveAlert --#(Models#Action:action, #table:rule)->(Alert)
+l.findActiveAlert --#(Models#Action:action, #table:rule)->(#Alert)
 = function(action, rule)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.rule.name == rule.name and alert.action == action then
@@ -314,7 +351,7 @@ l.findActiveAlert --#(Models#Action:action, #table:rule)->(Alert)
 end
 
 -- Find alert by control
-l.findAlertByControl --#(Control:control)->(Alert)
+l.findAlertByControl --#(#Control:control)->(#Alert)
 = function(control)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.control == control then
@@ -325,9 +362,12 @@ l.findAlertByControl --#(Control:control)->(Alert)
 end
 
 -- Create a new alert for action and rule
-l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(Alert)
+l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
 = function(action, rule, reason)
-  local showAbility = action.ability
+  if addon.debugEnabled(DSS_ALERT_CREATE, action.ability.name) then
+    addon.debug("[L+]rule '%s' created(%s) alert for %s", rule.name, reason or "?", action:toLogString())
+  end
+  local showAbility = models.newAbility(action.ability.id, action.ability.name, action.ability.icon)
   local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
   if GetSlotType(action.slotNum, action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
     mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
@@ -339,36 +379,30 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(Alert)
       showAbility = slotAbility
     end
   end
+  local stackEffect = action:getStackEffect()
 
-  local alert = {
-    rule = rule,
-    action = action,
-    ability = showAbility,
-    startTime = action.startTime,
-    control = nil,
-  }
+  local alert = {} -- #Alert
+  alert.rule = rule
+  alert.action = action -- Modles#Action
+  alert.ability = showAbility -- Models#Ability
+  alert.startTime = action.startTime -- #number
+  alert.control = nil -- #Control
   table.insert(l.activeAlerts, alert)
-
-  if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
-    addon.debug("[LR!]rule '%s' triggered (%s): %s", rule.name, reason or "?", action:toLogString_Short())
-  end
 
   -- show UI immediately
   l.showAlert(alert)
-
   return alert
 end
 
 -- Remove an alert
-l.removeAlert --#(Alert:alert, #string:reason)->()
+l.removeAlert --#(#Alert:alert, #string:reason)->()
 = function(alert, reason)
   -- hide control if associated
   if alert.control then
     if addon.debugEnabled(DSS_ALERT_REMOVE, alert.ability.name) then
       addon.debug("[L-]alert removed by %s: %s", reason, alert.ability:toLogString())
     end
-    alert.control:SetHidden(true)
-    -- control will be returned to pool via timeout or orphan check
+    l.returnControl(alert.control)
   end
 
   -- remove from activeAlerts
@@ -376,6 +410,16 @@ l.removeAlert --#(Alert:alert, #string:reason)->()
     if a == alert then
       table.remove(l.activeAlerts, i)
       break
+    end
+  end
+end
+
+l.removeAllAlertByAction --#(Models#Action:action, #string:reason)->()
+= function(action, reason)
+  -- remove from activeAlerts
+  for i, a in ipairs(l.activeAlerts) do
+    if a.action == action then
+      l.removeAlert(a, reason)
     end
   end
 end
@@ -419,7 +463,7 @@ l.getSavedVars -- #()->(#AlertSavedVars)
 end
 
 -- Remove alerts whose action no longer exists
-l.cleanupStaleAlerts -- #(map<#number,Models#Action>:snActionMap)->()
+l.cleanupStaleAlerts -- #(#map<#number,Models#Action>:snActionMap)->()
 = function(snActionMap)
   local toRemove = {} -- #list<Alert>
   for _, alert in ipairs(l.activeAlerts) do
@@ -447,9 +491,9 @@ l.checkOrphanedControls -- #()->()
       local alert = l.findAlertByControl(control)
       if not alert then
         if addon.debugEnabled(DSS_ALERT_HIDE, control.ability and control.ability.name) then
-          addon.debug("[L-]hiding orphaned control: %s(%d)", control.ability and control.ability.name or '?', control.ability and control.ability.id or 0)
+          addon.debug("[LH]hiding orphaned control: %s(%d)", control.ability and control.ability.name or '?', control.ability and control.ability.id or 0)
         end
-        control:SetHidden(true)
+        l.returnControl(control)
       end
     end
   end
@@ -464,7 +508,11 @@ l.onCoreUpdate -- #()->()
 
   -- 1. Check actions for new alerts and update existing alerts
   for sn, action in pairs(snActionMap) do
-    l.checkAction(action)
+    if action.newAction then
+      l.removeAllAlert(action, 'action renewed')
+    else
+      l.checkAction(action)
+    end
   end
 
   -- 2. Remove alerts whose action no longer exists
@@ -580,23 +628,20 @@ end
 
 l.returnControl -- #(Control#Control:control)->()
 = function(control)
-  for key, var in ipairs(l.showedControls) do
-    if var == control then
-      table.remove(l.showedControls,key)
-    end
-  end
-  if addon.debugEnabled(DSS_ALERT_HIDE, control.ability and control.ability.name) then
-    addon.debug("[L-]hiding alert (timeout): %s(%d)", control.ability and control.ability.name or '?', control.ability and control.ability.id or 0)
-  end
-  control:SetHidden(true)
-  control:ClearAnchors()
-  table.insert(l.controlPool, control)
-
   -- clear alert's control reference if linked
   local alert = l.findAlertByControl(control)
   if alert then
     alert.control = nil
   end
+  for key, var in ipairs(l.showedControls) do
+    if var == control then
+      table.remove(l.showedControls,key)
+    end
+  end
+  control:SetHidden(true)
+  control:ClearAnchors()
+  table.insert(l.controlPool, control)
+
 end
 
 --========================================
@@ -606,11 +651,11 @@ addon.register("Alert#M", m)
 
 -- Register Alert debug switches
 addon.registerDebugSwitch(DS_ALERT, "Alert Debug")
-addon.registerDebugSubSwitch(DSS_ALERT_SHOW, 'Alert Show [L+]', 'Log when alerts are shown')
-addon.registerDebugSubSwitch(DSS_ALERT_HIDE, 'Alert Hide [L-]', 'Log when alerts are hidden')
-addon.registerDebugSubSwitch(DSS_ALERT_SKIP, 'Alert Skip [LS*]', 'Log when alerts are skipped')
-addon.registerDebugSubSwitch(DSS_ALERT_RULE, 'Alert Rule [LR*]', 'Log rule check results')
+addon.registerDebugSubSwitch(DSS_ALERT_SHOW, 'Alert Show [LS]', 'Log when alerts are shown')
+addon.registerDebugSubSwitch(DSS_ALERT_HIDE, 'Alert Hide [LH]', 'Log when alerts are hidden')
+addon.registerDebugSubSwitch(DSS_ALERT_SKIP, 'Alert Skip [L^]', 'Log when alerts are skipped')
 addon.registerDebugSubSwitch(DSS_ALERT_REMOVE, 'Alert Remove [L-]', 'Log when alerts are removed by rule')
+addon.registerDebugSubSwitch(DSS_ALERT_CREATE, 'Alert Create [L+]', 'Log when alerts are triggered by rule')
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 

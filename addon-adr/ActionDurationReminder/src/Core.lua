@@ -1518,8 +1518,8 @@ l.refineActions -- #()->()
       and endTime < (action.fake and now or endLimit)
     then
       if addon.debugEnabled(DSS_ACTION_REMOVE, action.ability.name) then
-        addon.debug('[ARR]%s,endTime:%d<endLimit:%d', action:toLogString(),
-          endTime, endLimit)
+        addon.debug('[ARR]%s,endTime:%.2f<endLimit:%.2f', action:toLogString(),
+          endTime/1000, endLimit/1000)
       end
       l.removeAction(action)
       local gallopEffect = action:optGallopEffect()
