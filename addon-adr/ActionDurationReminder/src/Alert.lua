@@ -123,60 +123,11 @@ l.onPowerLashGuide -- #(boolean:show, #number:timestamp)->()
   l.alert(ability, timestamp)
 end
 
-l.checkAction --#(Models#Action:action)->()
-= function(action)
-  -- check ultimate
-  if action.slotNum == 8 then return end
-  -- check action alerted
-  if action.data.alerted then return end
-  -- check tick
-  if action.tickEffect and action.duration==0 then return end
-  -- check action just override without new effects
-  if action:getFullEndTime()-action.startTime < 3000 then return end
-  if action:getStageInfo() == '1/2' then return end
+--========================================
+--        Alert Rules
+--========================================
 
-  --
-  local onlyShowAfterTimeout = false
-  local instant = l.isActionInstant(action)
-  local aheadTime = l.getSavedVars().alertAheadSeconds *1000
-  local markTime = action.startTime
-  if onlyShowAfterTimeout then
-    aheadTime = 0
-  elseif instant then
-    aheadTime = action:getDuration()
-  end
-  if onlyShowAfterTimeout then aheadTime = 0 end
-  if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
-    action.data.alerted = true
-    local showAbility = action.ability
-    local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
-    if GetSlotType(action.slotNum,action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
-      mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
-    end
-    if showAbility.id ~= mutantId then
-      local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
-      if action:matchesAbility(slotAbility) then
-        slotAbility.id = action.ability.id
-        showAbility = slotAbility
-      end
-    end
-    l.alert(showAbility, action.startTime)
-  end
-end
-
-l.findSoundIndex -- #(#string:name)->(#number)
-= function(name)
-  for key, var in ipairs(l.soundChoices) do
-    if var==name then return key end
-  end
-  return -1
-end
-
-l.getSavedVars -- #()->(#AlertSavedVars)
-= function()
-  return settings.getSavedVars()
-end
-
+-- Shared detection: is action in instant/ready-to-trigger state?
 l.isActionInstant --#(Models#Action:action)->(#boolean)
 = function(action)
   local stackEffect = action:getStackEffect()
@@ -213,6 +164,108 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
   end
   --
   return false
+end
+
+-- Check if action should skip common preconditions
+l.shouldSkipAction --#(Models#Action:action)->(#boolean)
+= function(action)
+  -- check ultimate
+  if action.slotNum == 8 then return true end
+  -- check tick
+  if action.tickEffect and action.duration==0 then return true end
+  -- check action just override without new effects
+  if action:getFullEndTime()-action.startTime < 3000 then return true end
+  if action:getStageInfo() == '1/2' then return true end
+  return false
+end
+
+-- Alert rule: timeout (near expiration)
+l.alertRuleTimeout = {
+  name = "timeout",
+  shouldSkip = function(action)
+    -- skip instant actions for timeout rule
+    if l.isActionInstant(action) then return true end
+    return false
+  end,
+  shouldAlert = function(action)
+    local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
+    return action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds()
+  end,
+}
+
+-- Alert rule: instant (ready to trigger)
+l.alertRuleInstant = {
+  name = "instant",
+  shouldSkip = function(action)
+    return false
+  end,
+  shouldAlert = function(action)
+    return l.isActionInstant(action)
+  end,
+}
+
+l.alertRules = {
+  l.alertRuleTimeout,
+  l.alertRuleInstant,
+}
+
+-- Check a single rule for an action
+l.checkAlertRule --#(Models#Action:action, #table:rule)->(#boolean)
+= function(action, rule)
+  -- get or create alertRules table
+  local alertRules = action.data.alertRules
+  if not alertRules then
+    alertRules = {}
+    action.data.alertRules = alertRules
+  end
+  -- check if already alerted for this rule
+  if alertRules[rule.name] then return false end
+  -- check skip condition
+  if rule.shouldSkip(action) then return false end
+  -- check alert condition
+  if rule.shouldAlert(action) then
+    alertRules[rule.name] = true
+    return true
+  end
+  return false
+end
+
+l.checkAction --#(Models#Action:action)->()
+= function(action)
+  -- common preconditions
+  if l.shouldSkipAction(action) then return end
+
+  -- check each rule
+  for _, rule in ipairs(l.alertRules) do
+    if l.checkAlertRule(action, rule) then
+      local showAbility = action.ability
+      local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
+      if GetSlotType(action.slotNum,action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+        mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
+      end
+      if showAbility.id ~= mutantId then
+        local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+        if action:matchesAbility(slotAbility) then
+          slotAbility.id = action.ability.id
+          showAbility = slotAbility
+        end
+      end
+      l.alert(showAbility, action.startTime)
+    end
+  end
+end
+
+l.findSoundIndex -- #(#string:name)->(#number)
+= function(name)
+  for key, var in ipairs(l.soundChoices) do
+    if var==name then return key end
+  end
+  return -1
+end
+
+l.getSavedVars -- #()->(#AlertSavedVars)
+= function()
+  return settings.getSavedVars()
 end
 
 local lastLog = 0
