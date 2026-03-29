@@ -15,6 +15,7 @@ local DSS_ALERT_SHOW = {DS_ALERT, 'show'}      -- alert shown
 local DSS_ALERT_HIDE = {DS_ALERT, 'hide'}      -- alert hidden
 local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
 local DSS_ALERT_RULE = {DS_ALERT, 'rule'}      -- rule check
+local DSS_ALERT_REMOVE = {DS_ALERT, 'remove'}  -- alert removed by rule
 
 -- Power Lash ability id for alert
 local POWER_LASH_ABILITY_ID = 20824
@@ -46,7 +47,6 @@ local alertSavedVarsDefaults ={
   alertOffsetY = 0,
   alertKeyWords = '',
   alertBlackKeyWords = '',
-  alertRemoveWhenCastAgain = true,
 }
 
 --========================================
@@ -58,16 +58,19 @@ l.frame = nil --TopLevelWindow#TopLevelWindow
 
 l.showedControls = {} -- #list<Control#Control>
 
+-- Active alerts: alert objects created by rules
+-- Each alert: { rule, action, ability, startTime, control }
+l.activeAlerts = {} -- #list<Alert>
+
 l.soundChoices = {} -- #list<#number>
 for k,v in pairs(SOUNDS) do
   table.insert(l.soundChoices, k)
 end
 table.sort(l.soundChoices)
 
-l.alert -- #(Models#Ability:ability, #number:startTime)->()
-= function(ability, startTime)
-  local savedVars = l.getSavedVars()
-  -- filter by keywords
+-- Check if ability passes whitelist/blacklist filters
+l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
+= function(ability)
   local keywords = l.getSavedVars().alertKeyWords:lower()
   local checked = false
   local checkOk = false
@@ -87,7 +90,7 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
       addon.debug("[LSw]skipped by whitelist: %s(%d)", ability.name, ability.id)
     end
-    return
+    return false
   end
   keywords = l.getSavedVars().alertBlackKeyWords:lower()
   for line in keywords:gmatch("[^\r\n]+") do
@@ -98,20 +101,30 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
           if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
             addon.debug("[LSb]skipped by blacklist id: %s(%d)", ability.name, ability.id)
           end
-          return
+          return false
         end
       end
       if zo_strformat("<<1>>", ability.name):lower():find(line,1,true) then
         if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
           addon.debug("[LSb]skipped by blacklist name: %s(%d)", ability.name, ability.id)
         end
-        return
+        return false
       end
     end
   end
-  --
+  return true
+end
+
+-- Show alert UI for an alert object
+l.showAlert -- #(Alert:alert)->()
+= function(alert)
+  if alert.control then return end -- already shown
+
+  local savedVars = l.getSavedVars()
+  local ability = alert.ability
+
   if addon.debugEnabled(DSS_ALERT_SHOW, ability.name) then
-    addon.debug("[L+]showing alert: %s(%d) @%.2f", ability.name, ability.id, startTime/1000)
+    addon.debug("[L+]showing alert: %s(%d) @%.2f", ability.name, ability.id, alert.startTime/1000)
   end
   if savedVars.alertPlaySound then PlaySound(SOUNDS[savedVars.alertSoundName]) end
   local control = l.retrieveControl()
@@ -123,13 +136,18 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
   control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.alertOffsetX, -150 + savedVars.alertOffsetY)
   control:SetHidden(false)
   control.ability = ability
-  control.startTime = startTime
+  control.startTime = alert.startTime
   for i,v in ipairs(l.showedControls) do
     local _, _, _, _, offsetX, offsetY = v:GetAnchor(0)
     v:ClearAnchors()
     v:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, offsetX, offsetY -savedVars.alertIconSize-10)
   end
   table.insert(l.showedControls,control)
+
+  -- link control to alert
+  alert.control = control
+
+  -- set timeout to hide control (alert may be removed earlier by rule)
   zo_callLater(
     function()
       l.returnControl(control)
@@ -223,6 +241,14 @@ l.alertRuleTimeout = {
     local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
     return action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds()
   end,
+  shouldRemove = function(action, alert)
+    -- remove if action was refreshed (startTime changed)
+    if action.startTime ~= alert.startTime then return true end
+    -- remove if duration was extended (no longer near expiration)
+    local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
+    if action:getFullEndTime() - aheadTime > GetGameTimeMilliseconds() then return true end
+    return false
+  end,
 }
 
 -- Alert rule: instant (ready to trigger)
@@ -233,6 +259,11 @@ l.alertRuleInstant = {
   end,
   shouldAlert = function(action)
     return l.isActionInstant(action)
+  end,
+  shouldRemove = function(action, alert)
+    -- remove if no longer instant
+    if not l.isActionInstant(action) then return true end
+    return false
   end,
 }
 
@@ -256,44 +287,87 @@ l.shouldLog -- #(#string:key)->(#boolean)
   return true
 end
 
--- Check a single rule for an action
-l.checkAlertRule --#(Models#Action:action, #table:rule)->(#boolean)
+-- Find active alert for action and rule
+l.findActiveAlert --#(Models#Action:action, #table:rule)->(Alert)
 = function(action, rule)
-  -- get or create alertRules table
-  local alertRules = action.data.alertRules
-  if not alertRules then
-    alertRules = {}
-    action.data.alertRules = alertRules
-  end
-  -- check if already alerted for this rule
-  if alertRules[rule.name] then
-    if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
-      local key = "LR~/" .. action.ability.name
-      if l.shouldLog(key) then
-        addon.debug("[LR~]rule '%s' already triggered for: %s", rule.name, action:toLogString_Short())
-      end
+  for _, alert in ipairs(l.activeAlerts) do
+    if alert.rule.name == rule.name and alert.action == action then
+      return alert
     end
-    return false
   end
-  -- check skip condition
-  if rule.shouldSkip(action) then
-    if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
-      local key = "LSk/" .. action.ability.name
-      if l.shouldLog(key) then
-        addon.debug("[LSk]rule '%s' skipped for: %s", rule.name, action:toLogString_Short())
-      end
+  return nil
+end
+
+-- Find alert by control
+l.findAlertByControl --#(Control:control)->(Alert)
+= function(control)
+  for _, alert in ipairs(l.activeAlerts) do
+    if alert.control == control then
+      return alert
     end
-    return false
   end
-  -- check alert condition
-  if rule.shouldAlert(action) then
-    alertRules[rule.name] = true
-    if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
-      addon.debug("[LR!]rule '%s' triggered for: %s", rule.name, action:toLogString_Short())
+  return nil
+end
+
+-- Create a new alert for action and rule
+l.createAlert --#(Models#Action:action, #table:rule)->(Alert)
+= function(action, rule)
+  local showAbility = action.ability
+  local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
+  if GetSlotType(action.slotNum, action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
+    mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
+  end
+  if showAbility.id ~= mutantId then
+    local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+    if action:matchesAbility(slotAbility) then
+      slotAbility.id = action.ability.id
+      showAbility = slotAbility
     end
-    return true
   end
-  return false
+
+  -- filter by whitelist/blacklist
+  if not l.shouldShowAbility(showAbility) then
+    return nil
+  end
+
+  local alert = {
+    rule = rule,
+    action = action,
+    ability = showAbility,
+    startTime = action.startTime,
+    control = nil,
+  }
+  table.insert(l.activeAlerts, alert)
+
+  if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
+    addon.debug("[LR!]rule '%s' triggered for: %s", rule.name, action:toLogString_Short())
+  end
+
+  -- show UI immediately
+  l.showAlert(alert)
+
+  return alert
+end
+
+-- Remove an alert
+l.removeAlert --#(Alert:alert, #string:reason)->()
+= function(alert, reason)
+  -- hide control if associated
+  if alert.control then
+    if addon.debugEnabled(DSS_ALERT_REMOVE, alert.ability.name) then
+      addon.debug("[L-]alert removed by %s: %s(%d)", reason, alert.ability.name, alert.ability.id)
+    end
+    alert.control:SetHidden(true)
+    -- control will be returned to pool via timeout or orphan check
+  end
+
+  -- remove from activeAlerts
+  for i, a in ipairs(l.activeAlerts) do
+    if a == alert then
+      table.remove(l.activeAlerts, i)
+      break
+    end
+  end
 end
 
 l.checkAction --#(Models#Action:action)->()
@@ -311,20 +385,24 @@ l.checkAction --#(Models#Action:action)->()
 
   -- check each rule
   for _, rule in ipairs(l.alertRules) do
-    if l.checkAlertRule(action, rule) then
-      local showAbility = action.ability
-      local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
-      if GetSlotType(action.slotNum,action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
-        mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
-      end
-      if showAbility.id ~= mutantId then
-        local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
-        if action:matchesAbility(slotAbility) then
-          slotAbility.id = action.ability.id
-          showAbility = slotAbility
+    local existingAlert = l.findActiveAlert(action, rule)
+    if existingAlert then
+      -- already has alert for this rule, will be checked in checkActiveAlerts
+    else
+      -- check skip condition
+      if rule.shouldSkip(action) then
+        if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
+          local key = "LSk/" .. action.ability.name
+          if l.shouldLog(key) then
+            addon.debug("[LSk]rule '%s' skipped for: %s", rule.name, action:toLogString_Short())
+          end
+        end
+      else
+        -- check alert condition
+        if rule.shouldAlert(action) then
+          l.createAlert(action, rule)
         end
       end
-      l.alert(showAbility, action.startTime)
     end
   end
 end
@@ -347,6 +425,50 @@ addon.alertLogCntValve = 20
 addon.alertLogInterval = 300
 -- /script ActionDurationReminder.alertLogCntValve=0 ActionDurationReminder.alertLogInterval=5
 -- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=300
+
+-- Check active alerts for removal
+l.checkActiveAlerts -- #()->()
+= function()
+  local toRemove = {} -- #list<Alert>
+  for _, alert in ipairs(l.activeAlerts) do
+    local action = alert.action
+    local rule = alert.rule
+    -- check if action still exists (action may have been removed)
+    local actionExists = false
+    local snActionMap = core.getSnActionMap()
+    for _, a in pairs(snActionMap) do
+      if a == action then
+        actionExists = true
+        break
+      end
+    end
+    if not actionExists then
+      table.insert(toRemove, alert)
+    elseif rule.shouldRemove(action, alert) then
+      table.insert(toRemove, alert)
+    end
+  end
+  for _, alert in ipairs(toRemove) do
+    l.removeAlert(alert, "rule")
+  end
+end
+
+-- Check orphaned controls (controls without active alerts)
+l.checkOrphanedControls -- #()->()
+= function()
+  for _, control in ipairs(l.showedControls) do
+    if not control:IsHidden() then
+      local alert = l.findAlertByControl(control)
+      if not alert then
+        if addon.debugEnabled(DSS_ALERT_HIDE, control.ability and control.ability.name) then
+          addon.debug("[L-]hiding orphaned control: %s(%d)", control.ability and control.ability.name or '?', control.ability and control.ability.id or 0)
+        end
+        control:SetHidden(true)
+      end
+    end
+  end
+end
+
 l.onCoreUpdate -- #()->()
 = function()
   local savedVars = l.getSavedVars()
@@ -355,11 +477,19 @@ l.onCoreUpdate -- #()->()
   local snActionMap = core.getSnActionMap()
   local cntMap = {} -- #map<#number,#number>
   local maxSnMap = {} -- #map<#number, #number>
+
+  -- 1. Check actions for new alerts
   for sn,action in pairs(snActionMap) do
     l.checkAction(action)
     cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
     maxSnMap[action.ability.id] = math.max(cntMap[action.ability.id] or 0, action.sn)
   end
+
+  -- 2. Check active alerts for removal
+  l.checkActiveAlerts()
+
+  -- 3. Check orphaned controls
+  l.checkOrphanedControls()
 
   local now = GetGameTimeSeconds()
   -- TODO move this check into core
@@ -382,19 +512,6 @@ l.onCoreUpdate -- #()->()
       end
     end
     if didLog then lastLog = now end
-  end
-  if savedVars.alertRemoveWhenCastAgain then
-    for k,v in pairs(l.showedControls) do
-      if not v:IsHidden() then
-        local action = core.getActionByAbilityName(v.ability.name)
-        if action and action.startTime ~= v.startTime then
-          if addon.debugEnabled(DSS_ALERT_HIDE, v.ability.name) then
-            addon.debug("[L-]hiding alert on recast: %s(%d)", v.ability.name, v.ability.id)
-          end
-          v:SetHidden(true)
-        end
-      end
-    end
   end
 end
 
@@ -489,6 +606,12 @@ l.returnControl -- #(Control#Control:control)->()
   control:SetHidden(true)
   control:ClearAnchors()
   table.insert(l.controlPool, control)
+
+  -- clear alert's control reference if linked
+  local alert = l.findAlertByControl(control)
+  if alert then
+    alert.control = nil
+  end
 end
 
 --========================================
@@ -502,6 +625,7 @@ addon.registerDebugSubSwitch(DSS_ALERT_SHOW, 'Alert Show [L+]', 'Log when alerts
 addon.registerDebugSubSwitch(DSS_ALERT_HIDE, 'Alert Hide [L-]', 'Log when alerts are hidden')
 addon.registerDebugSubSwitch(DSS_ALERT_SKIP, 'Alert Skip [LS*]', 'Log when alerts are skipped')
 addon.registerDebugSubSwitch(DSS_ALERT_RULE, 'Alert Rule [LR*]', 'Log rule check results')
+addon.registerDebugSubSwitch(DSS_ALERT_REMOVE, 'Alert Remove [L-]', 'Log when alerts are removed by rule')
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 
@@ -534,15 +658,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function ()
         disabled = function() return not l.getSavedVars().alertEnabled end,
         width = "full",
         default = alertSavedVarsDefaults.alertIconOnly,
-      }, {
-        type = "checkbox",
-        name = text("Dismiss on Recast"),
-        tooltip = text("Remove the alert when you cast the same skill again"),
-        getFunc = function() return l.getSavedVars().alertRemoveWhenCastAgain end,
-        setFunc = function(value) l.getSavedVars().alertRemoveWhenCastAgain = value end,
-        disabled = function() return not l.getSavedVars().alertEnabled end,
-        width = "full",
-        default = alertSavedVarsDefaults.alertRemoveWhenCastAgain,
       }, {
         type = "button",
         name = text("Move Popup"),
