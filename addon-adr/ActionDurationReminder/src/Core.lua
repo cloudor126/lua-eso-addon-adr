@@ -1630,7 +1630,7 @@ end
 -- Check if target has Off Balance debuff
 l.targetHasOffBalance = function()
   if not DoesUnitExist("reticleover") then return false end
-  local numBuffs = GetUnitNumBuffs("reticleover") or 0
+  local numBuffs = GetNumBuffs("reticleover") or 0
   for i = 1, numBuffs do
     local _, _, _, _, _, iconFilename = GetUnitBuffInfo("reticleover", i)
     if iconFilename and iconFilename:find(OFF_BALANCE_ICON_KEYWORD, 1, true) then
@@ -1711,6 +1711,12 @@ end
 l.onUpdateForPowerLash = function()
   -- Check if player is Dragonknight
   if not l.isPlayerDragonknight() then
+    return
+  end
+
+  -- Check if player is in combat
+  if not IsUnitInCombat('player') then
+    l.sendPowerLashGuide(false)
     return
   end
 
