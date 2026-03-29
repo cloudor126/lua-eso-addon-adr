@@ -8,6 +8,14 @@ local core = addon.load("Core#M")
 local l = {} -- #L
 local m = {l=l} -- #M
 
+local DS_ALERT = "alert" -- debug switch for alert
+
+-- DSS (Debug Switch + SubSwitch) constants for addon.debugEnabled
+local DSS_ALERT_SHOW = {DS_ALERT, 'show'}      -- alert shown
+local DSS_ALERT_HIDE = {DS_ALERT, 'hide'}      -- alert hidden
+local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
+local DSS_ALERT_RULE = {DS_ALERT, 'rule'}      -- rule check
+
 -- Power Lash ability id for alert
 local POWER_LASH_ABILITY_ID = 20824
 
@@ -75,20 +83,36 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
       if checkOk then break end
     end
   end
-  if checked and not checkOk then return end
+  if checked and not checkOk then
+    if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
+      addon.debug("[LSw]skipped by whitelist: %s(%d)", ability.name, ability.id)
+    end
+    return
+  end
   keywords = l.getSavedVars().alertBlackKeyWords:lower()
   for line in keywords:gmatch("[^\r\n]+") do
     line = line:match "^%s*(.-)%s*$"
     if line and line:len()>0 then
       if line:match('^%d+$') then
-        if tonumber(line) == ability.id then return end
+        if tonumber(line) == ability.id then
+          if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
+            addon.debug("[LSb]skipped by blacklist id: %s(%d)", ability.name, ability.id)
+          end
+          return
+        end
       end
       if zo_strformat("<<1>>", ability.name):lower():find(line,1,true) then
+        if addon.debugEnabled(DSS_ALERT_SKIP, ability.name) then
+          addon.debug("[LSb]skipped by blacklist name: %s(%d)", ability.name, ability.id)
+        end
         return
       end
     end
   end
   --
+  if addon.debugEnabled(DSS_ALERT_SHOW, ability.name) then
+    addon.debug("[L+]showing alert: %s(%d) @%.2f", ability.name, ability.id, startTime/1000)
+  end
   if savedVars.alertPlaySound then PlaySound(SOUNDS[savedVars.alertSoundName]) end
   local control = l.retrieveControl()
   local fontstr = (zhFlags[GetCVar("language.2")] and "EsoZH/fonts/univers67.otf" or ("$("..savedVars.alertFontName..")")) .."|"..savedVars.alertFontSize.."|"..savedVars.alertFontStyle
@@ -209,6 +233,21 @@ l.alertRules = {
   l.alertRuleInstant,
 }
 
+-- Debug log throttle: prevent repeated logs within interval
+local logThrottleInterval = 1 -- seconds
+local logThrottleMap = {} -- #map<#string,#number> key -> lastLogTime
+
+l.shouldLog -- #(#string:key)->(#boolean)
+= function(key)
+  local now = GetGameTimeSeconds()
+  local lastTime = logThrottleMap[key]
+  if lastTime and now - lastTime < logThrottleInterval then
+    return false
+  end
+  logThrottleMap[key] = now
+  return true
+end
+
 -- Check a single rule for an action
 l.checkAlertRule --#(Models#Action:action, #table:rule)->(#boolean)
 = function(action, rule)
@@ -219,12 +258,31 @@ l.checkAlertRule --#(Models#Action:action, #table:rule)->(#boolean)
     action.data.alertRules = alertRules
   end
   -- check if already alerted for this rule
-  if alertRules[rule.name] then return false end
+  if alertRules[rule.name] then
+    if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
+      local key = "LR~/" .. action.ability.name
+      if l.shouldLog(key) then
+        addon.debug("[LR~]rule '%s' already triggered for: %s", rule.name, action:toLogString_Short())
+      end
+    end
+    return false
+  end
   -- check skip condition
-  if rule.shouldSkip(action) then return false end
+  if rule.shouldSkip(action) then
+    if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
+      local key = "LSk/" .. action.ability.name
+      if l.shouldLog(key) then
+        addon.debug("[LSk]rule '%s' skipped for: %s", rule.name, action:toLogString_Short())
+      end
+    end
+    return false
+  end
   -- check alert condition
   if rule.shouldAlert(action) then
     alertRules[rule.name] = true
+    if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
+      addon.debug("[LR!]rule '%s' triggered for: %s", rule.name, action:toLogString_Short())
+    end
     return true
   end
   return false
@@ -233,7 +291,15 @@ end
 l.checkAction --#(Models#Action:action)->()
 = function(action)
   -- common preconditions
-  if l.shouldSkipAction(action) then return end
+  if l.shouldSkipAction(action) then
+    if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
+      local key = "LSp/" .. action.ability.name
+      if l.shouldLog(key) then
+        addon.debug("[LSp]skipped by preconditions: %s", action:toLogString_Short())
+      end
+    end
+    return
+  end
 
   -- check each rule
   for _, rule in ipairs(l.alertRules) do
@@ -314,6 +380,9 @@ l.onCoreUpdate -- #()->()
       if not v:IsHidden() then
         local action = core.getActionByAbilityName(v.ability.name)
         if action and action.startTime ~= v.startTime then
+          if addon.debugEnabled(DSS_ALERT_HIDE, v.ability.name) then
+            addon.debug("[L-]hiding alert on recast: %s(%d)", v.ability.name, v.ability.id)
+          end
           v:SetHidden(true)
         end
       end
@@ -406,6 +475,9 @@ l.returnControl -- #(Control#Control:control)->()
       table.remove(l.showedControls,key)
     end
   end
+  if addon.debugEnabled(DSS_ALERT_HIDE, control.ability and control.ability.name) then
+    addon.debug("[L-]hiding alert (timeout): %s(%d)", control.ability and control.ability.name or '?', control.ability and control.ability.id or 0)
+  end
   control:SetHidden(true)
   control:ClearAnchors()
   table.insert(l.controlPool, control)
@@ -415,6 +487,13 @@ end
 --        register
 --========================================
 addon.register("Alert#M", m)
+
+-- Register Alert debug switches
+addon.registerDebugSwitch(DS_ALERT, "Alert Debug")
+addon.registerDebugSubSwitch(DSS_ALERT_SHOW, 'Alert Show [L+]', 'Log when alerts are shown')
+addon.registerDebugSubSwitch(DSS_ALERT_HIDE, 'Alert Hide [L-]', 'Log when alerts are hidden')
+addon.registerDebugSubSwitch(DSS_ALERT_SKIP, 'Alert Skip [LS*]', 'Log when alerts are skipped')
+addon.registerDebugSubSwitch(DSS_ALERT_RULE, 'Alert Rule [LR*]', 'Log rule check results')
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 
