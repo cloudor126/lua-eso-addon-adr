@@ -416,11 +416,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local optEffect = action:optEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
   -- label
-  local stackCountOnly = false
-  if #action.effectList==0 and stackCount > 0 then
-    stackCountOnly = true -- i.e. Grim Focus
-  end
-  if l.getSavedVars().barLabelEnabled and not stackCountOnly then
+  if l.getSavedVars().barLabelEnabled then
     local hint = string.format('%.1f', remain/1000)
     if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
       hint = string.format('%d', remain/1000)
