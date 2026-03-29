@@ -21,6 +21,9 @@
 ### Refactor
 - Moved action leak detection from Alert to Core module.
 
+### Bug Fixes
+- Fixed ShiftBar sizing to work correctly in Gamepad mode by using dynamic slot dimensions instead of hardcoded 50px.
+
 3.142a
 - Fixed a bug where prebuffed actions could wrongly match triggered ground effects after switching skills at combat start.
 
