@@ -263,6 +263,7 @@ m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:star
   effect.tickRate = tickRate or 0 -- #number
   effect.combatEventId = nil -- #number can be used to track one more special combat event
   effect.level = 99 -- #number
+  effect.levelIsLow = true -- #boolean
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -980,11 +981,20 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   local now = GetGameTimeMilliseconds()
   local reason = ''
 
+  local lowLevelStackEffect = nil
   if self.stackEffect and self.stackEffect.duration>0  then
-    return self.stackEffect, 'stackEffect'
+    if self.stackEffect.levelIsLow then
+      lowLevelStackEffect = self.stackEffect
+    else
+      return self.stackEffect, 'stackEffect'
+    end
   end
-  if self.stackEffect2 and self.stackEffect2.duration>0 then
-    return self.stackEffect2, 'stackEffect2'
+   if self.stackEffect2 and self.stackEffect2.duration>0  then
+    if self.stackEffect2.levelIsLow then
+      lowLevelStackEffect = self.stackEffect2
+    else
+      return self.stackEffect2, 'stackEffect'
+    end
   end
 
   for i, effect in ipairs(self.effectList) do
@@ -1002,6 +1012,10 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       end
       return effect, 'level:'..(effect.level or 0)
     end
+  end
+  
+  if lowLevelStackEffect then
+    return lowLevelStackEffect, 'level: low stack'
   end
 
   return nil, 'none'
@@ -1367,18 +1381,17 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if addType == 1 then
     self.stackCount = stackCount
     self.stackEffect = effect
-    self.stackEffect.level = LEVEL_STACK_EFFECT
     self.stackCountMatch = false -- #boolean
-    self.stackCountMatch = stackCount>=3 and #self.effectList==0 and self.descriptionNums[stackCount]
-    local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
-    m.cacheOfActionMatchingEffect[cacheKey] = true
-    return true
+    self.stackCountMatch = stackCount>=3 and self.descriptionNums[stackCount]
   elseif addType == 2 then
     self.stackCount2 = stackCount
     self.stackEffect2 = effect
-    self.stackEffect2.level = LEVEL_STACK_EFFECT_2
+  end
+  if addType >0 then
     local cacheKey = self.ability.id .. '/' .. effect.ability.id .. '/' .. effect.duration
     m.cacheOfActionMatchingEffect[cacheKey] = true
+    effect.level = self:calclevel(effect)
+    effect.levelIsLow = effect.level > LEVEL_THRESHOLD_LOW
     return true
   end
 
