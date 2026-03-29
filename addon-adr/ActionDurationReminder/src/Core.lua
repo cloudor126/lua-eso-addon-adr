@@ -46,13 +46,6 @@ local DSS_EFFECT_MATCH = {DS_EFFECT, 'match'}
 -- Target
 local DSS_TARGET_TRACK = {DS_TARGET, 'track'}
 
--- Power Lash Guide constants
-local DRAGONKNIGHT_CLASS_ID = 1
-local FLAME_LASH_ICON_KEYWORD = "dragonknight_001_a"
-local OFF_BALANCE_ICON_KEYWORD = "ability_debuff_offbalance"
-local POWER_LASH_ABILITY_ID = 20824 -- Power Lash
-local POWER_LASH_GUIDE_ABILITY_ID = -999001 -- fake ability id for Power Lash guide effect
-
 ---
 --@type CoreSavedVars
 local coreSavedVarsDefaults = {
@@ -116,7 +109,7 @@ l.findFlameLashSlot -- #()->(#number, #number)
   for hotbarCategory = 0, 1 do
     for slotNum = 3, 8 do
       local texture = GetSlotTexture(slotNum, hotbarCategory)
-      if texture and texture:find(FLAME_LASH_ICON_KEYWORD, 1, true) then
+      if texture and texture:find(models.FLAME_LASH_ICON_KEYWORD, 1, true) then
         return hotbarCategory, slotNum
       end
     end
@@ -351,11 +344,11 @@ end
 l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
 = function(effect, stacking)
   -- Special handling for Power Lash Guide effect
-  if effect.ability.id == POWER_LASH_GUIDE_ABILITY_ID then
+  if effect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
     local hotbarCategory, slotNum = l.findFlameLashSlot()
     if hotbarCategory then
       local action = models.newAction(slotNum, hotbarCategory)
-      action.ability.id = POWER_LASH_GUIDE_ABILITY_ID
+      action.ability.id = models.POWER_LASH_GUIDE_ABILITY_ID
       action.ability.name = "Power Lash Guide"
       action.ability.showName = "Power Lash Guide"
       action.ability.icon = "/esoui/art/icons/ability_dragonknight_001_b.dds"
@@ -1058,7 +1051,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   local ability = models.newAbility(abilityId, effectName, iconName)
   local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime, stackCount, 0);
-  if abilityId == POWER_LASH_GUIDE_ABILITY_ID then
+  if abilityId == models.POWER_LASH_GUIDE_ABILITY_ID then
     effect.stageInfo = '|t20:20:/esoui/art/icons/ability_warrior_025.dds|t'
     effect.stageInfoBlink = true
   end
@@ -1585,7 +1578,7 @@ end
 l.isPlayerDragonknight -- #()->(#boolean)Check if player is Dragonknight (cached)
  = function()
   if l.powerLashGuideState.isDragonknight == nil then
-    l.powerLashGuideState.isDragonknight = GetUnitClassId("player") == DRAGONKNIGHT_CLASS_ID
+    l.powerLashGuideState.isDragonknight = GetUnitClassId("player") == models.DRAGONKNIGHT_CLASS_ID
   end
   return l.powerLashGuideState.isDragonknight
 end
@@ -1596,7 +1589,7 @@ l.targetHasOffBalance = function()
   local numBuffs = GetNumBuffs("reticleover") or 0
   for i = 1, numBuffs do
     local _, _, _, _, _, iconFilename = GetUnitBuffInfo("reticleover", i)
-    if iconFilename and iconFilename:find(OFF_BALANCE_ICON_KEYWORD, 1, true) then
+    if iconFilename and iconFilename:find(models.OFF_BALANCE_ICON_KEYWORD, 1, true) then
       return true
     end
   end
@@ -1628,14 +1621,14 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- beginTime
       nowSec, -- endTime (same as beginTime for duration=0)
       1, -- stackCount=1 for unlimited duration
-      GetAbilityIcon(POWER_LASH_ABILITY_ID), -- iconName (Power Lash icon)
+      GetAbilityIcon(models.POWER_LASH_ABILITY_ID), -- iconName (Power Lash icon)
       0, -- buffType
       0, -- effectType
       0, -- abilityType
       0, -- statusEffectType
       GetUnitName("player"), -- unitName
       0, -- unitId
-      POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
+      models.POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
       COMBAT_UNIT_TYPE_PLAYER -- sourceType
     )
   else
@@ -1652,14 +1645,14 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- beginTime
       nowSec, -- endTime
       0, -- stackCount
-      GetAbilityIcon(POWER_LASH_ABILITY_ID), -- iconName
+      GetAbilityIcon(models.POWER_LASH_ABILITY_ID), -- iconName
       0, -- buffType
       0, -- effectType
       0, -- abilityType
       0, -- statusEffectType
       GetUnitName("player"), -- unitName
       0, -- unitId
-      POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
+      models.POWER_LASH_GUIDE_ABILITY_ID, -- abilityId (fake)
       COMBAT_UNIT_TYPE_PLAYER -- sourceType
     )
   end

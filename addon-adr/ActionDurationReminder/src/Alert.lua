@@ -17,9 +17,6 @@ local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
 local DSS_ALERT_RULE = {DS_ALERT, 'rule'}      -- rule check
 local DSS_ALERT_REMOVE = {DS_ALERT, 'remove'}  -- alert removed by rule
 
--- Power Lash Guide ability id (fake id from Core.lua)
-local POWER_LASH_GUIDE_ABILITY_ID = -999001
-
 local zhFlags = {
   zh = true,
   ze = true,
@@ -202,12 +199,28 @@ end
 -- Check if action should skip common preconditions
 l.shouldSkipAction --#(Models#Action:action)->(#boolean)
 = function(action)
+  if action.alertSkipResult ~= nil then return action.alertSkipResult end
+  
+  local skipReason = nil
   -- check ultimate
-  if action.slotNum == 8 then return true end
-  -- check tick
-  if action.tickEffect and action.duration==0 then return true end
-  -- check action in 1/2
-  if action:getStageInfo() == '1/2' then return true end
+  if action.slotNum == 8 then
+    skipReason='check ultimate'
+  elseif  not l.shouldShowAbility(action.ability) then
+    skipReason = 'filter by whitelist/blacklist'
+  end
+  -- filter by whitelist/blacklist
+  if skipReason then
+    action.alertSkipResult = true 
+    if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
+      local key = "LSp/" .. action.ability.name
+      if l.shouldLog(key) then
+        addon.debug("[LSp]skipped %s \n reason: %s", action:toLogString_SingleLine(), skipReason)
+      end
+    end
+    return true
+  end
+     
+  action.alertSkipResult = false
   return false
 end
 
@@ -216,6 +229,10 @@ l.alertRuleTimeout -- #table
 = {
   name = "timeout",
   shouldAlert = function(action, alert)
+    -- check tick
+    if action.tickEffect and action.duration==0 then return false,'is tick' end
+    -- check action in 1/2
+    if action:getStageInfo() == '1/2' then return false,'1/2 stage' end
     -- skip instant actions for timeout rule
     if l.isActionInstant(action) then return false, "is instant" end
     -- skip if duration comes from low level effect
@@ -254,9 +271,9 @@ l.alertRuleInstant = {
 l.alertRulePowerLash = {
   name = "powerLash",
   shouldAlert -- (Models#Action:action, #any:alert)->(#boolean, #string)
-   = function(action, alert)
+  = function(action, alert)
     local stackEffect = action:getStackEffect() -- Models#Effect
-    if stackEffect and stackEffect.ability.id == POWER_LASH_GUIDE_ABILITY_ID then
+    if stackEffect and stackEffect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
       return true, "power lash ready"
     else
       return false, "no power lash"
@@ -323,11 +340,6 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(Alert)
     end
   end
 
-  -- filter by whitelist/blacklist
-  if not l.shouldShowAbility(showAbility) then
-    return nil
-  end
-
   local alert = {
     rule = rule,
     action = action,
@@ -353,7 +365,7 @@ l.removeAlert --#(Alert:alert, #string:reason)->()
   -- hide control if associated
   if alert.control then
     if addon.debugEnabled(DSS_ALERT_REMOVE, alert.ability.name) then
-      addon.debug("[L-]alert removed by %s: %s(%d)", reason, alert.ability.name, alert.ability.id)
+      addon.debug("[L-]alert removed by %s: %s", reason, alert.ability:toLogString())
     end
     alert.control:SetHidden(true)
     -- control will be returned to pool via timeout or orphan check
@@ -370,16 +382,8 @@ end
 
 l.checkAction --#(Models#Action:action)->()
 = function(action)
-  -- common preconditions
-  if l.shouldSkipAction(action) then
-    if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
-      local key = "LSp/" .. action.ability.name
-      if l.shouldLog(key) then
-        addon.debug("[LSp]skipped by preconditions: %s", action:toLogString_Short())
-      end
-    end
-    return
-  end
+  -- common static preconditions
+  if l.shouldSkipAction(action) then return end
 
   -- check each rule
   for _, rule in ipairs(l.alertRules) do

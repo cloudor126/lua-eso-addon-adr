@@ -30,6 +30,15 @@ local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
 local LEVEL_THRESHOLD_LOW = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
 
 --========================================
+--        Game Constants
+--========================================
+m.DRAGONKNIGHT_CLASS_ID = 1
+m.FLAME_LASH_ICON_KEYWORD = "dragonknight_001_a"
+m.OFF_BALANCE_ICON_KEYWORD = "ability_debuff_offbalance"
+m.POWER_LASH_ABILITY_ID = 20824  -- Power Lash
+m.POWER_LASH_GUIDE_ABILITY_ID = -999001  -- fake ability id for Power Lash guide effect
+
+--========================================
 --        Duration Source Constants
 --========================================
 m.DUR_SOURCE_TICK = 'T'        -- from Tick effect
