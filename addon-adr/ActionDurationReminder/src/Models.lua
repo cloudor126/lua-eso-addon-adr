@@ -4,7 +4,7 @@
 local addon = ActionDurationReminder -- Addon#M
 local l = {} -- #L
 local m = {l=l} -- #M
-local mAction = {} -- #Action 
+local mAction = {} -- #Action
 local mAbility = {} -- #Ability
 local mEffect = {} -- #Effect
 
@@ -472,8 +472,8 @@ end
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
   -- Power Lash Guide: show Power Lash icon
-  if self.isPowerLashGuide then
-    return '|t20:20:/esoui/art/icons/ability_dragonknight_001_b.dds|t'
+  if self.stackEffect and self.stackEffect.stageInfo then
+    return self.stackEffect.stageInfo
   end
   if self.tickEffect then
     if not self.duration or self.duration ==0 then
@@ -676,7 +676,12 @@ end
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
-  return self.duration==0 and self.stackCount>0 and
+  return self.duration==0 and
+    (
+    self.stackCount>0
+    or (self.stackEffect and self.stackEffect.stackCount or 0)>0
+    )
+    and
     (
     optEffect and optEffect.duration==0
     or not optEffect
@@ -992,7 +997,7 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       return self.stackEffect, 'stackEffect'
     end
   end
-   if self.stackEffect2 and self.stackEffect2.duration>0  then
+  if self.stackEffect2 and self.stackEffect2.duration>0  then
     if self.stackEffect2.levelIsLow then
       lowLevelStackEffect = self.stackEffect2
     else
@@ -1016,7 +1021,7 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
       return effect, 'level:'..(effect.level or 0)
     end
   end
-  
+
   if lowLevelStackEffect then
     return lowLevelStackEffect, 'level: low stack'
   end
@@ -1173,12 +1178,12 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
     )
   then
     if addon.debugEnabled(DSS_MODEL_PURGE) then
-      addon.debug("[MPe]purge end %s, %s", reason, self:toLogString())
+      addon.debug("[MPe]purged and action is end %s, %s", reason, self:toLogString())
     end
     self.endTime = now
   else
     if addon.debugEnabled(DSS_MODEL_PURGE) then
-      addon.debug("[MPn]purge not end %s, %s", reason, self:toLogString())
+      addon.debug("[MPn]purged and action is not end %s, %s", reason, self:toLogString())
     end
   end
   return oldEffect

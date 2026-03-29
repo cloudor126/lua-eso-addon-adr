@@ -410,6 +410,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local endTime = action:getEndTime()
   local remain = math.max(endTime-now,0)
   local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
+  local stackEffectHasStageInfo = action.stackEffect and action.stackEffect.stageInfo
   local optEffect = action:optEffect()
   -- label
   local stackCountOnly = false
@@ -436,7 +437,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   -- stack label
   if l.getSavedVars().barStackLabelEnabled then
     -- stackLabel
-    if action.stackCount and action.stackCount > 0 then
+    if action.stackCount and action.stackCount > 0 and not stackEffectHasStageInfo then
       local stackText = string.format(action.stackCountMatch and '%d^' or '%d',action.stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)

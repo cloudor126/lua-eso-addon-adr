@@ -358,7 +358,9 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
       action.ability.name = "Power Lash Guide"
       action.ability.showName = "Power Lash Guide"
       action.ability.icon = "/esoui/art/icons/ability_dragonknight_001_b.dds"
-      action.isPowerLashGuide = true
+      action.duration = 0
+      action.descriptionDuration = 0
+      action.endTime = 0
       if addon.debugEnabled(DSS_ACTION_FIND, "PowerLashGuide") then
         addon.debug('[AFA]found Flame Lash slot for Power Lash Guide')
       end
@@ -1040,6 +1042,10 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
   local ability = models.newAbility(abilityId, effectName, iconName)
   local effect = models.newEffect(ability, unitTag, unitId, startTime, endTime, stackCount, 0);
+  if abilityId == POWER_LASH_GUIDE_ABILITY_ID then
+    effect.stageInfo = '|t20:20:/esoui/art/icons/ability_warrior_025.dds|t'
+    effect.stageInfoBlink = true
+  end
   -- 1. stack
   if stackCount > 0 then -- e.g. relentless focus
     local action = nil -- Models#Action
@@ -1550,8 +1556,8 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- endTime (same as beginTime for duration=0)
       1, -- stackCount=1 for unlimited duration
       "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName (Power Lash icon)
-      BUFF_TYPE_DEBUFF, -- buffType
-      BUFF_TYPE_DEBUFF, -- effectType
+      0, -- buffType
+      0, -- effectType
       0, -- abilityType
       0, -- statusEffectType
       GetUnitName("player"), -- unitName
@@ -1574,8 +1580,8 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- endTime
       0, -- stackCount
       "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName
-      BUFF_TYPE_DEBUFF, -- buffType
-      BUFF_TYPE_DEBUFF, -- effectType
+      0, -- buffType
+      0, -- effectType
       0, -- abilityType
       0, -- statusEffectType
       GetUnitName("player"), -- unitName
