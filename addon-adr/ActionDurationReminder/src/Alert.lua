@@ -17,8 +17,8 @@ local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
 local DSS_ALERT_RULE = {DS_ALERT, 'rule'}      -- rule check
 local DSS_ALERT_REMOVE = {DS_ALERT, 'remove'}  -- alert removed by rule
 
--- Power Lash ability id for alert
-local POWER_LASH_ABILITY_ID = 20824
+-- Power Lash Guide ability id (fake id from Core.lua)
+local POWER_LASH_GUIDE_ABILITY_ID = -999001
 
 local zhFlags = {
   zh = true,
@@ -156,15 +156,6 @@ l.showAlert -- #(Alert:alert)->()
   )
 end
 
--- Handle Power Lash Guide event from Core extension
-l.onPowerLashGuide -- #(boolean:show, #number:timestamp)->()
-= function(show, timestamp)
-  if not show then return end -- only alert on show
-  if not l.getSavedVars().alertEnabled then return end
-  local ability = models.newAbility(POWER_LASH_ABILITY_ID, GetAbilityName(POWER_LASH_ABILITY_ID), GetAbilityIcon(POWER_LASH_ABILITY_ID))
-  l.alert(ability, timestamp)
-end
-
 --========================================
 --        Alert Rules
 --========================================
@@ -267,9 +258,29 @@ l.alertRuleInstant = {
   end,
 }
 
+-- Alert rule: Power Lash Guide (Off Balance detected)
+l.alertRulePowerLash = {
+  name = "powerLash",
+  shouldSkip = function(action)
+    -- only interested in Power Lash Guide ability
+    return action.ability.id ~= POWER_LASH_GUIDE_ABILITY_ID
+  end,
+  shouldAlert = function(action)
+    -- alert immediately when Power Lash Guide appears
+    local stackEffect = action:getStackEffect()
+    return stackEffect and stackEffect.stackCount > 0
+  end,
+  shouldRemove = function(action, alert)
+    -- remove when stackCount becomes 0 (Off Balance ended)
+    local stackEffect = action:getStackEffect()
+    return not stackEffect or stackEffect.stackCount == 0
+  end,
+}
+
 l.alertRules = {
   l.alertRuleTimeout,
   l.alertRuleInstant,
+  l.alertRulePowerLash,
 }
 
 -- Debug log throttle: prevent repeated logs within interval
@@ -628,8 +639,6 @@ addon.registerDebugSubSwitch(DSS_ALERT_RULE, 'Alert Rule [LR*]', 'Log rule check
 addon.registerDebugSubSwitch(DSS_ALERT_REMOVE, 'Alert Remove [L-]', 'Log when alerts are removed by rule')
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
-
-addon.extend(core.EXTKEY_POWER_LASH_GUIDE, l.onPowerLashGuide)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(alertSavedVarsDefaults)

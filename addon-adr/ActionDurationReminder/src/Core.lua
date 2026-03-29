@@ -1577,8 +1577,6 @@ l.sendPowerLashGuide -- #(#string:show)->()
     if addon.debugEnabled(DSS_EFFECT_GAIN, "PowerLashGuide") then
       addon.debug('[E+]PowerLashGuide - Off Balance detected, use Power Lash!')
     end
-    -- Notify extension listeners (e.g., Alert)
-    addon.callExtension(m.EXTKEY_POWER_LASH_GUIDE, true, now)
     l.onEffectChanged(
       EVENT_EFFECT_CHANGED,
       EFFECT_RESULT_GAINED,
@@ -1719,7 +1717,6 @@ end
 --        m
 --========================================
 m.EXTKEY_UPDATE = "Core:update"
-m.EXTKEY_POWER_LASH_GUIDE = "Core:powerLashGuide"
 
 -- debug levels deprecated, use fine-grained settings instead
 
