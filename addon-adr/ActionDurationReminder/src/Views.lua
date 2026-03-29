@@ -411,6 +411,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   local remain = math.max(endTime-now,0)
   local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
   local stackEffectHasStageInfo = action.stackEffect and action.stackEffect.stageInfo
+  local stackEffectBlink = action.stackEffect and action.stackEffect.stageInfoBlink
   local optEffect = action:optEffect()
   -- label
   local stackCountOnly = false
@@ -443,7 +444,13 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       self.stackLabel:SetHidden(false)
     elseif stageInfo then
       self.stackLabel:SetText(stageInfo)
-      self.stackLabel:SetHidden(false)
+      -- Blink effect: hide every other 200ms interval
+      if stackEffectBlink then
+        local numSemiSeconds = math.floor(now / 200)
+        self.stackLabel:SetHidden(numSemiSeconds % 2 == 0)
+      else
+        self.stackLabel:SetHidden(false)
+      end
     else
       self.stackLabel:SetHidden(true)
     end
