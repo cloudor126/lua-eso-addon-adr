@@ -212,24 +212,29 @@ l.shouldSkipAction --#(Models#Action:action)->(#boolean)
 end
 
 -- Alert rule: timeout (near expiration)
-l.alertRuleTimeout = {
+l.alertRuleTimeout -- #table
+= {
   name = "timeout",
   shouldAlert = function(action, alert)
     -- skip instant actions for timeout rule
-    if l.isActionInstant(action) then return false end
+    if l.isActionInstant(action) then return false, "is instant" end
     -- skip if duration comes from low level effect
     local duration, durSource = action:getDuration()
     if durSource == models.DUR_SOURCE_PRIORITY then
       local optEffect = action:optEffect()
       if optEffect and optEffect.levelIsLow then
-        return false
+        return false, "low level effect"
       end
     end
     -- remove if action was refreshed (startTime changed)
-    if alert and action.startTime ~= alert.startTime then return false end
+    if alert and action.startTime ~= alert.startTime then return false, "action refreshed" end
     -- check if near expiration (or no longer near if alert exists)
     local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
-    return action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds()
+    if action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds() then
+      return true, "near expiration"
+    else
+      return false, "not near expiration"
+    end
   end,
 }
 
@@ -237,17 +242,25 @@ l.alertRuleTimeout = {
 l.alertRuleInstant = {
   name = "instant",
   shouldAlert = function(action, alert)
-    return l.isActionInstant(action)
+    if l.isActionInstant(action) then
+      return true, "is instant"
+    else
+      return false, "not instant"
+    end
   end,
 }
 
 -- Alert rule: Power Lash Guide
 l.alertRulePowerLash = {
   name = "powerLash",
-  shouldAlert -- (Models#Action:action, #any:alert)->(#boolean)
+  shouldAlert -- (Models#Action:action, #any:alert)->(#boolean, #string)
    = function(action, alert)
     local stackEffect = action:getStackEffect() -- Models#Effect
-    return stackEffect and stackEffect.ability.id == POWER_LASH_GUIDE_ABILITY_ID
+    if stackEffect and stackEffect.ability.id == POWER_LASH_GUIDE_ABILITY_ID then
+      return true, "power lash ready"
+    else
+      return false, "no power lash"
+    end
   end,
 }
 
@@ -295,8 +308,8 @@ l.findAlertByControl --#(Control:control)->(Alert)
 end
 
 -- Create a new alert for action and rule
-l.createAlert --#(Models#Action:action, #table:rule)->(Alert)
-= function(action, rule)
+l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(Alert)
+= function(action, rule, reason)
   local showAbility = action.ability
   local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
   if GetSlotType(action.slotNum, action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
@@ -325,7 +338,7 @@ l.createAlert --#(Models#Action:action, #table:rule)->(Alert)
   table.insert(l.activeAlerts, alert)
 
   if addon.debugEnabled(DSS_ALERT_RULE, action.ability.name) then
-    addon.debug("[LR!]rule '%s' triggered for: %s", rule.name, action:toLogString_Short())
+    addon.debug("[LR!]rule '%s' triggered (%s): %s", rule.name, reason or "?", action:toLogString_Short())
   end
 
   -- show UI immediately
@@ -371,18 +384,18 @@ l.checkAction --#(Models#Action:action)->()
   -- check each rule
   for _, rule in ipairs(l.alertRules) do
     local existingAlert = l.findActiveAlert(action, rule)
-    local shouldAlert = rule.shouldAlert(action, existingAlert)
+    local shouldAlert, reason = rule.shouldAlert(action, existingAlert)
 
     if existingAlert then
       -- alert exists but shouldAlert is false -> remove it
       if not shouldAlert then
-        l.removeAlert(existingAlert, "rule")
+        l.removeAlert(existingAlert, "rule '" .. rule.name .. "': " .. reason)
       end
       -- if shouldAlert is true, keep the existing alert (no-op)
     else
       -- no alert exists
       if shouldAlert then
-        l.createAlert(action, rule)
+        l.createAlert(action, rule, reason)
       end
     end
   end
