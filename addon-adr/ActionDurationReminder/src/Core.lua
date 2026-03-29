@@ -1454,7 +1454,49 @@ l.lastUpdateLog = 0
 l.onUpdate -- #()->()
 = function()
   l.refineActions()
+  l.checkActionLeaks()
   addon.callExtension(m.EXTKEY_UPDATE)
+end
+
+-- Leak detection: warn and remove duplicate actions
+addon.actionLeakLogInterval = 300 -- seconds
+addon.actionLeakCntValve = 20 -- threshold for warning
+l.lastLeakLog = 0
+
+l.checkActionLeaks -- #()->()
+= function()
+  local savedVars = l.getSavedVars()
+  local now = GetGameTimeSeconds()
+  if now - l.lastLeakLog < addon.actionLeakLogInterval then return end
+
+  -- count actions by ability id
+  local cntMap = {} -- #map<#number,#number>
+  local maxSnMap = {} -- #map<#number,#number>
+  for sn, action in pairs(l.snActionMap) do
+    cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
+    maxSnMap[action.ability.id] = math.max(maxSnMap[action.ability.id] or 0, action.sn)
+  end
+
+  local didLog = false
+  for id, cnt in pairs(cntMap) do
+    if cnt > addon.actionLeakCntValve then
+      didLog = true
+      if savedVars.addonLogTrackedEffectsInChat then
+        df("[!ADR!] |t24:24:%s|t%s(%d) #%d", GetAbilityIcon(id), GetAbilityName(id), id, cnt)
+      end
+      -- remove potential leaked actions (keep the one with highest sn)
+      local toRemove = {} --#list<Models#Action>
+      for sn, action in pairs(l.snActionMap) do
+        if action.ability.id == id and sn < maxSnMap[id] then
+          toRemove[#toRemove+1] = action
+        end
+      end
+      for _, action in ipairs(toRemove) do
+        l.removeAction(action)
+      end
+    end
+  end
+  if didLog then l.lastLeakLog = now end
 end
 
 l.queueAction -- #(Models#Action:action)->()

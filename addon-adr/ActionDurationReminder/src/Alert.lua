@@ -414,12 +414,6 @@ l.getSavedVars -- #()->(#AlertSavedVars)
   return settings.getSavedVars()
 end
 
-local lastLog = 0
-addon.alertLogCntValve = 20
-addon.alertLogInterval = 300
--- /script ActionDurationReminder.alertLogCntValve=0 ActionDurationReminder.alertLogInterval=5
--- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=300
-
 -- Remove alerts whose action no longer exists
 l.cleanupStaleAlerts -- #(map<#number,Models#Action>:snActionMap)->()
 = function(snActionMap)
@@ -463,14 +457,10 @@ l.onCoreUpdate -- #()->()
   if not savedVars.alertEnabled then return end
 
   local snActionMap = core.getSnActionMap()
-  local cntMap = {} -- #map<#number,#number>
-  local maxSnMap = {} -- #map<#number, #number>
 
   -- 1. Check actions for new alerts and update existing alerts
-  for sn,action in pairs(snActionMap) do
+  for sn, action in pairs(snActionMap) do
     l.checkAction(action)
-    cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
-    maxSnMap[action.ability.id] = math.max(cntMap[action.ability.id] or 0, action.sn)
   end
 
   -- 2. Remove alerts whose action no longer exists
@@ -478,29 +468,6 @@ l.onCoreUpdate -- #()->()
 
   -- 3. Check orphaned controls
   l.checkOrphanedControls()
-
-  local now = GetGameTimeSeconds()
-  -- TODO move this check into core
-  if now - lastLog > addon.alertLogInterval then
-    local didLog = false
-    for id, cnt in pairs(cntMap) do
-      if cnt > addon.alertLogCntValve then
-        didLog = true
-        if savedVars.addonLogTrackedEffectsInChat then
-          df("[!ADR!] |t24:24:%s|t%s(%d) #%d", GetAbilityIcon(id), GetAbilityName(id), id, cnt)
-        end
-        -- also remove potential leaked actions
-        local toRemove = {} --#list<Models#Action>
-        for sn,action in pairs(snActionMap) do
-          if action.ability.id == id and sn<maxSnMap[id] then toRemove[#toRemove+1] =action end
-        end
-        for key, var in ipairs(toRemove) do
-          core.l.removeAction(var)
-        end
-      end
-    end
-    if didLog then lastLog = now end
-  end
 end
 
 l.openAlertFrame -- #()->()
