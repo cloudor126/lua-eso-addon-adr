@@ -51,7 +51,6 @@ local DRAGONKNIGHT_CLASS_ID = 1
 local FLAME_LASH_ICON_KEYWORD = "dragonknight_001_a"
 local OFF_BALANCE_ICON_KEYWORD = "ability_debuff_offbalance"
 local POWER_LASH_GUIDE_ABILITY_ID = -999001 -- fake ability id for Power Lash guide effect
-local POWER_LASH_GUIDE_DURATION = 5000 -- 5 seconds duration for the guide effect
 
 ---
 --@type CoreSavedVars
@@ -1652,7 +1651,7 @@ l.sendPowerLashGuide -- #(#string:show)->() Send Power Lash guide effect (simula
   local nowSec = now / 1000
 
   if show then
-    -- Show guide effect (GAINED)
+    -- Show guide effect (GAINED) - unlimited duration using stackCount=1, duration=0
     if addon.debugEnabled(DSS_EFFECT_GAIN, "PowerLashGuide") then
       addon.debug('[E+]PowerLashGuide - Off Balance detected, use Power Lash!')
     end
@@ -1663,8 +1662,8 @@ l.sendPowerLashGuide -- #(#string:show)->() Send Power Lash guide effect (simula
       "Power Lash Guide", -- effectName
       "player", -- unitTag
       nowSec, -- beginTime
-      nowSec + POWER_LASH_GUIDE_DURATION / 1000, -- endTime
-      0, -- stackCount
+      nowSec, -- endTime (same as beginTime for duration=0)
+      1, -- stackCount=1 for unlimited duration
       "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName (Power Lash icon)
       BUFF_TYPE_DEBUFF, -- buffType
       BUFF_TYPE_DEBUFF, -- effectType
