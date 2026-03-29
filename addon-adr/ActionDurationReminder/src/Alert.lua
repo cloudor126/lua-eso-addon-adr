@@ -206,8 +206,7 @@ l.shouldSkipAction --#(Models#Action:action)->(#boolean)
   if action.slotNum == 8 then return true end
   -- check tick
   if action.tickEffect and action.duration==0 then return true end
-  -- check action just override without new effects
-  if action:getFullEndTime()-action.startTime < 3000 then return true end
+  -- check action in 1/2
   if action:getStageInfo() == '1/2' then return true end
   return false
 end
@@ -242,15 +241,13 @@ l.alertRuleInstant = {
   end,
 }
 
--- Alert rule: Power Lash Guide (Off Balance detected)
+-- Alert rule: Power Lash Guide
 l.alertRulePowerLash = {
   name = "powerLash",
-  shouldAlert = function(action, alert)
-    -- only interested in Power Lash Guide ability
-    if action.ability.id ~= POWER_LASH_GUIDE_ABILITY_ID then return false end
-    -- check if Off Balance is active
-    local stackEffect = action:getStackEffect()
-    return stackEffect and stackEffect.stackCount > 0
+  shouldAlert -- (Models#Action:action, #any:alert)->(#boolean)
+   = function(action, alert)
+    local stackEffect = action:getStackEffect() -- Models#Effect
+    return stackEffect and stackEffect.ability.id == POWER_LASH_GUIDE_ABILITY_ID
   end,
 }
 
@@ -517,7 +514,9 @@ l.openAlertFrame -- #()->()
     backdrop:SetAnchor(BOTTOMRIGHT)
     backdrop:SetCenterColor(0,0,1,0.5)
     backdrop:SetEdgeTexture('',1,1,1,1)
-    local label = WINDOW_MANAGER:CreateControl(nil, backdrop, CT_LABEL) --LabelControl#LabelControl
+    backdrop:SetDrawLayer(DL_COUNT)
+    backdrop:SetDrawLevel(0)
+    local label = WINDOW_MANAGER:CreateControl(nil, l.frame, CT_LABEL) --LabelControl#LabelControl
     label:SetFont('$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin')
     label:SetColor(1,1,1)
     label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -526,21 +525,45 @@ l.openAlertFrame -- #()->()
     label:SetDrawLayer(DL_COUNT)
     label:SetDrawLevel(1)
     label:SetText('ADR Alert Frame')
-    local labelClose = WINDOW_MANAGER:CreateControl(nil, backdrop, CT_LABEL) --LabelControl#LabelControl
-    labelClose:SetFont('$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin')
-    labelClose:SetColor(1,1,1)
-    labelClose:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-    labelClose:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
-    labelClose:SetAnchor(BOTTOMRIGHT, nil, BOTTOMRIGHT, -5, -2)
-    labelClose:SetDrawLayer(DL_COUNT)
-    labelClose:SetDrawLevel(1)
-    labelClose:SetText('[X]')
-    labelClose:SetMouseEnabled(true)
-    labelClose:SetHandler('OnMouseUp', function() l.frame:SetHidden(true) end)
+    -- Close button as a top-level window so it receives mouse events independently
+    local closeBtn = WINDOW_MANAGER:CreateTopLevelWindow()
+    closeBtn:SetDimensions(32, 32)
+    closeBtn:SetDrawLayer(DL_OVERLAY)
+    closeBtn:SetMouseEnabled(true)
+    closeBtn:SetMovable(false)
+    closeBtn.parentFrame = l.frame -- reference for handler
+    -- Use a texture for visual
+    local closeTexture = closeBtn:CreateControl(nil, CT_TEXTURE)
+    closeTexture:SetAnchor(CENTER)
+    closeTexture:SetDimensions(24, 24)
+    closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    closeTexture:SetDrawLayer(DL_OVERLAY)
+    closeBtn.texture = closeTexture
+    -- Mouse handlers
+    closeBtn:SetHandler('OnMouseEnter', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_up.dds')
+    end)
+    closeBtn:SetHandler('OnMouseExit', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    end)
+    closeBtn:SetHandler('OnMouseDown', function()
+      closeTexture:SetTexture('/esoui/art/buttons/closebutton_down.dds')
+    end)
+    closeBtn:SetHandler('OnMouseUp', function(self, button)
+      if button == 1 then
+        self.parentFrame:SetHidden(true)
+        self:SetHidden(true)
+      end
+    end)
+    l.closeBtn = closeBtn
   end
   l.frame:SetHidden(false)
   l.frame:ClearAnchors()
   l.frame:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, - 150 + savedVars.alertOffsetX, - 150 + savedVars.alertOffsetY)
+  -- Position close button relative to frame
+  l.closeBtn:ClearAnchors()
+  l.closeBtn:SetAnchor(TOPRIGHT, l.frame, TOPRIGHT, 4, -4)
+  l.closeBtn:SetHidden(false)
 end
 
 
