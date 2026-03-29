@@ -209,6 +209,14 @@ l.alertRuleTimeout = {
   shouldSkip = function(action)
     -- skip instant actions for timeout rule
     if l.isActionInstant(action) then return true end
+    -- skip if duration comes from low level effect
+    local duration, durSource = action:getDuration()
+    if durSource == models.DUR_SOURCE_PRIORITY then
+      local optEffect = action:optEffect()
+      if optEffect and optEffect.levelIsLow then
+        return true
+      end
+    end
     return false
   end,
   shouldAlert = function(action)
