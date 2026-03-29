@@ -384,7 +384,6 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   local matchHotbarCategory = nil
   local currentHotbarCategory = GetActiveHotbarCategory()
   local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
-  local isCrux =  effect.ability.icon:find("arcanist_crux",18,true)
   for i=1, 3 do
     local hotbarCategory = indices[i]
     for slotNum = 3,8 do
@@ -394,21 +393,13 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
       end
       local slotIcon = GetSlotTexture(slotNum,hotbarCategory)
       if slotBoundId >0 then
-        if isCrux then
-          if slotIcon:find('arcanist_002',18,true) or slotIcon:find('arcanist_003_b',18,true) then
-            matchSlotNum = slotNum
-            matchHotbarCategory = hotbarCategory
-            break
-          end
-        else
-          local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
-          if (effect.ability.name== slotName)
-            or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
-          then
-            matchSlotNum = slotNum
-            matchHotbarCategory = hotbarCategory
-            break
-          end
+        local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
+        if (effect.ability.name== slotName)
+          or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
+        then
+          matchSlotNum = slotNum
+          matchHotbarCategory = hotbarCategory
+          break
         end
       end
     end
@@ -430,6 +421,33 @@ end
 l.getSavedVars -- #()->(#CoreSavedVars)
 = function()
   return settings.getSavedVars()
+end
+
+l.ensureCruxActions -- #()->()
+= function()
+  -- Find all crux-consuming slots on the bar and ensure actions exist
+  local currentHotbarCategory = GetActiveHotbarCategory()
+  local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
+  for i=1, 3 do
+    local hotbarCategory = indices[i]
+    for slotNum = 3,8 do
+      local slotIcon = GetSlotTexture(slotNum, hotbarCategory)
+      -- Check if this slot can consume crux (arcanist_002 or arcanist_003_b icon)
+      if slotIcon:find('arcanist_002', 18, true) or slotIcon:find('arcanist_003_b', 18, true) then
+        -- Check if action already exists for this slot
+        local action = l.getActionBySlot(hotbarCategory, slotNum)
+        if not action then
+          -- Create and save a new action for this slot
+          action = models.newAction(slotNum, hotbarCategory)
+          action.fake = true
+          l.saveAction(action)
+          if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
+            addon.debug('[AN+]created crux action:%s@%.2f', action.ability.name, action.startTime/1000)
+          end
+        end
+      end
+    end
+  end
 end
 
 l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
@@ -1046,6 +1064,19 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
     effect.stageInfo = '|t20:20:/esoui/art/icons/ability_warrior_025.dds|t'
     effect.stageInfoBlink = true
   end
+
+  -- Handle crux effect globally (shared across all crux-consuming actions)
+  if effect.isCrux then
+    if changeType == EFFECT_RESULT_FADED then
+      models.crux.setEffect(nil)
+    else
+      models.crux.setEffect(effect)
+    end
+    -- Ensure actions exist for all crux-consuming slots on the bar
+    l.ensureCruxActions()
+    return
+  end
+
   -- 1. stack
   if stackCount > 0 then -- e.g. relentless focus
     local action = nil -- Models#Action

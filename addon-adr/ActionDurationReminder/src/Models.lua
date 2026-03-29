@@ -29,7 +29,27 @@ local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
 
 local LEVEL_THRESHOLD_LOW = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
 
+--========================================
+--        Global Crux Registry
+--========================================
+local mCrux = {}  -- private table for crux management
+m.crux = mCrux    -- expose to public
 
+mCrux.effect = nil  -- current active crux effect
+
+mCrux.getEffect -- #()->(#Effect)
+= function()
+  return mCrux.effect
+end
+
+mCrux.setEffect -- #(#Effect:effect)->()
+= function(effect)
+  if effect then
+    effect.level = LEVEL_CRUX
+    effect.levelIsLow = true
+  end
+  mCrux.effect = effect
+end
 
 local SPECIAL_DURATION_PATCH = {
   ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
@@ -663,16 +683,6 @@ mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
   return false
 end
 
-mAction.isShowingCruxDuration -- #(#Action:self)->(#boolean)
-= function(self)
-  local optEffect = self:optEffect()
-  if optEffect and optEffect.isCrux -- opt effect is crux?
-    and self.channelStartTime==0 -- not showing channel time
-  then
-    return true end
-  return false
-end
-
 mAction.isUnlimited -- #(#Action:self)->(#boolean)
 = function(self)
   local optEffect = self:optEffect()
@@ -780,15 +790,11 @@ end
 
 mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
-  -- 1. crux
-  if self.showCrux and effect.isCrux then
-    return true
-  end
-  -- 2. tank skills can taunt
+  -- 1. tank skills can taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
-  -- 3. fast check already matched effects unless it is a buff effect
+  -- 2. fast check already matched effects unless it is a buff effect
   local isBuff = effect.ability.icon:find('ability_buff_m',1,true)
   if not isBuff then
     for i, var in ipairs(self.effectList) do
@@ -831,15 +837,11 @@ end
 
 mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
 = function(self, effect)
-  -- 1. crux
-  if self.showCrux and effect.isCrux then
-    return true
-  end
-  -- 2. taunt
+  -- 1. taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
   end
-  -- 3. tick effect
+  -- 2. tick effect
   if self.tickEffect and self.tickEffect.ability.id == effect.ability.id then
     return true
   end
@@ -865,11 +867,6 @@ end
 
 mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
 = function(self, effect)
-  -- Level 8: Crux (lowest priority)
-  if effect.isCrux then
-    return LEVEL_CRUX
-  end
-
   local duration = self.duration > 0 and self.duration or self.inheritDuration
   if duration == 0 then duration = self.descriptionDuration or 0 end
 
@@ -1024,6 +1021,16 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
 
   if lowLevelStackEffect then
     return lowLevelStackEffect, 'level: low stack'
+  end
+
+  -- Check global crux effect (lowest priority)
+  if self.showCrux then
+    local cruxEffect = m.crux.getEffect()
+    if cruxEffect then
+      if now <= cruxEffect.endTime then
+        return cruxEffect, 'crux'
+      end
+    end
   end
 
   return nil, 'none'

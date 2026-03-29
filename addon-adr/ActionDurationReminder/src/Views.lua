@@ -424,7 +424,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       hint = string.format('%d', remain/1000)
     end
     -- Show brackets for low priority effects (tail effects, Crux, etc.)
-    if optEffect and (optEffect.levelIsLow or optEffect.isCrux) then
+    if optEffect and optEffect.levelIsLow then
       hint = string.format('<%d>', remain/1000)
       self.label:SetColor(unpack(l.getSavedVars().barLowPriorityLabelColor))
     else
