@@ -7,6 +7,10 @@ local models = addon.load("Models#M")
 local core = addon.load("Core#M")
 local l = {} -- #L
 local m = {l=l} -- #M
+
+-- Power Lash ability id for alert
+local POWER_LASH_ABILITY_ID = 20824
+
 local zhFlags = {
   zh = true,
   ze = true,
@@ -108,6 +112,15 @@ l.alert -- #(Models#Ability:ability, #number:startTime)->()
     end,
     savedVars.alertKeepSeconds*1000
   )
+end
+
+-- Handle Power Lash Guide event from Core extension
+l.onPowerLashGuide -- #(boolean:show, #number:timestamp)->()
+= function(show, timestamp)
+  if not show then return end -- only alert on show
+  if not l.getSavedVars().alertEnabled then return end
+  local ability = models.newAbility(POWER_LASH_ABILITY_ID, GetAbilityName(POWER_LASH_ABILITY_ID), GetAbilityIcon(POWER_LASH_ABILITY_ID))
+  l.alert(ability, timestamp)
 end
 
 l.checkAction --#(Models#Action:action)->()
@@ -351,6 +364,8 @@ end
 addon.register("Alert#M", m)
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
+
+addon.extend(core.EXTKEY_POWER_LASH_GUIDE, l.onPowerLashGuide)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(alertSavedVarsDefaults)

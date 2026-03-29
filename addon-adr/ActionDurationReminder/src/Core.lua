@@ -50,6 +50,7 @@ local DSS_TARGET_TRACK = {DS_TARGET, 'track'}
 local DRAGONKNIGHT_CLASS_ID = 1
 local FLAME_LASH_ICON_KEYWORD = "dragonknight_001_a"
 local OFF_BALANCE_ICON_KEYWORD = "ability_debuff_offbalance"
+local POWER_LASH_ABILITY_ID = 20824 -- Power Lash
 local POWER_LASH_GUIDE_ABILITY_ID = -999001 -- fake ability id for Power Lash guide effect
 
 ---
@@ -1576,6 +1577,8 @@ l.sendPowerLashGuide -- #(#string:show)->()
     if addon.debugEnabled(DSS_EFFECT_GAIN, "PowerLashGuide") then
       addon.debug('[E+]PowerLashGuide - Off Balance detected, use Power Lash!')
     end
+    -- Notify extension listeners (e.g., Alert)
+    addon.callExtension(m.EXTKEY_POWER_LASH_GUIDE, true, now)
     l.onEffectChanged(
       EVENT_EFFECT_CHANGED,
       EFFECT_RESULT_GAINED,
@@ -1585,7 +1588,7 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- beginTime
       nowSec, -- endTime (same as beginTime for duration=0)
       1, -- stackCount=1 for unlimited duration
-      "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName (Power Lash icon)
+      GetAbilityIcon(POWER_LASH_ABILITY_ID), -- iconName (Power Lash icon)
       0, -- buffType
       0, -- effectType
       0, -- abilityType
@@ -1609,7 +1612,7 @@ l.sendPowerLashGuide -- #(#string:show)->()
       nowSec, -- beginTime
       nowSec, -- endTime
       0, -- stackCount
-      "/esoui/art/icons/ability_dragonknight_001_b.dds", -- iconName
+      GetAbilityIcon(POWER_LASH_ABILITY_ID), -- iconName
       0, -- buffType
       0, -- effectType
       0, -- abilityType
@@ -1716,6 +1719,7 @@ end
 --        m
 --========================================
 m.EXTKEY_UPDATE = "Core:update"
+m.EXTKEY_POWER_LASH_GUIDE = "Core:powerLashGuide"
 
 -- debug levels deprecated, use fine-grained settings instead
 
