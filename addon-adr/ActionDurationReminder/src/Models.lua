@@ -30,6 +30,17 @@ local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
 local LEVEL_THRESHOLD_LOW = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
 
 --========================================
+--        Duration Source Constants
+--========================================
+m.DUR_SOURCE_TICK = 'T'        -- from Tick effect
+m.DUR_SOURCE_CHANNEL = 'C'     -- from Channel
+m.DUR_SOURCE_FILTER = 'F'      -- from Filter (configDuration)
+m.DUR_SOURCE_PRIORITY = 'P'    -- from Priority effect (optEffect)
+m.DUR_SOURCE_SELF = 'S'        -- from Self (action.duration)
+m.DUR_SOURCE_DESC = 'D'        -- from Description
+m.DUR_SOURCE_NONE = ''         -- no duration
+
+--========================================
 --        Global Crux Registry
 --========================================
 local mCrux = {}  -- private table for crux management
@@ -385,17 +396,17 @@ end
 mAction.getDuration -- #(#Action:self)->(#number,#string)
 = function(self)
   if self.tickEffect and self.duration==0 then
-    return self.tickEffect.tickRate,'T' -- from Tick
+    return self.tickEffect.tickRate, m.DUR_SOURCE_TICK
   end
   if self.channelStartTime>0 and self.channelEndTime>0 then
-    return self.channelEndTime - self.channelStartTime,'C' -- from Channel
+    return self.channelEndTime - self.channelStartTime, m.DUR_SOURCE_CHANNEL
   end
-  if self.configDuration then return self.configDuration,'F' end -- from Filter
+  if self.configDuration then return self.configDuration, m.DUR_SOURCE_FILTER end
   local optEffect,reason = self:optEffect() -- #Effect
-  if optEffect then return optEffect.duration,'P' end -- from Priority
-  if self.duration and self.duration>0 then return self.duration,'S' end -- from Self
-  if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration,'D' end -- from Description
-  return 0,''
+  if optEffect then return optEffect.duration, m.DUR_SOURCE_PRIORITY end
+  if self.duration and self.duration>0 then return self.duration, m.DUR_SOURCE_SELF end
+  if self.descriptionDuration and self.descriptionDuration >0 then return self.descriptionDuration, m.DUR_SOURCE_DESC end
+  return 0, m.DUR_SOURCE_NONE
 end
 
 mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)

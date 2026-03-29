@@ -1649,9 +1649,9 @@ l.onUpdateForPowerLash -- #()->()
   -- Get Flame Lash action and check if in cooldown (20s)
   local flameLashAction = l.getActionBySlot(hotbarCategory, slotNum)
   if flameLashAction then
-    local duration = flameLashAction:getDuration()
-    -- If duration is around 20 seconds (19000-21000ms), it's in Power Lash cooldown
-    if duration >= 19000 and duration <= 21000 then
+    local duration,durSource = flameLashAction:getDuration()
+    -- If its prioritized effect duration is around 20 seconds (19000-21000ms), it's in Power Lash cooldown
+    if durSource== models.DUR_SOURCE_PRIORITY and  duration >= 19000 and duration <= 21000 then
       -- In Power Lash cooldown, hide guide if was shown
       l.sendPowerLashGuide(false)
       return
