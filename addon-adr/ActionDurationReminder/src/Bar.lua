@@ -171,7 +171,7 @@ l.onCoreUpdate -- #()->()
         l.shiftedBarWidgetMap[slotNum] = widget
       end
       widget:updateWithAction(action, now)
-      widget.backdrop:SetDimensions(50,50)
+      widget.backdrop:SetDimensions(views.getSlotBaseSize(), views.getSlotBaseSize())
     end
   end
   -- 4.2 show fully
@@ -188,7 +188,7 @@ l.onCoreUpdate -- #()->()
         end
         if not widget.visible then
           widget:updateWithSlot(slotNum)
-          widget.backdrop:SetDimensions(50,50)
+          widget.backdrop:SetDimensions(views.getSlotBaseSize(), views.getSlotBaseSize())
         end
       end
     end

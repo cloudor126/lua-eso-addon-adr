@@ -16,6 +16,23 @@ l.getSavedVars -- #()->(Bar#BarSavedVars)
   return settings.getSavedVars()
 end
 
+l.getSlotBaseSize -- #()->(#number)
+= function()
+  -- Get actual slot size from the game's action bar
+  local slot = ZO_ActionBar_GetButton(3).slot
+  local _, height = slot:GetDimensions()
+  return height
+end
+
+l.getSlotBaseGap -- #()->(#number)
+= function()
+  -- Calculate gap between slots based on actual positions
+  local slot3 = ZO_ActionBar_GetButton(3).slot
+  local slot4 = ZO_ActionBar_GetButton(4).slot
+  local gap = slot4:GetLeft() - slot3:GetRight()
+  return gap
+end
+
 l.getLabelFont -- #()->(#string)
 = function()
   return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|"..l.getSavedVars().barLabelFontStyle
@@ -30,6 +47,8 @@ l.debugIdList = {} -- #list<#number>
 --========================================
 --        m
 --========================================
+m.getSlotBaseSize = l.getSlotBaseSize
+m.getSlotBaseGap = l.getSlotBaseGap
 m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
 = function(background, drawTier)
   local inst = {} -- #Cooldown
@@ -73,6 +92,8 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   if shifted then
     local offsetX = savedVars.barShiftOffsetX
     local offsetY = savedVars.barShiftOffsetY
+    local baseSize = l.getSlotBaseSize()
+    local baseGap = l.getSlotBaseGap()
     backdrop = WINDOW_MANAGER:CreateControl(nil, slot, CT_TEXTURE) -- Control#Control
     if l.getSavedVars().barShowShiftScalePercent<100 then
       backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
@@ -80,11 +101,11 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     inst.backdrop = backdrop --TextureControl#TextureControl
     backdrop:SetDrawLayer(DL_BACKGROUND)
     if appendIndex then
-      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (appendIndex-1) * 55, offsetY)
+      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (appendIndex-1) * (baseSize + baseGap), offsetY)
     else
       backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX , offsetY)
     end
-    backdrop:SetDimensions(50 , 50)
+    backdrop:SetDimensions(baseSize, baseSize)
     backdrop:SetTexture("esoui/art/actionbar/abilityframe64_up.dds")
     background = WINDOW_MANAGER:CreateControl(nil, backdrop, CT_TEXTURE)
     inst.background = background--TextureControl#TextureControl
@@ -166,11 +187,13 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
   if not widget.shifted then return end
   local offsetX = l.getSavedVars().barShiftOffsetX
   local offsetY = l.getSavedVars().barShiftOffsetY
+  local baseSize = l.getSlotBaseSize()
+  local baseGap = l.getSlotBaseGap()
   if widget.backdrop then
     local slot = widget.backdrop:GetParent()
     widget.backdrop:ClearAnchors()
     if widget.appendIndex then
-      widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (widget.appendIndex - 1) * 55, offsetY)
+      widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (widget.appendIndex - 1) * (baseSize + baseGap), offsetY)
     else
       widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX , offsetY)
     end
