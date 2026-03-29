@@ -1640,13 +1640,8 @@ l.targetHasOffBalance = function()
   return false
 end
 
--- Get Flame Lash action from idActionMap
-l.getFlameLashAction = function(hotbarCategory, slotNum)
-  return l.getActionBySlot(hotbarCategory, slotNum)
-end
-
--- Send Power Lash guide effect (simulated onEffectChanged)
-l.sendPowerLashGuide = function(show)
+l.sendPowerLashGuide -- #(#string:show)->() Send Power Lash guide effect (simulated onEffectChanged)
+ = function(show)
   -- Avoid sending same type repeatedly
   if l.powerLashGuideState.lastGuideType == (show and 'show' or 'hide') then
     return
@@ -1729,7 +1724,7 @@ l.onUpdateForPowerLash = function()
   end
 
   -- Get Flame Lash action and check if in cooldown (20s)
-  local flameLashAction = l.getFlameLashAction(hotbarCategory, slotNum)
+  local flameLashAction = l.getActionBySlot(hotbarCategory, slotNum)
   if flameLashAction then
     local duration = flameLashAction:getDuration()
     -- If duration is around 20 seconds (19000-21000ms), it's in Power Lash cooldown
