@@ -4,7 +4,7 @@
 local addon = ActionDurationReminder -- Addon#M
 local l = {} -- #L
 local m = {l=l} -- #M
-local mAction = {} -- #Action
+local mAction = {} -- #Action 
 local mAbility = {} -- #Ability
 local mEffect = {} -- #Effect
 
@@ -471,6 +471,10 @@ end
 
 mAction.getStageInfo -- #(#Action:self)->(#string)
 = function(self)
+  -- Power Lash Guide: show Power Lash icon
+  if self.isPowerLashGuide then
+    return '|t20:20:/esoui/art/icons/ability_dragonknight_001_b.dds|t'
+  end
   if self.tickEffect then
     if not self.duration or self.duration ==0 then
       return '∞'
@@ -901,7 +905,6 @@ mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
   end
 
   -- Level 7: tail effect (significantly longer than action duration) TODO
-  addon.debug('[calc] dur:%d dd:%d %s ',duration, self.descriptionDuration or 0,effect:toLogString())
   if duration > 0 and effect.duration > duration * 2 and effect.duration > 10000 then
     return LEVEL_TAIL_EFFECT
   end
