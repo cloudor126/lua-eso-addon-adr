@@ -215,65 +215,42 @@ end
 -- Alert rule: timeout (near expiration)
 l.alertRuleTimeout = {
   name = "timeout",
-  shouldSkip = function(action)
+  shouldAlert = function(action, alert)
     -- skip instant actions for timeout rule
-    if l.isActionInstant(action) then return true end
+    if l.isActionInstant(action) then return false end
     -- skip if duration comes from low level effect
     local duration, durSource = action:getDuration()
     if durSource == models.DUR_SOURCE_PRIORITY then
       local optEffect = action:optEffect()
       if optEffect and optEffect.levelIsLow then
-        return true
+        return false
       end
     end
-    return false
-  end,
-  shouldAlert = function(action)
+    -- remove if action was refreshed (startTime changed)
+    if alert and action.startTime ~= alert.startTime then return false end
+    -- check if near expiration (or no longer near if alert exists)
     local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
     return action:getFullEndTime() - aheadTime < GetGameTimeMilliseconds()
-  end,
-  shouldRemove = function(action, alert)
-    -- remove if action was refreshed (startTime changed)
-    if action.startTime ~= alert.startTime then return true end
-    -- remove if duration was extended (no longer near expiration)
-    local aheadTime = l.getSavedVars().alertAheadSeconds * 1000
-    if action:getFullEndTime() - aheadTime > GetGameTimeMilliseconds() then return true end
-    return false
   end,
 }
 
 -- Alert rule: instant (ready to trigger)
 l.alertRuleInstant = {
   name = "instant",
-  shouldSkip = function(action)
-    return false
-  end,
-  shouldAlert = function(action)
+  shouldAlert = function(action, alert)
     return l.isActionInstant(action)
-  end,
-  shouldRemove = function(action, alert)
-    -- remove if no longer instant
-    if not l.isActionInstant(action) then return true end
-    return false
   end,
 }
 
 -- Alert rule: Power Lash Guide (Off Balance detected)
 l.alertRulePowerLash = {
   name = "powerLash",
-  shouldSkip = function(action)
+  shouldAlert = function(action, alert)
     -- only interested in Power Lash Guide ability
-    return action.ability.id ~= POWER_LASH_GUIDE_ABILITY_ID
-  end,
-  shouldAlert = function(action)
-    -- alert immediately when Power Lash Guide appears
+    if action.ability.id ~= POWER_LASH_GUIDE_ABILITY_ID then return false end
+    -- check if Off Balance is active
     local stackEffect = action:getStackEffect()
     return stackEffect and stackEffect.stackCount > 0
-  end,
-  shouldRemove = function(action, alert)
-    -- remove when stackCount becomes 0 (Off Balance ended)
-    local stackEffect = action:getStackEffect()
-    return not stackEffect or stackEffect.stackCount == 0
   end,
 }
 
@@ -397,22 +374,18 @@ l.checkAction --#(Models#Action:action)->()
   -- check each rule
   for _, rule in ipairs(l.alertRules) do
     local existingAlert = l.findActiveAlert(action, rule)
+    local shouldAlert = rule.shouldAlert(action, existingAlert)
+
     if existingAlert then
-      -- already has alert for this rule, will be checked in checkActiveAlerts
+      -- alert exists but shouldAlert is false -> remove it
+      if not shouldAlert then
+        l.removeAlert(existingAlert, "rule")
+      end
+      -- if shouldAlert is true, keep the existing alert (no-op)
     else
-      -- check skip condition
-      if rule.shouldSkip(action) then
-        if addon.debugEnabled(DSS_ALERT_SKIP, action.ability.name) then
-          local key = "LSk/" .. action.ability.name
-          if l.shouldLog(key) then
-            addon.debug("[LSk]rule '%s' skipped for: %s", rule.name, action:toLogString_Short())
-          end
-        end
-      else
-        -- check alert condition
-        if rule.shouldAlert(action) then
-          l.createAlert(action, rule)
-        end
+      -- no alert exists
+      if shouldAlert then
+        l.createAlert(action, rule)
       end
     end
   end
@@ -437,30 +410,24 @@ addon.alertLogInterval = 300
 -- /script ActionDurationReminder.alertLogCntValve=0 ActionDurationReminder.alertLogInterval=5
 -- /script ActionDurationReminder.alertLogCntValve=20 ActionDurationReminder.alertLogInterval=300
 
--- Check active alerts for removal
-l.checkActiveAlerts -- #()->()
-= function()
+-- Remove alerts whose action no longer exists
+l.cleanupStaleAlerts -- #(map<#number,Models#Action>:snActionMap)->()
+= function(snActionMap)
   local toRemove = {} -- #list<Alert>
   for _, alert in ipairs(l.activeAlerts) do
-    local action = alert.action
-    local rule = alert.rule
-    -- check if action still exists (action may have been removed)
     local actionExists = false
-    local snActionMap = core.getSnActionMap()
     for _, a in pairs(snActionMap) do
-      if a == action then
+      if a == alert.action then
         actionExists = true
         break
       end
     end
     if not actionExists then
       table.insert(toRemove, alert)
-    elseif rule.shouldRemove(action, alert) then
-      table.insert(toRemove, alert)
     end
   end
   for _, alert in ipairs(toRemove) do
-    l.removeAlert(alert, "rule")
+    l.removeAlert(alert, "action removed")
   end
 end
 
@@ -489,15 +456,15 @@ l.onCoreUpdate -- #()->()
   local cntMap = {} -- #map<#number,#number>
   local maxSnMap = {} -- #map<#number, #number>
 
-  -- 1. Check actions for new alerts
+  -- 1. Check actions for new alerts and update existing alerts
   for sn,action in pairs(snActionMap) do
     l.checkAction(action)
     cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
     maxSnMap[action.ability.id] = math.max(cntMap[action.ability.id] or 0, action.sn)
   end
 
-  -- 2. Check active alerts for removal
-  l.checkActiveAlerts()
+  -- 2. Remove alerts whose action no longer exists
+  l.cleanupStaleAlerts(snActionMap)
 
   -- 3. Check orphaned controls
   l.checkOrphanedControls()
