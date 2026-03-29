@@ -368,15 +368,17 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
     addon.debug("[L+]rule '%s' created(%s) alert for %s", rule.name, reason or "?", action:toLogString())
   end
   local showAbility = models.newAbility(action.ability.id, action.ability.name, action.ability.icon)
-  local mutantId = GetSlotBoundId(action.slotNum, action.hotbarCategory) --#number
+  -- Only check mutant for crafted abilities (skill line abilities that can morph/transform)
+  -- For normal abilities, bar swap changes the slot to a completely different skill,
+  -- and we should not replace the original ability icon.
   if GetSlotType(action.slotNum, action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
-    mutantId = GetAbilityIdForCraftedAbilityId(mutantId)
-  end
-  if showAbility.id ~= mutantId then
-    local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
-    if action:matchesAbility(slotAbility) then
-      slotAbility.id = action.ability.id
-      showAbility = slotAbility
+    local mutantId = GetAbilityIdForCraftedAbilityId(GetSlotBoundId(action.slotNum, action.hotbarCategory))
+    if showAbility.id ~= mutantId then
+      local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+      if action:matchesAbility(slotAbility) then
+        slotAbility.id = action.ability.id
+        showAbility = slotAbility
+      end
     end
   end
   local stackEffect = action:getStackEffect()

@@ -1,3 +1,8 @@
+3.144
+
+### Bug Fixes
+- Fixed alert showing wrong ability icon after bar swap for non-crafted abilities (e.g., Budding Seeds).
+
 3.143
 
 ### New Features
