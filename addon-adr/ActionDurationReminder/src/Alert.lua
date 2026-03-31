@@ -416,7 +416,7 @@ l.removeAlert --#(#Alert:alert, #string:reason)->()
   end
 end
 
-l.removeAllAlertByAction --#(Models#Action:action, #string:reason)->()
+l.removeAllAlertsByAction --#(Models#Action:action, #string:reason)->()
 = function(action, reason)
   -- remove from activeAlerts
   for i, a in ipairs(l.activeAlerts) do
@@ -511,7 +511,7 @@ l.onCoreUpdate -- #()->()
   -- 1. Check actions for new alerts and update existing alerts
   for sn, action in pairs(snActionMap) do
     if action.newAction then
-      l.removeAllAlertByAction(action, 'action renewed')
+      l.removeAllAlertsByAction(action, 'action renewed')
     else
       l.checkAction(action)
     end
