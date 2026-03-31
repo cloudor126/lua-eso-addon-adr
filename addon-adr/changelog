@@ -1,3 +1,8 @@
+3.144a
+
+### Bug Fixes
+- Fixed Lua error "function expected instead of nil" in Alert.lua when action is renewed during combat.
+
 3.144
 
 ### Bug Fixes

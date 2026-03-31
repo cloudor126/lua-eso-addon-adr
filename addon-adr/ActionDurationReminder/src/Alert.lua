@@ -511,7 +511,7 @@ l.onCoreUpdate -- #()->()
   -- 1. Check actions for new alerts and update existing alerts
   for sn, action in pairs(snActionMap) do
     if action.newAction then
-      l.removeAllAlert(action, 'action renewed')
+      l.removeAllAlertByAction(action, 'action renewed')
     else
       l.checkAction(action)
     end
