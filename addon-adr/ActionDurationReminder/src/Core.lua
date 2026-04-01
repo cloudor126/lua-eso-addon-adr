@@ -547,10 +547,14 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
-  local action = models.newAction(slotNum,GetActiveHotbarCategory())
+  local hotbar = GetActiveHotbarCategory()
+  local action = models.newAction(slotNum,hotbar)
   if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
     addon.debug('[AN]%s', action:toLogString())
   end
+  zo_callLater(function()
+    action.ability.icon = GetSlotTexture(slotNum, hotbar) 
+  end, 500)
   if action.ability.icon:find('_curse',1,true) -- daedric curse, haunting curse, daedric prey
     or action.ability.icon:find('dark_haze',1,true) -- rune cage
     or action.ability.icon:find('dark_fog',1,true) -- rune prison
