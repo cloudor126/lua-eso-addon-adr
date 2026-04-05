@@ -56,7 +56,7 @@ local coreSavedVarsDefaults = {
   coreIgnoreLongDebuff = true,
   coreKeyWords = '',
   coreBlackKeyWords = '',
-  coreClearWhenCombatEnd = false,
+  coreClearAreaActionsOnCombatEnd = false,
 }
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
@@ -1335,17 +1335,11 @@ end
 
 l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
 = function(eventCode,inCombat)
-  if not l.getSavedVars().coreClearWhenCombatEnd then return end
+  if not l.getSavedVars().coreClearAreaActionsOnCombatEnd then return end
   zo_callLater(
     function()
       if not IsUnitInCombat('player') then
-        for key,action in pairs(l.idActionMap) do
-          l.idActionMap[key] = nil
-          if addon.debugEnabled(DSS_ACTION_CLEAR) then
-            addon.debug('[ACC]%s@%.2f<%.2f> %s', action.ability:toLogString(), action:getStartTime()/1000,
-              action:getDuration()/1000, action:getFlagsInfo())
-          end
-        end
+        m.clearAreaActions()
       end
     end,
     3000
@@ -1857,12 +1851,12 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         },
         {
           type = "checkbox",
-          name = addon.text("Clear on Combat End"),
-          tooltip = addon.text("Remove all timers when combat ends"),
-          getFunc = function() return l.getSavedVars().coreClearWhenCombatEnd end,
-          setFunc = function(value) l.getSavedVars().coreClearWhenCombatEnd = value end,
+          name = addon.text("Clear Area Actions on Combat End"),
+          tooltip = addon.text("Remove area/ground timers when combat ends"),
+          getFunc = function() return l.getSavedVars().coreClearAreaActionsOnCombatEnd end,
+          setFunc = function(value) l.getSavedVars().coreClearAreaActionsOnCombatEnd = value end,
           width = "full",
-          default = coreSavedVarsDefaults.coreClearWhenCombatEnd,
+          default = coreSavedVarsDefaults.coreClearAreaActionsOnCombatEnd,
         },
         {
           type = "slider",
