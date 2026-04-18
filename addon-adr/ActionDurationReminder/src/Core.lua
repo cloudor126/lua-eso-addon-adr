@@ -842,7 +842,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           l.saveAction(action)
           return
           --
-        elseif hitValue > 1 then -- hitValue如果大于1，那就是一个stack效果，匹配上就可以加上stack
+        elseif hitValue > 1 and action.descriptionNums and action.descriptionNums[hitValue] then -- check if hitValue matches a descriptionNum (triggered bonus stacks)
           local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now, hitValue, 0);
           effect.combatEventId = abilityId
           action:updateStackInfo(hitValue,effect)

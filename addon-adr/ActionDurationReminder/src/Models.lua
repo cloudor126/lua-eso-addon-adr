@@ -1416,9 +1416,10 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   if not self.stackEffect then
     addType = 1
     -- detect triggered bonus stack pattern: sudden stack at action beginning
-    if stackCount>=2 -- sudden stack like Stone Giant, Flame Lash
+    if stackCount>=3 -- sudden stack like Stone Giant, Flame Lash
       and GetGameTimeMilliseconds()-self.startTime<1000 -- in the beginning (1000ms to account for latency and cast time)
       and not self.fake -- not for fake actions
+      and self.descriptionNums[stackCount] -- must match a number in skill description
     then
       addType = 2
       if self.stackEffect2 and self.stackEffect2.ability.id~= effect.ability.id then
