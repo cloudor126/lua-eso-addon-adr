@@ -1,3 +1,8 @@
+3.147
+
+### Improvements
+- Fade event now checks stackEffect as fallback for stackCount2 mismatch, and supports hitValue increment detection alongside descriptionNum matching.
+
 3.146
 
 ### Improvements
