@@ -734,14 +734,21 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
       end
     end
     for key, var in pairs(l.idActionMap) do
+      local effect = nil
       if var.stackEffect2 and var.stackEffect2.combatEventId == abilityId then
+        effect = var.stackEffect2
+      elseif var.stackEffect and var.stackEffect.combatEventId == abilityId then
+        effect = var.stackEffect
+      end
+      if effect ~=nil then
         action = var
         if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
           addon.debug('[C-s]cancel stack %s', action:toLogString())
         end
-        local oldEffect = action:purgeEffect(action.stackEffect2)
+        local oldEffect = action:purgeEffect(effect)
         if oldEffect then l.timeActionMap[oldEffect.startTime] = nil end
       end
+      
     end
     action = l.findActionByTick(abilityId, targetUnitId)
     if action and action.duration==0 then
@@ -842,7 +849,13 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
           l.saveAction(action)
           return
           --
-        elseif hitValue > 1 and action.descriptionNums and action.descriptionNums[hitValue] then -- check if hitValue matches a descriptionNum (triggered bonus stacks)
+        elseif hitValue > 1 and
+          -- 递增
+          (hitValue == (action.stackEffect and action.stackEffect.stackCount or 0) +1)
+        or
+        -- check if hitValue matches a descriptionNum (triggered bonus stacks)
+         (action.descriptionNums and action.descriptionNums[hitValue])
+          then 
           local effect = models.newEffect(abilityOnBar, 'player', sourceUnitId, now, now, hitValue, 0);
           effect.combatEventId = abilityId
           action:updateStackInfo(hitValue,effect)
