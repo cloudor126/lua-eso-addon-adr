@@ -447,7 +447,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       hint = string.format('<%d>', remain/1000)
       self.label:SetColor(unpack(l.getSavedVars().barLowPriorityLabelColor))
     else
-      self.label:SetColor(1, 1, 1)
+      local isEnding = action:needEndingAlert() and remain < self.cooldown.endingSeconds * 1000
+      self.label:SetColor(unpack(isEnding and l.getSavedVars().barLabelEndingColor or l.getSavedVars().barLabelColor))
     end
     self.label:SetText(hint)
     self.label:SetHidden(false)
@@ -461,6 +462,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       local stackText = string.format(action.stackCountMatch and '%d^' or '%d',stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
+      self.stackLabel:SetColor(unpack(l.getSavedVars().barStackLabelColor))
     elseif stageInfo then
       self.stackLabel:SetText(stageInfo)
       -- Blink effect: hide every other 200ms interval
@@ -470,6 +472,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
       else
         self.stackLabel:SetHidden(false)
       end
+      self.stackLabel:SetColor(unpack(l.getSavedVars().barStackLabelColor))
     else
       self.stackLabel:SetHidden(true)
     end
@@ -505,12 +508,16 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   elseif remain > 0 then
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      self.cooldown:start(remain, 8000, stageInfo == '1/2' or action.tickEffect)
+      self.cooldown:start(remain, 8000, not action:needEndingAlert())
     end
   else
     self.cdMark = 0
-    local numSemiSeconds = math.floor((now-action:getEndTime())/200)
-    if numSemiSeconds % 2 == 0 then
+    if action:needEndingAlert() then
+      local numSemiSeconds = math.floor((now-action:getEndTime())/200)
+      if numSemiSeconds % 2 == 0 then
+        self.label:SetHidden(true)
+      end
+    else
       self.label:SetHidden(true)
     end
   end

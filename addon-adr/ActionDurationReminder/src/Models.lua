@@ -698,6 +698,12 @@ mAction.getStackEffect2 -- #(#Action:self)->(#Effect)
   return self.stackEffect2
 end
 
+mAction.needEndingAlert -- #(#Action:self)->(#boolean)
+= function(self)
+  -- tick/channel skills don't benefit from ending alerts (automatic or requring crux, not re-cast)
+  return not self.tickEffect and not (self.channelStartTime and self.channelStartTime > 0)
+end
+
 mAction.hasEffect -- #(#Action:self)->(#boolean)
 = function(self)
   return #self.effectList >0

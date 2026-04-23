@@ -41,6 +41,9 @@ local barSavedVarsDefaults
     barCooldownOpacity = 100,
     barCooldownThickness = 2,
     barLowPriorityLabelColor = {0.6, 0.6, 0.6}, -- gray for low priority effects
+    barLabelColor = {1, 1, 1}, -- white for normal label
+    barLabelEndingColor = {1, 0, 0}, -- same as line ending color by default
+    barStackLabelColor = {1, 1, 1}, -- white for normal stack label
   }
 
 --========================================
@@ -582,6 +585,43 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             r = barSavedVarsDefaults.barLowPriorityLabelColor[1],
             g = barSavedVarsDefaults.barLowPriorityLabelColor[2],
             b = barSavedVarsDefaults.barLowPriorityLabelColor[3],
+          }
+        },{
+          type = "colorpicker",
+          name = text("Label Color"),
+          getFunc = function() return unpack(l.getSavedVars().barLabelColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barLabelColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
+          default = {
+            r = barSavedVarsDefaults.barLabelColor[1],
+            g = barSavedVarsDefaults.barLabelColor[2],
+            b = barSavedVarsDefaults.barLabelColor[3],
+          }
+        },{
+          type = "colorpicker",
+          name = text("Label Ending Color"),
+          tooltip = text("Label color when remaining time is below threshold"),
+          getFunc = function() return unpack(l.getSavedVars().barLabelEndingColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barLabelEndingColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
+          default = {
+            r = barSavedVarsDefaults.barLabelEndingColor[1],
+            g = barSavedVarsDefaults.barLabelEndingColor[2],
+            b = barSavedVarsDefaults.barLabelEndingColor[3],
+          }
+        },{
+          type = "colorpicker",
+          name = text("Stack Label Color"),
+          getFunc = function() return unpack(l.getSavedVars().barStackLabelColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barStackLabelColor={r,g,b}; l.updateWidgets(views.updateWidgetCooldown) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barLabelEnabled end,
+          default = {
+            r = barSavedVarsDefaults.barStackLabelColor[1],
+            g = barSavedVarsDefaults.barStackLabelColor[2],
+            b = barSavedVarsDefaults.barStackLabelColor[3],
           }
         }
       }})
