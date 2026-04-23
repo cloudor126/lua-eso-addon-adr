@@ -727,8 +727,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
         addon.debug('[C-c]cancel channeling %s', action:toLogString())
       end
-      action.channelStartTime = 0
-      action.channelEndTime = 0
+      action.channelEndTime = now
       if #action.effectList == 0 then
         action.endTime = now
       end
