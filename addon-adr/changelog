@@ -1,3 +1,8 @@
+3.148
+
+### Bug Fixes
+- Fixed stack effect timer flickering at 0.0 when FADED event is not received.
+
 3.147
 
 ### Improvements
