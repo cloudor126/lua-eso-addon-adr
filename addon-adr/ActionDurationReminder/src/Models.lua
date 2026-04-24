@@ -114,6 +114,12 @@ end
 --========================================
 --        m
 --========================================
+m.isValidStackEffect -- #(#Effect:stackEffect)->(#boolean)
+= function(stackEffect)
+  if not stackEffect then return false end
+  if stackEffect.duration == 0 then return true end
+  return stackEffect.endTime > GetGameTimeMilliseconds()
+end
 m.cacheOfActionMatchingEffect = {} -- #map<#string:#boolean>
 m.cacheOfActionMatchingAbilityName = {} -- #map<#string:#boolean>
 m.cacheOfActionMatchingAbilityIcon = {} -- #map<#string:#boolean>
@@ -627,7 +633,7 @@ mAction.getStageInfo2 -- #(#Action:self)->(#number)
 = function(self)
   -- fixed value from stackEffect2
   local stackEffect2 = self:getStackEffect2()
-  if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 then
+  if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 and m.isValidStackEffect(stackEffect2) then
     return stackEffect2.stackCount
   end
   -- cached value
@@ -732,6 +738,7 @@ mAction.isUnlimited -- #(#Action:self)->(#boolean)
   local optEffect = self:optEffect()
   local stackEffect = self:getStackEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
+  if stackCount > 0 and not m.isValidStackEffect(stackEffect) then return false end
   return self.duration==0 and
     stackCount > 0
     and
@@ -1030,14 +1037,14 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   local reason = ''
 
   local lowLevelStackEffect = nil
-  if self.stackEffect and self.stackEffect.duration>0  then
+  if self.stackEffect and self.stackEffect.duration>0 and m.isValidStackEffect(self.stackEffect) then
     if self.stackEffect.levelIsLow then
       lowLevelStackEffect = self.stackEffect
     else
       return self.stackEffect, 'stackEffect'
     end
   end
-  if self.stackEffect2 and self.stackEffect2.duration>0  then
+  if self.stackEffect2 and self.stackEffect2.duration>0 and m.isValidStackEffect(self.stackEffect2) then
     if self.stackEffect2.levelIsLow then
       lowLevelStackEffect = self.stackEffect2
     else
