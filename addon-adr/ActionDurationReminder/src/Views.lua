@@ -3,6 +3,7 @@
 --========================================
 local addon = ActionDurationReminder -- Addon#M
 local settings = addon.load("Settings#M")
+local models = addon.load("Models#M")
 local l = {} -- #L
 local m = {l=l} -- #M
 local mWidget = {} -- #Widget
