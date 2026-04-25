@@ -114,12 +114,6 @@ end
 --========================================
 --        m
 --========================================
-m.isValidStackEffect -- #(#Effect:stackEffect)->(#boolean)
-= function(stackEffect)
-  if not stackEffect then return false end
-  if stackEffect.duration == 0 then return true end
-  return stackEffect.endTime > GetGameTimeMilliseconds()
-end
 m.cacheOfActionMatchingEffect = {} -- #map<#string:#boolean>
 m.cacheOfActionMatchingAbilityName = {} -- #map<#string:#boolean>
 m.cacheOfActionMatchingAbilityIcon = {} -- #map<#string:#boolean>
@@ -633,7 +627,7 @@ mAction.getStageInfo2 -- #(#Action:self)->(#number)
 = function(self)
   -- fixed value from stackEffect2
   local stackEffect2 = self:getStackEffect2()
-  if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 and m.isValidStackEffect(stackEffect2) then
+  if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 then
     return stackEffect2.stackCount
   end
   -- cached value
@@ -692,16 +686,22 @@ mAction.getStackEffect -- #(#Action:self)->(#Effect)
   -- For crux-consuming actions, return global crux effect if no local stackEffect
   if self.showCrux then
     local cruxEffect = m.crux.getEffect()
-    if cruxEffect and (not self.stackEffect or self.stackEffect.duration == 0) then
+    if cruxEffect and (cruxEffect.duration == 0 or cruxEffect.endTime > GetGameTimeMilliseconds()) and (not self.stackEffect or self.stackEffect.duration == 0) then
       return cruxEffect
     end
   end
-  return self.stackEffect
+  if self.stackEffect and (self.stackEffect.duration == 0 or self.stackEffect.endTime > GetGameTimeMilliseconds()) then
+    return self.stackEffect
+  end
+  return nil
 end
 
 mAction.getStackEffect2 -- #(#Action:self)->(#Effect)
 = function(self)
-  return self.stackEffect2
+  if self.stackEffect2 and (self.stackEffect2.duration == 0 or self.stackEffect2.endTime > GetGameTimeMilliseconds()) then
+    return self.stackEffect2
+  end
+  return nil
 end
 
 mAction.needEndingAlert -- #(#Action:self)->(#boolean)
@@ -738,7 +738,6 @@ mAction.isUnlimited -- #(#Action:self)->(#boolean)
   local optEffect = self:optEffect()
   local stackEffect = self:getStackEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
-  if stackCount > 0 and not m.isValidStackEffect(stackEffect) then return false end
   return self.duration==0 and
     stackCount > 0
     and
@@ -1037,18 +1036,20 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   local reason = ''
 
   local lowLevelStackEffect = nil
-  if self.stackEffect and self.stackEffect.duration>0 and m.isValidStackEffect(self.stackEffect) then
-    if self.stackEffect.levelIsLow then
-      lowLevelStackEffect = self.stackEffect
+  local stackEffect = self:getStackEffect()
+  if stackEffect and stackEffect.duration>0 then
+    if stackEffect.levelIsLow then
+      lowLevelStackEffect = stackEffect
     else
-      return self.stackEffect, 'stackEffect'
+      return stackEffect, 'stackEffect'
     end
   end
-  if self.stackEffect2 and self.stackEffect2.duration>0 and m.isValidStackEffect(self.stackEffect2) then
-    if self.stackEffect2.levelIsLow then
-      lowLevelStackEffect = self.stackEffect2
+  local stackEffect2 = self:getStackEffect2()
+  if stackEffect2 and stackEffect2.duration>0 then
+    if stackEffect2.levelIsLow then
+      lowLevelStackEffect = stackEffect2
     else
-      return self.stackEffect2, 'stackEffect'
+      return stackEffect2, 'stackEffect'
     end
   end
 

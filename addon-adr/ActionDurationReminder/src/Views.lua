@@ -458,12 +458,12 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   -- stack label
   if l.getSavedVars().barStackLabelEnabled then
     -- stackLabel
-    if stackCount > 0 and not stackEffectHasStageInfo and models.isValidStackEffect(stackEffect) then
+    if stackCount > 0 and not stackEffectHasStageInfo then
       local stackText = string.format(action.stackCountMatch and '%d^' or '%d',stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
       self.stackLabel:SetColor(unpack(l.getSavedVars().barStackLabelColor))
-    elseif stageInfo and models.isValidStackEffect(stackEffect) then
+    elseif stageInfo then
       self.stackLabel:SetText(stageInfo)
       -- Blink effect: hide every other 200ms interval
       if stackEffectBlink then
