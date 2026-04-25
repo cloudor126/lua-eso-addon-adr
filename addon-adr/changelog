@@ -1,3 +1,11 @@
+3.149
+
+### Bug Fixes
+- Fixed UI error caused by missing models reference in stack label display.
+
+### Refactoring
+- Moved stackEffect validity check into getStackEffect/getStackEffect2 getters, eliminating the need for callers to check expiry themselves.
+
 3.148
 
 ### Bug Fixes
