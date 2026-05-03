@@ -1,3 +1,11 @@
+3.150
+
+### New Features
+- Added LEVEL_MAJOR_MINOR_BUFF priority level: major/minor buff effects are now deprioritized when they don't match the skill's own duration, preventing them from overriding the primary effect timer.
+
+### Improvements
+- Synced all i18n translation files with current code keys, removing 65 obsolete entries and adding 51 new entries.
+
 3.149
 
 ### Bug Fixes
