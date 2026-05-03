@@ -203,7 +203,7 @@ addon.registerDebugSubSwitch(DSS_EFFECT_UPDATE, 'Effect Update [E=]', 'Log effec
 addon.registerDebugSubSwitch(DSS_EFFECT_REFRESH, 'Effect Refresh [E*]', 'Log effect refresh events')
 addon.registerDebugSubSwitch(DSS_EFFECT_TRANSFER, 'Effect Transfer [E/]', 'Log effect transferred events')
 addon.registerDebugSubSwitch(DSS_EFFECT_MISS, 'Effect Miss [EM?]', 'Log effect action not found')
-addon.registerDebugSubSwitch(DSS_EFFECT_MATCH, 'Effect Match', 'Log effect matching operations')
+addon.registerDebugSubSwitch(DSS_EFFECT_MATCH, 'Effect Match [EM]', 'Log effect matching operations')
 
 addon.registerDebugSwitch(DS_COMBAT, "Combat Debug")
 addon.registerDebugSubSwitch(DSS_COMBAT_EVENT, 'Combat Event [CE]', 'Log combat events')
@@ -218,7 +218,7 @@ addon.registerDebugSubSwitch(DSS_FILTER_ACCEPT, 'Filter Accept [FA*]', 'Log acce
 addon.registerDebugSubSwitch(DSS_FILTER_REJECT, 'Filter Reject [FR*]', 'Log rejected effects/actions')
 
 addon.registerDebugSwitch(DS_TARGET, "Target Debug")
-addon.registerDebugSubSwitch(DSS_TARGET_TRACK, 'Target Track', 'Log target tracking changes')
+addon.registerDebugSubSwitch(DSS_TARGET_TRACK, 'Target Track [TT]', 'Log target tracking changes')
 
 -- Register Core debug options for the settings menu
 
