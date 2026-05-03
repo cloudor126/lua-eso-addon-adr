@@ -25,7 +25,8 @@ local LEVEL_ROLE_PREFERRED = 4       -- DPS: non-player effect; Tank/Healer: pla
 local LEVEL_DURATION_MATCH = 5       -- effect.duration matches action.duration
 local LEVEL_LONGER_DURATION = 6      -- normal longer duration effect
 local LEVEL_TAIL_EFFECT = 7          -- effect significantly longer than action (tail effect, secondary)
-local LEVEL_CRUX = 8                 -- Crux effect (lowest priority)
+local LEVEL_MAJOR_MINOR_BUFF = 8     -- major/minor buff as side effect
+local LEVEL_CRUX = 9                 -- Crux effect (lowest priority)
 
 local LEVEL_THRESHOLD_LOW = LEVEL_TAIL_EFFECT  -- effects at this level or lower shown with brackets []
 
@@ -924,6 +925,13 @@ mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
     return LEVEL_ACTION_ID_MATCH
   end
 
+  -- Major/minor buff as side effect: demote to low priority
+  if effect:isMajorMinorBuff() then
+    if self.duration == 0 or effect.duration ~= self.duration then
+      return LEVEL_MAJOR_MINOR_BUFF
+    end
+  end
+
   -- Level 2: stackEffect
   if self.stackEffect and effect.ability.id == self.stackEffect.ability.id then
     return LEVEL_STACK_EFFECT
@@ -1482,6 +1490,12 @@ end
 mEffect.isLongDuration  -- #(#Effect:self)->(#boolean)
 = function(self)
   return self.duration > 39000
+end
+
+mEffect.isMajorMinorBuff -- #(#Effect:self)->(#boolean)
+= function(self)
+  local icon = self.ability.icon
+  return not not (icon and (icon:find('ability_buff_ma', 1, true) or icon:find('ability_buff_mi', 1, true)))
 end
 
 mEffect.toLogString --#(#Effect:self)->(#string)
