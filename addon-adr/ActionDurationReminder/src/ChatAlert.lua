@@ -1,9 +1,8 @@
 --========================================
 --        Chat Alert Module
 --========================================
--- To reset welcome prompt, run in game:
---   /script ADRSV.Default.chatAlertPromptShown = false; ReloadUI()
--- (use ADRSV["CharacterName"] for character-specific settings)
+-- To show welcome prompt again, run in game:
+--   /script ActionDurationReminder.load("ChatAlert#M").resetWelcomePrompt()
 --========================================
 --        vars
 --========================================
@@ -492,6 +491,12 @@ end
 --========================================
 --        register
 --========================================
+-- Public method to force show welcome prompt (for debugging)
+m.resetWelcomePrompt = function()
+  l.getSavedVars().chatAlertPromptShown = false
+  l.showWelcomePrompt()
+end
+
 addon.register("ChatAlert#M", m)
 
 addon.registerDebugSwitch(DS_CHATALERT, "Chat Alert Debug")
