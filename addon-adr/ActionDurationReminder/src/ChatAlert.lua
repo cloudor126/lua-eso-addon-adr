@@ -28,6 +28,8 @@ local chatAlertSavedVarsDefaults = {
   chatAlertChannelWhisper = false,
   chatAlertShowUserId = true,
   chatAlertChannelGuild = false,
+  chatAlertGuildPrefixFormat = "guild",  -- "number", "guild", "number-guild"
+  chatAlertAlignment = "center",  -- "left", "center", "right"
   chatAlertOffsetX = 0,
   chatAlertOffsetY = 150,
   chatAlertFontName = "MEDIUM_FONT",
@@ -95,9 +97,9 @@ l.retrieveControl -- #()->(Control#Control)
   cooldownBar:SetDrawLayer(DL_BACKGROUND)
   cooldownBar:SetHidden(true)
   control.cooldownBar = cooldownBar
-  -- Sender name label (bold, light blue)
+  -- Sender name label (color set dynamically from channel color)
   local senderLabel = control:CreateControl(nil, CT_LABEL)
-  senderLabel:SetColor(0.6, 0.8, 1.0)
+  senderLabel:SetColor(1, 1, 1)
   senderLabel:SetAnchor(LEFT, nil, LEFT, 4, 0)
   senderLabel:SetDrawLayer(DL_TEXT)
   control.senderLabel = senderLabel
@@ -135,22 +137,34 @@ end
 --========================================
 --        display
 --========================================
+l.getAnchorParams -- #(#string:alignment, #number:offsetX)->(#number:anchorPoint, #number:adjustedX)
+= function(alignment, offsetX)
+  if alignment == "left" then
+    return BOTTOMLEFT, -150 + offsetX
+  elseif alignment == "right" then
+    return BOTTOMRIGHT, 150 + offsetX
+  else  -- center
+    return BOTTOM, offsetX
+  end
+end
+
 l.repositionControls -- #()->()
 = function()
   local savedVars = l.getSavedVars()
   local yOffset = 0
+  local anchorPoint, adjustedX = l.getAnchorParams(savedVars.chatAlertAlignment, savedVars.chatAlertOffsetX)
   for i, control in ipairs(l.showedControls) do
     local height = control:GetHeight()
     control:ClearAnchors()
-    control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER,
-      -150 + savedVars.chatAlertOffsetX,
+    control:SetAnchor(anchorPoint, GuiRoot, CENTER,
+      adjustedX,
       -150 + savedVars.chatAlertOffsetY - yOffset)
     yOffset = yOffset + height + 4
   end
 end
 
-l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text)->()
-= function(channelId, fromName, text)
+l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text, #number:r, #number:g, #number:b)->()
+= function(channelId, fromName, text, r, g, b)
   local savedVars = l.getSavedVars()
 
   -- Enforce max concurrent alerts: remove oldest if at limit
@@ -175,6 +189,9 @@ l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text)->()
   control.label:SetFont(fontstr)
   control.senderLabel:SetFont(fontstr)
 
+  -- Use channel color from game settings for sender name and message
+  control.senderLabel:SetColor(r, g, b)
+  control.label:SetColor(r, g, b)
   control.senderLabel:SetText(fromName .. ":")
   control.label:SetText(text)
 
@@ -182,8 +199,9 @@ l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text)->()
   local maxWidth = 500
   control.label:SetDimensionConstraints(0, 0, maxWidth, 0)
 
-  control:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER,
-    -150 + savedVars.chatAlertOffsetX,
+  local anchorPoint, adjustedX = l.getAnchorParams(savedVars.chatAlertAlignment, savedVars.chatAlertOffsetX)
+  control:SetAnchor(anchorPoint, GuiRoot, CENTER,
+    adjustedX,
     -150 + savedVars.chatAlertOffsetY)
   control:SetHidden(false)
 
@@ -241,7 +259,7 @@ l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text)->()
   for i, v in ipairs(l.showedControls) do
     local _, _, _, _, offsetX, offsetY = v:GetAnchor(0)
     v:ClearAnchors()
-    v:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, offsetX, offsetY - shiftAmount)
+    v:SetAnchor(anchorPoint, GuiRoot, CENTER, offsetX, offsetY - shiftAmount)
   end
 
   table.insert(l.showedControls, control)
@@ -288,6 +306,63 @@ end
 --========================================
 --        chat event
 --========================================
+
+-- Mapping from CHAT_CHANNEL_* to CHAT_CATEGORY_* (for GetChatCategoryColor)
+l.channelToCategoryMap = {
+  [CHAT_CHANNEL_SAY] = CHAT_CATEGORY_SAY,
+  [CHAT_CHANNEL_YELL] = CHAT_CATEGORY_YELL,
+  [CHAT_CHANNEL_WHISPER] = CHAT_CATEGORY_WHISPER_INCOMING,
+  [CHAT_CHANNEL_PARTY] = CHAT_CATEGORY_PARTY,
+  [CHAT_CHANNEL_GUILD_1] = CHAT_CATEGORY_GUILD_1,
+  [CHAT_CHANNEL_GUILD_2] = CHAT_CATEGORY_GUILD_2,
+  [CHAT_CHANNEL_GUILD_3] = CHAT_CATEGORY_GUILD_3,
+  [CHAT_CHANNEL_GUILD_4] = CHAT_CATEGORY_GUILD_4,
+  [CHAT_CHANNEL_GUILD_5] = CHAT_CATEGORY_GUILD_5,
+}
+
+l.getChannelColor -- #(#number:channelType)->(#number,#number,#number)
+= function(channelType)
+  local category = l.channelToCategoryMap[channelType]
+  if category then
+    local r, g, b = GetChatCategoryColor(category)
+    if r and g and b then
+      return r, g, b
+    end
+  end
+  -- Default colors matching ESO's chat channel colors
+  if channelType == CHAT_CHANNEL_PARTY then
+    return 0.4, 0.8, 0.4
+  elseif channelType == CHAT_CHANNEL_SAY then
+    return 1.0, 1.0, 1.0
+  elseif channelType == CHAT_CHANNEL_WHISPER then
+    return 1.0, 0.5, 0.7
+  elseif channelType >= CHAT_CHANNEL_GUILD_1 and channelType <= CHAT_CHANNEL_GUILD_5 then
+    return 0.4, 0.6, 1.0
+  end
+  return 1, 1, 1
+end
+
+l.getGuildPrefix -- #(#number:channelType)->(#string|nil)
+= function(channelType)
+  if channelType >= CHAT_CHANNEL_GUILD_1 and channelType <= CHAT_CHANNEL_GUILD_5 then
+    local guildIndex = channelType - CHAT_CHANNEL_GUILD_1 + 1
+    local guildId = GetGuildId(guildIndex)
+    if guildId then
+      local guildName = GetGuildName(guildId)
+      if guildName and guildName ~= "" then
+        local format = l.getSavedVars().chatAlertGuildPrefixFormat
+        if format == "number" then
+          return "[" .. guildIndex .. "] "
+        elseif format == "number-guild" then
+          return "[" .. guildIndex .. "-" .. guildName .. "] "
+        else  -- "guild" (default)
+          return "[" .. guildName .. "] "
+        end
+      end
+    end
+  end
+  return nil
+end
 
 l.onChatMessageChannel -- #(#number:eventCode,#MsgChannelType:channelType,#string:fromName,#string:text,#boolean:isCustomerService,#string:fromDisplayName)->()
 = function(eventCode, channelType, fromName, text, isCustomerService, fromDisplayName)
@@ -339,7 +414,16 @@ l.onChatMessageChannel -- #(#number:eventCode,#MsgChannelType:channelType,#strin
     displayName = zo_strformat("<<1>>", displayName)
   end
 
-  l.showChatAlert(channelType, displayName, text)
+  -- Add guild prefix for guild channels
+  local guildPrefix = l.getGuildPrefix(channelType)
+  if guildPrefix then
+    displayName = guildPrefix .. displayName
+  end
+
+  -- Get channel color from game settings
+  local r, g, b = l.getChannelColor(channelType)
+
+  l.showChatAlert(channelType, displayName, text, r, g, b)
 end
 
 --========================================
@@ -581,6 +665,17 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         default = chatAlertSavedVarsDefaults.chatAlertChannelGuild,
         disabled = function() return not l.getSavedVars().chatAlertEnabled end,
       }, {
+        type = "dropdown",
+        name = text("Guild Prefix Format"),
+        tooltip = text("Format for guild channel prefix: [<Index>], [Guild Name], or [<Index>-<Guild Name>]"),
+        choices = {text("[Guild Name]"), text("[<Index>]"), text("[<Index>-<Guild Name>]")},
+        choicesValues = {"guild", "number", "number-guild"},
+        getFunc = function() return l.getSavedVars().chatAlertGuildPrefixFormat end,
+        setFunc = function(value) l.getSavedVars().chatAlertGuildPrefixFormat = value end,
+        width = "half",
+        default = chatAlertSavedVarsDefaults.chatAlertGuildPrefixFormat,
+        disabled = function() return not l.getSavedVars().chatAlertEnabled or not l.getSavedVars().chatAlertChannelGuild end,
+      }, {
         type = "slider",
         name = text("Chat Alert Duration"),
         tooltip = text("How long to display chat alerts in seconds"),
@@ -610,6 +705,17 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         width = "full",
         disabled = function() return not l.getSavedVars().chatAlertEnabled end,
         default = chatAlertSavedVarsDefaults.chatAlertMaxMessageLength,
+      }, {
+        type = "dropdown",
+        name = text("Chat Alert Alignment"),
+        tooltip = text("How messages align relative to the position marker: Left, Center, or Right"),
+        choices = {text("Center"), text("Left"), text("Right")},
+        choicesValues = {"center", "left", "right"},
+        getFunc = function() return l.getSavedVars().chatAlertAlignment end,
+        setFunc = function(value) l.getSavedVars().chatAlertAlignment = value end,
+        width = "full",
+        default = chatAlertSavedVarsDefaults.chatAlertAlignment,
+        disabled = function() return not l.getSavedVars().chatAlertEnabled end,
       }, {
         type = "button",
         name = text("Move Chat Alert"),
