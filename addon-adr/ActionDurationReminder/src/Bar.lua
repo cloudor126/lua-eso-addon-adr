@@ -40,6 +40,9 @@ local barSavedVarsDefaults
     barCooldownEndingColor = {1,0,0},
     barCooldownOpacity = 100,
     barCooldownThickness = 2,
+    barProgressVisible = false,
+    barProgressColor = {0.2, 0.2, 0.2},
+    barProgressOpacity = 80,
     barLowPriorityLabelColor = {0.6, 0.6, 0.6}, -- gray for low priority effects
     barLabelColor = {1, 1, 1}, -- white for normal label
     barLabelEndingColor = {1, 0, 0}, -- same as line ending color by default
@@ -573,6 +576,37 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             g = barSavedVarsDefaults.barCooldownEndingColor[2],
             b = barSavedVarsDefaults.barCooldownEndingColor[3],
           }
+        },{
+          type = "checkbox",
+          name = text("Show Progress Bar"),
+          tooltip = text("Display a horizontal progress bar that shrinks from right to left"),
+          getFunc = function() return l.getSavedVars().barProgressVisible end,
+          setFunc = function(value) l.getSavedVars().barProgressVisible = value; l.updateWidgets(views.updateWidgetProgress) end,
+          width = "full",
+          default = barSavedVarsDefaults.barProgressVisible,
+          disabled = function() return not l.getSavedVars().barEnabled end,
+        },{
+          type = "colorpicker",
+          name = text("Progress Bar Color"),
+          getFunc = function() return unpack(l.getSavedVars().barProgressColor) end,
+          setFunc = function(r,g,b,a) l.getSavedVars().barProgressColor={r,g,b}; l.updateWidgets(views.updateWidgetProgress) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barProgressVisible end,
+          default = {
+            r = barSavedVarsDefaults.barProgressColor[1],
+            g = barSavedVarsDefaults.barProgressColor[2],
+            b = barSavedVarsDefaults.barProgressColor[3],
+          }
+        },{
+          type = "slider",
+          name = text("Progress Bar Opacity"),
+          tooltip = text("Transparency of the progress bar (0 = invisible, 100 = opaque)"),
+          min = 10, max = 100, step = 5,
+          getFunc = function() return l.getSavedVars().barProgressOpacity end,
+          setFunc = function(value) l.getSavedVars().barProgressOpacity = value; l.updateWidgets(views.updateWidgetProgress) end,
+          width = "full",
+          disabled = function() return not l.getSavedVars().barEnabled or not l.getSavedVars().barProgressVisible end,
+          default = barSavedVarsDefaults.barProgressOpacity,
         },{
           type = "colorpicker",
           name = text("Low Priority Effect Color"),

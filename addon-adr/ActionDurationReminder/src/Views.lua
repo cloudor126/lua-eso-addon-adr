@@ -145,6 +145,18 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
   inst.cooldown.shifted = shifted
   inst.cdMark = 0
+
+  -- Progress bar (horizontal bar that shrinks from right to left)
+  local progressBar = WINDOW_MANAGER:CreateControl(nil, backdrop or slot, CT_BACKDROP)
+  progressBar:SetDrawLayer(DL_CONTROLS)
+  progressBar:SetDrawLevel(1)  -- Above icon (DL_BACKGROUND), below cooldown line
+  local progressColor = savedVars.barProgressColor
+  local progressAlpha = savedVars.barProgressOpacity / 100
+  progressBar:SetCenterColor(progressColor[1], progressColor[2], progressColor[3], progressAlpha)
+  progressBar:SetEdgeColor(0, 0, 0, 0)
+  progressBar:SetHidden(true)
+  inst.progressBar = progressBar
+
   --
   return setmetatable(inst, {__index=mWidget})
 end
@@ -162,6 +174,16 @@ m.updateWidgetCooldown -- #(#Widget:widget)->()
     else
       widget.cooldown:setAlpha(1)
     end
+  end
+end
+
+m.updateWidgetProgress -- #(#Widget:widget)->()
+= function(widget)
+  local savedVars = l.getSavedVars()
+  if widget.progressBar then
+    local r, g, b = unpack(savedVars.barProgressColor)
+    local alpha = savedVars.barProgressOpacity / 100
+    widget.progressBar:SetCenterColor(r, g, b, alpha)
   end
 end
 
@@ -230,7 +252,8 @@ mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
     part:SetDrawTier(self.drawTier)
     part:SetDrawLayer(DL_TEXT)
   else
-    part:SetDrawLevel(1)
+    part:SetDrawLayer(DL_CONTROLS)
+    part:SetDrawLevel(2)
   end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
   local opacity = l.getSavedVars().barCooldownOpacity -- #number
@@ -406,10 +429,13 @@ mWidget.hide  -- #(#Widget:self)->()
   self.stackLabel:SetHidden(true)
   self.stackLabel2:SetHidden(true)
   self.cooldown:setHidden(true)
+  if self.progressBar then self.progressBar:SetHidden(true) end
   self.visible = false
 end
 
 mWidget.updateCooldown = m.updateWidgetCooldown -- #(#Widget:self)->()
+
+mWidget.updateProgress = m.updateWidgetProgress -- #(#Widget:self)->()
 
 mWidget.updateFont = m.updateWidgetFont -- #(#Widget:self)->()
 
@@ -493,6 +519,7 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   if action:isUnlimited() then
     self.label:SetHidden(true)
     self.cooldown:setHidden(true)
+    self.progressBar:SetHidden(true)
     return
   end
   local duration = action:getDuration()
@@ -523,6 +550,29 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   end
   local cdHidden = self.cdMark==0 or not l.getSavedVars().barCooldownVisible
   self.cooldown:setHidden(cdHidden)
+
+  -- progress bar
+  local savedVars = l.getSavedVars()
+  if savedVars.barProgressVisible and remain > 0 and not action:isUnlimited() then
+    local duration = action:getDuration()
+    if duration > 0 then
+      local parent = self.backdrop or self.slotIcon
+      local slotWidth = parent:GetWidth()
+      local shrink = 1  -- Match cooldown line shrink
+      local lineMargin = savedVars.barCooldownThickness  -- Margin for cooldown line on right side
+      local progress = remain / duration
+      local barWidth = (slotWidth - lineMargin - shrink) * progress
+      local barHeight = savedVars.barLabelFontSize + 4
+      self.progressBar:ClearAnchors()
+      self.progressBar:SetAnchor(BOTTOMLEFT, parent, BOTTOMLEFT, shrink, savedVars.barLabelYOffset - 2)
+      self.progressBar:SetDimensions(barWidth, barHeight)
+      self.progressBar:SetHidden(false)
+    else
+      self.progressBar:SetHidden(true)
+    end
+  else
+    self.progressBar:SetHidden(true)
+  end
 end
 
 mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
@@ -544,6 +594,8 @@ mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
   self.stackLabel2:SetHidden(true)
   -- cooldown
   self.cooldown:setHidden(true)
+  -- progress bar
+  if self.progressBar then self.progressBar:SetHidden(true) end
 end
 --========================================
 --        register
