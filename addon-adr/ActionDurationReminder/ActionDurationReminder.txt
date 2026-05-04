@@ -20,6 +20,7 @@ src/Core.lua
 src/Views.lua
 src/Bar.lua
 src/Alert.lua
+src/ChatAlert.lua
 src/Patch.lua
 src/Debug.lua
 
