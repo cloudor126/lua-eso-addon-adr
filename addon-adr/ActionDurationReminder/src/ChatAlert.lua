@@ -459,27 +459,12 @@ l.registerWelcomeDialog -- #()->()
       },
       [2] =
       {
-        text = addon.text("Disable"),
-        callback = function(dialog)
-          l.getSavedVars().chatAlertEnabled = false
-          l.getSavedVars().chatAlertPromptShown = true
-        end,
-      },
-      [3] =
-      {
         text = addon.text("Settings"),
         callback = function(dialog)
           l.getSavedVars().chatAlertEnabled = true
           l.getSavedVars().chatAlertPromptShown = true
           zo_callLater(function()
             LibAddonMenu2:OpenToPanel('ADRAddonOptions')
-            -- Try to expand Chat Alert submenu
-            zo_callLater(function()
-              local submenuHeader = _G["ADRAddonOptionsChat AlertHeader"]
-              if submenuHeader and submenuHeader.OnMouseDown then
-                submenuHeader:OnMouseDown(nil, 1)
-              end
-            end, 200)
           end, 100)
         end,
       },
