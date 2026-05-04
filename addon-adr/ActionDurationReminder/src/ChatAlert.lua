@@ -1,4 +1,9 @@
 --========================================
+--        Chat Alert Module
+--========================================
+-- To reset welcome prompt, run in game:
+--   /script ADRSV.chatAlertPromptShown = false; ReloadUI()
+--========================================
 --        vars
 --========================================
 local addon = ActionDurationReminder -- Addon#M
@@ -618,13 +623,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
         width = "half",
         disabled = function() return not l.getSavedVars().chatAlertEnabled end,
-      }, {
-        type = "button",
-        name = text("Show Welcome Prompt"),
-        func = function()
-          l.showWelcomePrompt()
-        end,
-        width = "half",
       }, {
         type = "checkbox",
         name = text("Play Chat Alert Sound"),
