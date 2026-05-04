@@ -173,7 +173,7 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
   if GetGameTimeMilliseconds() > action.startTime + 300 then -- switching shouldn't happen just after performing
     local oldestAction = action:getOldest()
     local currentId = GetSlotBoundId(oldestAction.slotNum)
-    local currentAbility = models.newAbility(currentId,GetSlotName(oldestAction.slotNum),'')
+    local currentAbility = models.newAbility(currentId,models.patchAbilityName(GetSlotName(oldestAction.slotNum)),'')
     if oldestAction:matchesAbility(currentAbility) then
       -- record currentId in action data
       if not action.data['alert.transmuteRefChecked'] then
@@ -374,7 +374,7 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
   if GetSlotType(action.slotNum, action.hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
     local mutantId = GetAbilityIdForCraftedAbilityId(GetSlotBoundId(action.slotNum, action.hotbarCategory))
     if showAbility.id ~= mutantId then
-      local slotAbility = models.newAbility(mutantId, GetSlotName(action.slotNum), GetSlotTexture(action.slotNum))
+      local slotAbility = models.newAbility(mutantId, models.patchAbilityName(GetSlotName(action.slotNum)), GetSlotTexture(action.slotNum))
       if action:matchesAbility(slotAbility) then
         slotAbility.id = action.ability.id
         showAbility = slotAbility

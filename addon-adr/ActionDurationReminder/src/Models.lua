@@ -76,6 +76,23 @@ local SPECIAL_DURATION_PATCH = {
   ['/esoui/art/icons/ability_warden_015_b.dds'] =6000
 }
 
+-- 中文技能名补丁：修正ESO翻译错别字
+local NAME_PATCH_ZH = {
+  ['鞭挞'] = '鞭笞',
+}
+
+-- 应用技能名补丁，返回修正后的名称
+m.patchAbilityName -- #(#string:name)->(#string)
+= function(name)
+  if GetCVar("language.2") ~= 'zh' then return name end
+  for wrong, right in pairs(NAME_PATCH_ZH) do
+    if name:find(wrong, 1, true) then
+      return name:gsub(wrong, right)
+    end
+  end
+  return name
+end
+
 local fRefinePath -- #(#string:path)->(#string)
 = function(path)
   if not path then return path end
@@ -177,7 +194,7 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
     action.craftedId = abilityId -- #number
     abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
   end
-  action.ability = m.newAbility(abilityId, GetSlotName(slotNum,hotbarCategory),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
+  action.ability = m.newAbility(abilityId, m.patchAbilityName(GetSlotName(slotNum,hotbarCategory)),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
   action.relatedAbilityList = {} --#list<#Ability> for matching
   local channeled,castTime = GetAbilityCastInfo(action.ability.id)
   action.channeled = channeled --#boolean

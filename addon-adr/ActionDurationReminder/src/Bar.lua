@@ -94,7 +94,7 @@ l.onCoreUpdate -- #()->()
     if action
       -- check this position action
       and not action:matchesAbilityIcon(GetSlotTexture(slotNum))
-      and not action:matchesAbilityName(GetSlotName(slotNum))
+      and not action:matchesAbilityName(models.patchAbilityName(GetSlotName(slotNum)))
     then action = nil end
     if not action then action = core.getActionByAbilityId(abilityId) end
     if action then

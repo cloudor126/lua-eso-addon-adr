@@ -388,6 +388,7 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
       local slotIcon = GetSlotTexture(slotNum,hotbarCategory)
       if slotBoundId >0 then
         local slotName = fStripBracket(zo_strformat("<<1>>", GetSlotName(slotNum, hotbarCategory)))
+        slotName = models.patchAbilityName(slotName)
         if (effect.ability.name== slotName)
           or checkDescription and zo_strformat("<<1>>", GetAbilityDescription(slotBoundId)):find(effect.ability.name,1,true)
         then
@@ -684,6 +685,7 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
+  abilityName = models.patchAbilityName(abilityName)
   local abilityIcon = GetAbilityIcon(abilityId)
   if addon.debugEnabled(DSS_COMBAT_EVENT, abilityName) then
     addon.debug('[CE]|t24:24:%s|t%s(%s)@%.2f[%s]source:%s(%i:%i)target:%s(%i:%i)slot:%d,dmg:%d,overflow:%d,result:%d,power:%d,hit:%d',
@@ -767,6 +769,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   --
   abilityName = zo_strformat("<<1>>", abilityName)
+  abilityName = models.patchAbilityName(abilityName)
   local now = GetGameTimeMilliseconds()
 
   if result ~= ACTION_RESULT_EFFECT_GAINED
@@ -817,7 +820,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     for key, action in pairs(l.actionQueue) do
       local abilityOnBar = models.newAbility(
         GetSlotBoundId(action.slotNum,action.hotbarCategory),
-        GetSlotName(action.slotNum,action.hotbarCategory),
+        models.patchAbilityName(GetSlotName(action.slotNum,action.hotbarCategory)),
         GetSlotTexture(action.slotNum,action.hotbarCategory))
       if (
         action.ability.id == abilityId
@@ -875,7 +878,7 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
     for key, action in pairs(l.actionQueue) do
       local abilityOnBar = models.newAbility(
         GetSlotBoundId(action.slotNum,action.hotbarCategory),
-        GetSlotName(action.slotNum,action.hotbarCategory),
+        models.patchAbilityName(GetSlotName(action.slotNum,action.hotbarCategory)),
         GetSlotTexture(action.slotNum,action.hotbarCategory))
       if (
         action.ability.id == abilityId

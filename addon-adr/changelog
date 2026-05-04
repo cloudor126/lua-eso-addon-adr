@@ -1,3 +1,18 @@
+3.153
+
+### Improvements
+- Added Chinese ability name patch to fix ESO translation typos (e.g., "鞭挞" -> "鞭笞") for correct ability matching.
+
+3.152
+
+### New Features
+- Added progress bar display mode for action bar timers: a horizontal bar that shrinks from right to left, independently configurable with custom color and opacity.
+
+### Improvements
+- Chat Alert now uses game's chat color settings from Settings > Social > Chat Colors.
+- Added guild prefix format options for guild channel messages: [Guild Name], [<Index>], or [<Index>-<Guild Name>].
+- Added alignment option for Chat Alert messages: Left, Center, or Right.
+
 3.151
 
 ### New Features
