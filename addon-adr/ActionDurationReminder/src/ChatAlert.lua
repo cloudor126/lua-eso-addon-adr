@@ -2,7 +2,8 @@
 --        Chat Alert Module
 --========================================
 -- To reset welcome prompt, run in game:
---   /script ADRSV.chatAlertPromptShown = false; ReloadUI()
+--   /script ADRSV.Default.chatAlertPromptShown = false; ReloadUI()
+-- (use ADRSV["CharacterName"] for character-specific settings)
 --========================================
 --        vars
 --========================================
