@@ -1,8 +1,8 @@
 --========================================
 --        Chat Alert Module
 --========================================
--- To show welcome prompt again, run in game:
---   /script ActionDurationReminder.load("ChatAlert#M").resetWelcomePrompt()
+-- To reset welcome prompt for testing, run in game:
+--   /script ActionDurationReminder.load("ChatAlert#M").resetWelcomePrompt(); ReloadUI()
 --========================================
 --        vars
 --========================================
@@ -491,10 +491,9 @@ end
 --========================================
 --        register
 --========================================
--- Public method to force show welcome prompt (for debugging)
+-- Public method to reset welcome prompt flag (for testing first-run experience)
 m.resetWelcomePrompt = function()
   l.getSavedVars().chatAlertPromptShown = false
-  l.showWelcomePrompt()
 end
 
 addon.register("ChatAlert#M", m)
