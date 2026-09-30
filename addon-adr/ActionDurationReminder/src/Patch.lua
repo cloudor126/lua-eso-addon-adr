@@ -87,7 +87,7 @@ l.onCoreUpdate = function()
   end
   -- 1.2 check if we have done
   local shiftBarVisible = false
-  local barSavedVars = settings.getSavedVars() -- Bar#BarSavedVars
+  local barSavedVars = settings.getSavedVars()
   if barSavedVars.barShowShift then
     for id, action in pairs(core.getIdActionMap()) do
       if action.flags.shifted then

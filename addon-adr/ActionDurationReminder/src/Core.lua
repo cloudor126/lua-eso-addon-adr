@@ -479,7 +479,7 @@ l.findBarActionByNewEffect = function(effect, stacking)
   return nil
 end
 
----@type fun(): adr.core.CoreSavedVars
+---@type fun(): adr.settings.SavedVars
 l.getSavedVars = function()
   return settings.getSavedVars()
 end

@@ -84,7 +84,7 @@ local mCooldown = {}
 --========================================
 --        l
 --========================================
----@type fun(): adr.bar.BarSavedVars
+---@type fun(): adr.settings.SavedVars
 l.getSavedVars = function()
   return settings.getSavedVars()
 end
@@ -159,7 +159,7 @@ end
 
 ---@type fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
 m.newWidget = function(slotNum, shifted, appendIndex)
-  local savedVars = l.getSavedVars() -- Bar#BarSavedVars
+  local savedVars = l.getSavedVars()
   ---@type adr.views.Widget
   local inst = {}
   inst.slotNum = slotNum

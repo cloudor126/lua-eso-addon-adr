@@ -395,7 +395,7 @@ l.getGuildPrefix = function(channelType)
   return nil
 end
 
----@type fun(eventCode: number, channelType: MsgChannelType, fromName: string, text: string, isCustomerService: boolean, fromDisplayName: string)
+---@type fun(eventCode: number, channelType: number, fromName: string, text: string, isCustomerService: boolean, fromDisplayName: string)
 l.onChatMessageChannel = function(eventCode, channelType, fromName, text, isCustomerService, fromDisplayName)
   if not l.getAccountSavedVars().chatAlertEnabled then
     return
