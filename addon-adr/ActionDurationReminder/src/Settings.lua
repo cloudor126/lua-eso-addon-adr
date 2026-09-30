@@ -5,7 +5,7 @@
 local addon = ActionDurationReminder
 local l = {}
 ---@type adr.settings.M
-local m = {l=l}
+local m = { l = l }
 local SV_NAME = "ADRSV"
 local SV_VER = "1.0"
 
@@ -153,9 +153,11 @@ l.onStart = function()
   l.characterSavedVars = ZO_SavedVars:New(SV_NAME, SV_VER, nil, savedVarsDefaults)
   -- register addon panel
   local LAM2 = LibAddonMenu2
-  if LAM2 == nil then return end
+  if LAM2 == nil then
+    return
+  end
   local panelData = {
-    type = 'panel',
+    type = "panel",
     name = addon.title or addon.name,
     displayName = "ADR Settings",
     author = "Cloudor",
@@ -166,20 +168,22 @@ l.onStart = function()
     registerForRefresh = true,
     registerForDefaults = true,
   }
-  LAM2:RegisterAddonPanel('ADRAddonOptions', panelData)
+  LAM2:RegisterAddonPanel("ADRAddonOptions", panelData)
   -- init menu options
   m.addMenuOptions({
     type = "checkbox",
-        name = addon.text("Account Wide Configuration"),
-        getFunc = function() return l.characterSavedVars.settingsAccountWide end,
-        setFunc = function(value)
-            l.characterSavedVars.settingsAccountWide = value
-        end,
-        width = "full",
-        default = true,
+    name = addon.text("Account Wide Configuration"),
+    getFunc = function()
+      return l.characterSavedVars.settingsAccountWide
+    end,
+    setFunc = function(value)
+      l.characterSavedVars.settingsAccountWide = value
+    end,
+    width = "full",
+    default = true,
   })
   addon.callExtension(m.EXTKEY_ADD_MENUS)
-  LAM2:RegisterOptionControls('ADRAddonOptions', l.menuOptions)
+  LAM2:RegisterOptionControls("ADRAddonOptions", l.menuOptions)
 end
 
 --========================================
@@ -190,12 +194,12 @@ m.EXTKEY_ADD_MENUS = "Settings:addMenus"
 
 ---@type fun(...: any)
 m.addDefaults = function(...)
-  zo_mixin(savedVarsDefaults,...)
+  zo_mixin(savedVarsDefaults, ...)
 end
 
 ---@type fun(...: adr.settings.MenuOption)
 m.addMenuOptions = function(...)
-  for i=1,select('#',...) do
+  for i = 1, select("#", ...) do
     local option = select(i, ...)
     table.insert(l.menuOptions, option)
   end

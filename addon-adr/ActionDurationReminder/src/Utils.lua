@@ -35,10 +35,10 @@ m.newRecentCache = function(duration, num)
   ---@type adr.utils.RecentCache
   local recentCache = {}
   recentCache.num = num
-  recentCache.unit = math.floor(duration/num)
+  recentCache.unit = math.floor(duration / num)
   recentCache.offset = 0
   recentCache.data = {}
-  setmetatable(recentCache,{__index=mRecentCache})
+  setmetatable(recentCache, { __index = mRecentCache })
   return recentCache
 end
 
@@ -49,9 +49,11 @@ end
 mRecentCache.get = function(self, key)
   self:roll()
   local result = 0
-  for index=1, self.num do
+  for index = 1, self.num do
     local slot = self.data[index]
-    if slot and slot[key] then result = result + slot[key] end
+    if slot and slot[key] then
+      result = result + slot[key]
+    end
   end
   return result
 end
@@ -62,7 +64,7 @@ mRecentCache.mark = function(self, key)
   self.data[1] = self.data[1] or {}
   local slot = self.data[1]
   if slot[key] then
-    slot[key] = slot[key]+1
+    slot[key] = slot[key] + 1
   else
     slot[key] = 1
   end
@@ -70,11 +72,11 @@ end
 
 ---@type fun(self: adr.utils.RecentCache)
 mRecentCache.roll = function(self)
-  local newOffset = math.floor(GetGameTimeMilliseconds()/self.unit)
+  local newOffset = math.floor(GetGameTimeMilliseconds() / self.unit)
 
-  local shift = newOffset-self.offset
-  if shift>0 then
-    for i=self.num,1,-1 do
+  local shift = newOffset - self.offset
+  if shift > 0 then
+    for i = self.num, 1, -1 do
       local from = i - shift
       self.data[i] = from > 0 and self.data[from] or nil
     end

@@ -10,13 +10,13 @@ local models = addon.load("Models#M")
 ---@type adr.core.M
 local core = addon.load("Core#M")
 local l = {}
-local m = {l=l}
+local m = { l = l }
 
 --========================================
 --        types
 --========================================
 ---@type adr.settings.SavedVars
-local patchSavedVarsDefaults ={
+local patchSavedVarsDefaults = {
   patchMoveBarsEnabled = true,
 }
 
@@ -54,7 +54,7 @@ l.computeNewOffsetY = function(rectList, name, hud, gap)
     bottom = hud:GetBottom(), -- bar have out margin
   }
   local delta = 0
-  for _,rect in pairs(rectList) do
+  for _, rect in pairs(rectList) do
     delta = delta + l.moveUp(hudRect, rect, gap)
   end
   return hudRect, l.hudInfo[name].offsetY + delta, l.hudInfo[name].bottom + delta
@@ -67,8 +67,12 @@ end
 
 ---@type fun(movingRect: adr.patch.Rect, rect: adr.patch.Rect, gap: number): number
 l.moveUp = function(movingRect, rect, gap)
-  if movingRect.left > rect.right or movingRect.right < rect.left then return 0 end
-  if movingRect.bottom + gap < rect.top or movingRect.top - gap > rect.bottom then return 0 end
+  if movingRect.left > rect.right or movingRect.right < rect.left then
+    return 0
+  end
+  if movingRect.bottom + gap < rect.top or movingRect.top - gap > rect.bottom then
+    return 0
+  end
   local delta = rect.top - gap - movingRect.bottom
   movingRect.top = movingRect.top + delta
   movingRect.bottom = movingRect.bottom + delta
@@ -78,7 +82,9 @@ end
 ---@type fun()
 l.onCoreUpdate = function()
   -- 1.1 check if enabled
-  if not l.getSavedVars().patchMoveBarsEnabled then return end
+  if not l.getSavedVars().patchMoveBarsEnabled then
+    return
+  end
   -- 1.2 check if we have done
   local shiftBarVisible = false
   local barSavedVars = settings.getSavedVars() -- Bar#BarSavedVars
@@ -90,8 +96,12 @@ l.onCoreUpdate = function()
       end
     end
   end
-  if not shiftBarVisible and not l.shifted then return end
-  if shiftBarVisible and l.shifted then return end
+  if not shiftBarVisible and not l.shifted then
+    return
+  end
+  if shiftBarVisible and l.shifted then
+    return
+  end
   -- 2. collect info
   local gap = 5
   ---@type table<string, Control>
@@ -102,7 +112,7 @@ l.onCoreUpdate = function()
     bb = ZO_BuffDebuffTopLevelSelfContainer,
   }
   -- 2.1 record their original info
-  for name,hud in pairs(hudTable) do
+  for name, hud in pairs(hudTable) do
     if not l.hudInfo[name] then
       local _, point, relativeTo, relativePoint, offsetX, offsetY = hud:GetAnchor(0)
       local bottom = hud:GetBottom()
@@ -125,27 +135,27 @@ l.onCoreUpdate = function()
     local shiftY = -50 - gap
     local offsetX = barSavedVars.barShiftOffsetX
     local offsetY = barSavedVars.barShiftOffsetY
-    rectList[#rectList+1]={
+    rectList[#rectList + 1] = {
       top = slot3:GetTop() + shiftY + offsetY,
       bottom = slot3:GetBottom() + shiftY + offsetY,
       left = slot3:GetLeft() + offsetX,
       right = slot7:GetRight() + offsetX,
     }
-    local nameList = {'hb','mb','sb','bb'}
+    local nameList = { "hb", "mb", "sb", "bb" }
     table.sort(nameList, function(name1, name2)
-      return hudTable[name1]:GetBottom()> hudTable[name2]:GetBottom()
+      return hudTable[name1]:GetBottom() > hudTable[name2]:GetBottom()
     end)
-    for index = 1,#nameList do
+    for index = 1, #nameList do
       local name = nameList[index]
       local hud = hudTable[name]
       local hudRect, newOffsetY, newBottom = l.computeNewOffsetY(rectList, name, hud, gap)
-      rectList[#rectList+1]= hudRect
+      rectList[#rectList + 1] = hudRect
       l.hudInfo[name].newRect = hudRect
     end
     l.newRectReady = true
   end
   -- 3. check bottom to set anchor
-  for name,hud in pairs(hudTable) do
+  for name, hud in pairs(hudTable) do
     local info = l.hudInfo[name]
     local bottom = shiftBarVisible and info.newRect.bottom or info.bottom
     if bottom ~= hud:GetBottom() then
@@ -173,37 +183,31 @@ end
 --========================================
 --        register
 --========================================
-addon.extend(core.EXTKEY_UPDATE,l.onCoreUpdate)
+addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(patchSavedVarsDefaults)
 end)
 
-addon.extend(settings.EXTKEY_ADD_MENUS, function ()
+addon.extend(settings.EXTKEY_ADD_MENUS, function()
   local text = addon.text
   settings.addMenuOptions({
     type = "submenu",
     name = text("Patch"),
-    controls={ {
-      type = "checkbox",
-      name = text("Auto-Move Attribute Bars"),
-      tooltip = text("Automatically reposition health/magicka/stamina bars to avoid overlap with timer bars"),
-      getFunc = function() return l.getSavedVars().patchMoveBarsEnabled end,
-      setFunc = function(value) l.getSavedVars().patchMoveBarsEnabled = value end,
-      width = "full",
-      default = patchSavedVarsDefaults.patchMoveBarsEnabled,
-    }}})
+    controls = {
+      {
+        type = "checkbox",
+        name = text("Auto-Move Attribute Bars"),
+        tooltip = text("Automatically reposition health/magicka/stamina bars to avoid overlap with timer bars"),
+        getFunc = function()
+          return l.getSavedVars().patchMoveBarsEnabled
+        end,
+        setFunc = function(value)
+          l.getSavedVars().patchMoveBarsEnabled = value
+        end,
+        width = "full",
+        default = patchSavedVarsDefaults.patchMoveBarsEnabled,
+      },
+    },
+  })
 end)
-
-
-
-
-
-
-
-
-
-
-
-
-

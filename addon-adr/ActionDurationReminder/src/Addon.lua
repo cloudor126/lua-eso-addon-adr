@@ -2,10 +2,10 @@
 --        vars
 --========================================
 local l = {} -- private table for local use
-local m = {l=l} -- public table for module use
-local NAME = 'ActionDurationReminder'
-local VERSION = '@@ADDON_VERSION@@'
-local TITLE = 'Action Duration Reminder'
+local m = { l = l } -- public table for module use
+local NAME = "ActionDurationReminder"
+local VERSION = "@@ADDON_VERSION@@"
+local TITLE = "Action Duration Reminder"
 local LINK_TYPE = "ADR_LINK"
 
 --========================================
@@ -53,7 +53,9 @@ l.startListeners = {}
 
 ---@type fun(eventCode: number, addonName: string)
 l.onAddonStarted = function(eventCode, addonName)
-  if NAME ~= addonName then return end
+  if NAME ~= addonName then
+    return
+  end
   EVENT_MANAGER:UnregisterForEvent(addonName, eventCode)
   l.start()
 end
@@ -67,10 +69,12 @@ local function onTooltipShow(tooltipControl, linkData)
 end
 
 l.start = function()
-  if l.started then return end
+  if l.started then
+    return
+  end
   l.started = true
   while #l.startListeners > 0 do
-    table.remove(l.startListeners,1)()
+    table.remove(l.startListeners, 1)()
   end
 
   --  if HodorReflexes and HodorReflexes.users then
@@ -100,7 +104,7 @@ m.callExtension = function(key, ...)
   end
 end
 
-m.doAction = function(key,...)
+m.doAction = function(key, ...)
   local targetAction = l.actionMap[key]
   targetAction(...)
 end
@@ -115,20 +119,28 @@ m.extend = function(key, extension)
 end
 
 m.hookStart = function(listener)
-  if l.started then listener() end
+  if l.started then
+    listener()
+  end
   table.insert(l.startListeners, listener)
 end
 
 local reservedWords = {
-  ["失衡"]=true
+  ["失衡"] = true,
 }
 m.isSimpleWord = function(s)
-  if s:find(' ',1,true) then return false end
-  if s:find('(',1,true) then return false end
+  if s:find(" ", 1, true) then
+    return false
+  end
+  if s:find("(", 1, true) then
+    return false
+  end
 
-  if s:byte(1) and s:byte(1)>128 then
-    if reservedWords[s] then return false end
-    return s:len()<=6
+  if s:byte(1) and s:byte(1) > 128 then
+    if reservedWords[s] then
+      return false
+    end
+    return s:len() <= 6
   end
   return true
 end
@@ -142,14 +154,14 @@ m.putText = function(key, value)
 end
 
 m.register = function(typeName, typeProto)
-  l.registry[typeName]=typeProto
+  l.registry[typeName] = typeProto
 end
 
-m.text = function(key,...)
-  if select('#',...) ==0 then
+m.text = function(key, ...)
+  if select("#", ...) == 0 then
     return l.dict[key] or key
   end
-  return l.dict[key] and string.format(l.dict[key],...) or string.format(key,...)
+  return l.dict[key] and string.format(l.dict[key], ...) or string.format(key, ...)
 end
 
 --========================================
@@ -166,13 +178,15 @@ m.registerDebugSwitch = function(switch, displayName)
 end
 
 m.registerDebugSubSwitch = function(dss, displayName, tooltip)
-  if not dss[2] then return end
+  if not dss[2] then
+    return
+  end
   if not l.debugSettingMap[dss[1]] then
     l.debugSettingMap[dss[1]] = {}
   end
   -- Auto-generate settingKey: "debug" + capitalize(switch) + capitalize(subSwitch)
-  local settingKey = 'debug' .. dss[1]:sub(1,1):upper() .. dss[1]:sub(2) .. dss[2]:sub(1,1):upper() .. dss[2]:sub(2)
-  l.debugSettingMap[dss[1]][dss[2]] = {settingKey, displayName, tooltip}
+  local settingKey = "debug" .. dss[1]:sub(1, 1):upper() .. dss[1]:sub(2) .. dss[2]:sub(1, 1):upper() .. dss[2]:sub(2)
+  l.debugSettingMap[dss[1]][dss[2]] = { settingKey, displayName, tooltip }
 end
 
 m.getDebugSwitchMap = function()
@@ -191,9 +205,9 @@ m.debugEnabled = function()
 end
 
 m.debug = function(format, ...)
-  local s = string.format( format, ...)
-  s = s:gsub('\n','\n'..string.rep(' ',24)):gsub('%[','|c22dd22[',1):gsub('%]',']|r',1)
-  d('|c0000dd[ADR]|r' ..s)
+  local s = string.format(format, ...)
+  s = s:gsub("\n", "\n" .. string.rep(" ", 24)):gsub("%[", "|c22dd22[", 1):gsub("%]", "]|r", 1)
+  d("|c0000dd[ADR]|r" .. s)
 end
 
 --========================================

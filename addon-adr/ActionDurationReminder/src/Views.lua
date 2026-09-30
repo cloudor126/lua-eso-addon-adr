@@ -7,7 +7,7 @@ local addon = ActionDurationReminder
 local settings = addon.load("Settings#M")
 local l = {}
 ---@type adr.views.M
-local m = {l=l}
+local m = { l = l }
 ---@type adr.views.Widget
 local mWidget = {}
 ---@type adr.views.Cooldown
@@ -109,12 +109,22 @@ end
 
 ---@type fun(): string
 l.getLabelFont = function()
-  return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|"..l.getSavedVars().barLabelFontStyle
+  return "$("
+    .. l.getSavedVars().barLabelFontName
+    .. ")|"
+    .. l.getSavedVars().barLabelFontSize
+    .. "|"
+    .. l.getSavedVars().barLabelFontStyle
 end
 
 ---@type fun(): string
 l.getStackLabelFont = function()
-  return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|"..l.getSavedVars().barStackLabelFontStyle
+  return "$("
+    .. l.getSavedVars().barStackLabelFontName
+    .. ")|"
+    .. l.getSavedVars().barStackLabelFontSize
+    .. "|"
+    .. l.getSavedVars().barStackLabelFontStyle
 end
 
 ---@type number[]
@@ -128,7 +138,7 @@ m.newCooldown = function(background, drawTier)
   ---@type adr.views.Cooldown
   local inst = {}
   inst.id = GetGameTimeMilliseconds()
-  table.insert(l.debugIdList,inst.id)
+  table.insert(l.debugIdList, inst.id)
   inst.background = background
   inst.drawTier = drawTier
   inst.hidden = false
@@ -143,8 +153,8 @@ m.newCooldown = function(background, drawTier)
   inst.endingSeconds = l.getSavedVars().barCooldownEndingSeconds
   inst.endingColor = l.getSavedVars().barCooldownEndingColor
   inst.color = l.getSavedVars().barCooldownColor
-  inst.alpha =  l.getSavedVars().barCooldownOpacity/100
-  return setmetatable(inst, {__index=mCooldown})
+  inst.alpha = l.getSavedVars().barCooldownOpacity / 100
+  return setmetatable(inst, { __index = mCooldown })
 end
 
 ---@type fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
@@ -157,7 +167,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   inst.appendIndex = appendIndex
   --
   inst.visible = true
-  local slot = ZO_ActionBar_GetButton(slotNum, slotNum >8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
+  local slot = ZO_ActionBar_GetButton(slotNum, slotNum > 8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
   local slotIcon = slot:GetNamedChild("Icon")
   --  local flipCard = slot:GetNamedChild("FlipCard")
   inst.slotIcon = slotIcon
@@ -170,15 +180,15 @@ m.newWidget = function(slotNum, shifted, appendIndex)
     local offsetY = savedVars.barShiftOffsetY
     local baseSize = l.getSlotBaseSize()
     backdrop = WINDOW_MANAGER:CreateControl(nil, slot, CT_TEXTURE) -- Control#Control
-    if l.getSavedVars().barShowShiftScalePercent<100 then
-      backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
+    if l.getSavedVars().barShowShiftScalePercent < 100 then
+      backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
     end
     inst.backdrop = backdrop
     backdrop:SetDrawLayer(DL_BACKGROUND)
     if appendIndex then
-      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (appendIndex-1) * (baseSize + 5), offsetY)
+      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (appendIndex - 1) * (baseSize + 5), offsetY)
     else
-      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX , offsetY)
+      backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX, offsetY)
     end
     backdrop:SetDimensions(baseSize, baseSize)
     backdrop:SetTexture("esoui/art/actionbar/abilityframe64_up.dds")
@@ -186,12 +196,12 @@ m.newWidget = function(slotNum, shifted, appendIndex)
     inst.background = background
     local offset = dui and 4.2 or 2
     background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, offset, offset)
-    background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset )
+    background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset)
   end
-  local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)  --LabelControl#LabelControl
+  local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL) --LabelControl#LabelControl
   inst.label = label
   label:SetFont(l.getLabelFont())
-  label:SetColor(1,1,1)
+  label:SetColor(1, 1, 1)
   label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
   label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
@@ -199,24 +209,42 @@ m.newWidget = function(slotNum, shifted, appendIndex)
     label:SetAnchor(TOPLEFT, slotIcon, TOPLEFT, 5, 3)
     label:SetDrawTier(DT_HIGH)
   else
-    label:SetAnchor(BOTTOM, backdrop or slotIcon, BOTTOM, 0, shifted and (-savedVars.barLabelYOffsetInShift+1) or (-savedVars.barLabelYOffset + 3))
+    label:SetAnchor(
+      BOTTOM,
+      backdrop or slotIcon,
+      BOTTOM,
+      0,
+      shifted and (-savedVars.barLabelYOffsetInShift + 1) or (-savedVars.barLabelYOffset + 3)
+    )
   end
   local stackLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
   inst.stackLabel = stackLabel
   stackLabel:SetFont(l.getStackLabelFont())
-  stackLabel:SetColor(1,1,1)
+  stackLabel:SetColor(1, 1, 1)
   stackLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   stackLabel:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, -5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
+  stackLabel:SetAnchor(
+    TOPRIGHT,
+    backdrop or slotIcon,
+    TOPRIGHT,
+    -5,
+    shifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+  )
   local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
   inst.stackLabel2 = stackLabel2
   stackLabel2:SetFont(l.getStackLabelFont())
-  stackLabel2:SetColor(1,1,1)
+  stackLabel2:SetColor(1, 1, 1)
   stackLabel2:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
   stackLabel2:SetVerticalAlignment(TEXT_ALIGN_TOP)
   stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-  stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
+  stackLabel2:SetAnchor(
+    TOPLEFT,
+    backdrop or slotIcon,
+    TOPLEFT,
+    5,
+    shifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+  )
 
   ---@type adr.views.Cooldown
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH)
@@ -226,7 +254,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   -- Progress bar (horizontal bar that shrinks from right to left)
   local progressBar = WINDOW_MANAGER:CreateControl(nil, backdrop or slot, CT_BACKDROP)
   progressBar:SetDrawLayer(DL_CONTROLS)
-  progressBar:SetDrawLevel(1)  -- Above icon (DL_BACKGROUND), below cooldown line
+  progressBar:SetDrawLevel(1) -- Above icon (DL_BACKGROUND), below cooldown line
   local progressColor = savedVars.barProgressColor
   local progressAlpha = savedVars.barProgressOpacity / 100
   progressBar:SetCenterColor(progressColor[1], progressColor[2], progressColor[3], progressAlpha)
@@ -235,7 +263,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   inst.progressBar = progressBar
 
   --
-  return setmetatable(inst, {__index=mWidget})
+  return setmetatable(inst, { __index = mWidget })
 end
 
 ---@type fun(widget: adr.views.Widget)
@@ -247,7 +275,7 @@ m.updateWidgetCooldown = function(widget)
     widget.cooldown:setEndingSeconds(savedVars.barCooldownEndingSeconds)
     widget.cooldown:setEndingColor(unpack(savedVars.barCooldownEndingColor))
     if savedVars.barCooldownOpacity < 100 then
-      widget.cooldown:setAlpha(savedVars.barCooldownOpacity/100)
+      widget.cooldown:setAlpha(savedVars.barCooldownOpacity / 100)
     else
       widget.cooldown:setAlpha(1)
     end
@@ -266,23 +294,36 @@ end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetFont = function(widget)
-  if widget.label then widget.label:SetFont(l.getLabelFont()) end
-  if widget.stackLabel then widget.stackLabel:SetFont(l.getStackLabelFont()) end
-  if widget.stackLabel2 then widget.stackLabel2:SetFont(l.getStackLabelFont()) end
+  if widget.label then
+    widget.label:SetFont(l.getLabelFont())
+  end
+  if widget.stackLabel then
+    widget.stackLabel:SetFont(l.getStackLabelFont())
+  end
+  if widget.stackLabel2 then
+    widget.stackLabel2:SetFont(l.getStackLabelFont())
+  end
 end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetLabelYOffset = function(widget)
   if widget.label then
     widget.label:ClearAnchors()
-    widget.label:SetAnchor(BOTTOM, widget.label:GetParent(), BOTTOM, 0,
-      widget.shifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3))
+    widget.label:SetAnchor(
+      BOTTOM,
+      widget.label:GetParent(),
+      BOTTOM,
+      0,
+      widget.shifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3)
+    )
   end
 end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetShiftOffset = function(widget)
-  if not widget.shifted then return end
+  if not widget.shifted then
+    return
+  end
   local offsetX = l.getSavedVars().barShiftOffsetX
   local offsetY = l.getSavedVars().barShiftOffsetY
   local baseSize = l.getSlotBaseSize()
@@ -292,16 +333,18 @@ m.updateWidgetShiftOffset = function(widget)
     if widget.appendIndex then
       widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (widget.appendIndex - 1) * (baseSize + 5), offsetY)
     else
-      widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX , offsetY)
+      widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX, offsetY)
     end
   end
 end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetShiftScalePercent = function(widget)
-  if not widget.shifted then return end
+  if not widget.shifted then
+    return
+  end
   if widget.backdrop then
-    widget.backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
+    widget.backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   end
 end
 
@@ -309,13 +352,25 @@ end
 m.updateWidgetStackLabelYOffset = function(widget)
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()
-    widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0,
-      widget.shifted and (- l.getSavedVars().barStackLabelYOffsetInShift - 5) or (- l.getSavedVars().barStackLabelYOffset - 5))
+    widget.stackLabel:SetAnchor(
+      TOPRIGHT,
+      widget.stackLabel:GetParent(),
+      TOPRIGHT,
+      0,
+      widget.shifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
+        or (-l.getSavedVars().barStackLabelYOffset - 5)
+    )
   end
   if widget.stackLabel2 then
     widget.stackLabel2:ClearAnchors()
-    widget.stackLabel2:SetAnchor(TOPLEFT, widget.stackLabel2:GetParent(), TOPLEFT, 2,
-      widget.shifted and (- l.getSavedVars().barStackLabelYOffsetInShift - 5) or (- l.getSavedVars().barStackLabelYOffset - 5))
+    widget.stackLabel2:SetAnchor(
+      TOPLEFT,
+      widget.stackLabel2:GetParent(),
+      TOPLEFT,
+      2,
+      widget.shifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
+        or (-l.getSavedVars().barStackLabelYOffset - 5)
+    )
   end
 end
 
@@ -325,7 +380,7 @@ end
 ---@type fun(self: adr.views.Cooldown): TextureControl
 mCooldown.createPart = function(self)
   local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
-  if self.drawTier and self.drawTier>0 then
+  if self.drawTier and self.drawTier > 0 then
     part:SetDrawTier(self.drawTier)
     part:SetDrawLayer(DL_TEXT)
   else
@@ -334,39 +389,45 @@ mCooldown.createPart = function(self)
   end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
   local opacity = l.getSavedVars().barCooldownOpacity
-  if opacity<100 then part:SetAlpha(opacity/100) end
+  if opacity < 100 then
+    part:SetAlpha(opacity / 100)
+  end
   return part
 end
 
 ---@type fun(self: adr.views.Cooldown, duration: number, endTime: number)
 mCooldown.draw = function(self, duration, endTime)
-  if self.duration~=duration or self.endTime ~= endTime then return end -- another start happened
+  if self.duration ~= duration or self.endTime ~= endTime then
+    return
+  end -- another start happened
   local remain = endTime - GetGameTimeMilliseconds()
   self:drawRemain(remain)
   if not self.hidden then
     zo_callLater(function()
       self:draw(duration, endTime)
-    end,40) -- 25fps
+    end, 40) -- 25fps
   end
 end
 
 ---@type fun(self: adr.views.Cooldown, remain: number, shifted: boolean)
 mCooldown.drawRemain = function(self, remain)
   -- 0. check hidden
-  if not l.getSavedVars().barCooldownVisible or self.duration == 0 or self.hidden or remain<=0 then
+  if not l.getSavedVars().barCooldownVisible or self.duration == 0 or self.hidden or remain <= 0 then
     ---@type TextureControl[]
-    local controlList = {self.topLeft,self.left,self.bottom,self.right, self.topRight}
+    local controlList = { self.topLeft, self.left, self.bottom, self.right, self.topRight }
     for key, var in pairs(controlList) do
-      if var then var:SetHidden(true) end
+      if var then
+        var:SetHidden(true)
+      end
     end
     return
   end
   local duration = self.duration
   local savedVars = l.getSavedVars()
   local shrink = 1
-  local width,height = self.background:GetDimensions()
+  local width, height = self.background:GetDimensions()
   if Azurah then
-    local scale = Azurah:CheckModified('ZO_ActionBar1')
+    local scale = Azurah:CheckModified("ZO_ActionBar1")
     if scale and scale ~= 1 then
       width = width / scale
       height = height / scale
@@ -374,75 +435,85 @@ mCooldown.drawRemain = function(self, remain)
   end
   if self.shifted then
     local percent = l.getSavedVars().barShowShiftScalePercent
-    if percent <100 then
-      width = width *100/ percent
+    if percent < 100 then
+      width = width * 100 / percent
       height = height * 100 / percent
     end
   end
-  width = width - l.getSavedVars().barCooldownThickness - 2*shrink
-  height = height - l.getSavedVars().barCooldownThickness - 2*shrink
+  width = width - l.getSavedVars().barCooldownThickness - 2 * shrink
+  height = height - l.getSavedVars().barCooldownThickness - 2 * shrink
   -- 1. topRight
   if remain > duration * 7 / 8 then
     if not self.topRight then
       self.topRight = self:createPart()
     end
-    local length = width /2 * math.min(1, remain*8/duration - 7)
-    self.topRight:SetAnchor(TOPRIGHT,self.background,TOPRIGHT,-shrink,shrink)
-    self.topRight:SetDimensions(length,savedVars.barCooldownThickness)
+    local length = width / 2 * math.min(1, remain * 8 / duration - 7)
+    self.topRight:SetAnchor(TOPRIGHT, self.background, TOPRIGHT, -shrink, shrink)
+    self.topRight:SetDimensions(length, savedVars.barCooldownThickness)
     self.topRight:SetHidden(false)
   else
-    if self.topRight and not self.topRight:IsHidden() then self.topRight:SetHidden(true) end
+    if self.topRight and not self.topRight:IsHidden() then
+      self.topRight:SetHidden(true)
+    end
   end
   -- 2. right
   if remain > duration * 5 / 8 then
     if not self.right then
       self.right = self:createPart()
     end
-    local length = height * math.min(1, (remain*8/duration - 5)/2)
-    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT,-shrink,-shrink)
-    self.right:SetDimensions(savedVars.barCooldownThickness,length)
+    local length = height * math.min(1, (remain * 8 / duration - 5) / 2)
+    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT, -shrink, -shrink)
+    self.right:SetDimensions(savedVars.barCooldownThickness, length)
     self.right:SetHidden(false)
   else
-    if self.right and not self.right:IsHidden() then self.right:SetHidden(true) end
+    if self.right and not self.right:IsHidden() then
+      self.right:SetHidden(true)
+    end
   end
   -- 3. bottom
   if remain > duration * 3 / 8 then
     if not self.bottom then
       self.bottom = self:createPart()
     end
-    local length = width * math.min(1, (remain*8/duration - 3)/2)
-    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT,shrink,-shrink)
-    self.bottom:SetDimensions(length,savedVars.barCooldownThickness)
+    local length = width * math.min(1, (remain * 8 / duration - 3) / 2)
+    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT, shrink, -shrink)
+    self.bottom:SetDimensions(length, savedVars.barCooldownThickness)
     self.bottom:SetHidden(false)
   else
-    if self.bottom and not self.bottom:IsHidden() then self.bottom:SetHidden(true) end
+    if self.bottom and not self.bottom:IsHidden() then
+      self.bottom:SetHidden(true)
+    end
   end
   -- 4. left
-  if remain > duration /8 then
+  if remain > duration / 8 then
     if not self.left then
       self.left = self:createPart()
     end
-    local length = height * math.min(1,(remain * 8/duration-1)/2)
-    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT,shrink,shrink)
-    self.left:SetDimensions(savedVars.barCooldownThickness,length)
+    local length = height * math.min(1, (remain * 8 / duration - 1) / 2)
+    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT, shrink, shrink)
+    self.left:SetDimensions(savedVars.barCooldownThickness, length)
     self.left:SetHidden(false)
   else
-    if self.left and not self.left:IsHidden() then self.left:SetHidden(true) end
+    if self.left and not self.left:IsHidden() then
+      self.left:SetHidden(true)
+    end
   end
   -- 5. topLeft
-  if remain >0 then
+  if remain > 0 then
     if not self.topLeft then
       self.topLeft = self:createPart()
     end
-    local length = width/2 * math.min(1, remain*8/duration)
-    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP,0,shrink)
-    self.topLeft:SetDimensions(length,savedVars.barCooldownThickness)
+    local length = width / 2 * math.min(1, remain * 8 / duration)
+    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP, 0, shrink)
+    self.topLeft:SetDimensions(length, savedVars.barCooldownThickness)
     self.topLeft:SetHidden(false)
   else
-    if self.topLeft and not self.topLeft:IsHidden() then self.topLeft:SetHidden(true) end
+    if self.topLeft and not self.topLeft:IsHidden() then
+      self.topLeft:SetHidden(true)
+    end
   end
   -- $. updateColor
-  self:updateColor(not self.noEnding and remain<self.endingSeconds*1000)
+  self:updateColor(not self.noEnding and remain < self.endingSeconds * 1000)
 end
 
 ---@type fun(self: adr.views.Cooldown, alpha: number)
@@ -451,13 +522,13 @@ mCooldown.setAlpha = function(self, alpha)
 end
 
 ---@type fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
-mCooldown.setColor = function(self, r,g,b,a)
-  self.color = {r,g,b,a}
+mCooldown.setColor = function(self, r, g, b, a)
+  self.color = { r, g, b, a }
 end
 
 ---@type fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
-mCooldown.setEndingColor = function(self, r,g,b,a)
-  self.endingColor = {r,g,b,a}
+mCooldown.setEndingColor = function(self, r, g, b, a)
+  self.endingColor = { r, g, b, a }
 end
 
 ---@type fun(self: adr.views.Cooldown, endingSeconds: number)
@@ -467,7 +538,9 @@ end
 
 ---@type fun(self: adr.views.Cooldown, hidden: boolean)
 mCooldown.setHidden = function(self, hidden)
-  if hidden == self.hidden then return end
+  if hidden == self.hidden then
+    return
+  end
   self.hidden = hidden
   self:draw(self.duration, self.endTime)
 end
@@ -488,7 +561,7 @@ end
 ---@type fun(self: adr.views.Cooldown, ending: boolean)
 mCooldown.updateColor = function(self, ending)
   ---@type TextureControl[]
-  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight}
+  local list = { self.topLeft, self.left, self.bottom, self.right, self.topRight }
   for key, var in ipairs(list) do
     if var then
       var:SetColor(unpack(ending and self.endingColor or self.color))
@@ -502,13 +575,19 @@ end
 --========================================
 ---@type fun(self: adr.views.Widget)
 mWidget.hide = function(self)
-  if self.backdrop then self.backdrop:SetHidden(true) end
-  if self.background then self.background:SetHidden(true) end
+  if self.backdrop then
+    self.backdrop:SetHidden(true)
+  end
+  if self.background then
+    self.background:SetHidden(true)
+  end
   self.label:SetHidden(true)
   self.stackLabel:SetHidden(true)
   self.stackLabel2:SetHidden(true)
   self.cooldown:setHidden(true)
-  if self.progressBar then self.progressBar:SetHidden(true) end
+  if self.progressBar then
+    self.progressBar:SetHidden(true)
+  end
   self.visible = false
 end
 
@@ -533,14 +612,16 @@ mWidget.updateShiftOffset = m.updateWidgetShiftOffset
 ---@type fun(self: adr.views.Widget, action: adr.models.Action, now: number)
 mWidget.updateWithAction = function(self, action, now)
   self.visible = true
-  if self.backdrop then self.backdrop:SetHidden(false) end
+  if self.backdrop then
+    self.backdrop:SetHidden(false)
+  end
   if self.background then
     self.background:SetTexture(action.ability.icon)
     self.background:SetHidden(false)
   end
 
   local endTime = action:getEndTime()
-  local remain = math.max(endTime-now,0)
+  local remain = math.max(endTime - now, 0)
   local stageInfo = action:getStageInfo() or action:getAreaEffectCount()
   local stackEffect = action:getStackEffect()
   local stackEffectHasStageInfo = stackEffect and stackEffect.stageInfo
@@ -549,13 +630,13 @@ mWidget.updateWithAction = function(self, action, now)
   local stackCount = stackEffect and stackEffect.stackCount or 0
   -- label
   if l.getSavedVars().barLabelEnabled then
-    local hint = string.format('%.1f', remain/1000)
-    if l.getSavedVars().barLabelIgnoreDecimal and remain/1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
-      hint = string.format('%d', remain/1000)
+    local hint = string.format("%.1f", remain / 1000)
+    if l.getSavedVars().barLabelIgnoreDecimal and remain / 1000 >= l.getSavedVars().barLabelIgnoreDeciamlThreshold then
+      hint = string.format("%d", remain / 1000)
     end
     -- Show brackets for low priority effects (tail effects, Crux, etc.)
     if optEffect and optEffect.levelIsLow then
-      hint = string.format('<%d>', remain/1000)
+      hint = string.format("<%d>", remain / 1000)
       self.label:SetColor(unpack(l.getSavedVars().barLowPriorityLabelColor))
     else
       local isEnding = action:needEndingAlert() and remain < self.cooldown.endingSeconds * 1000
@@ -570,7 +651,7 @@ mWidget.updateWithAction = function(self, action, now)
   if l.getSavedVars().barStackLabelEnabled then
     -- stackLabel
     if stackCount > 0 and not stackEffectHasStageInfo then
-      local stackText = string.format(action.stackCountMatch and '%d^' or '%d',stackCount)
+      local stackText = string.format(action.stackCountMatch and "%d^" or "%d", stackCount)
       self.stackLabel:SetText(stackText)
       self.stackLabel:SetHidden(false)
       self.stackLabel:SetColor(unpack(l.getSavedVars().barStackLabelColor))
@@ -616,7 +697,7 @@ mWidget.updateWithAction = function(self, action, now)
     cdMark = action.endTime - 7000
     if self.cdMark ~= cdMark then
       self.cdMark = cdMark
-      local scale = duration/1000 - 7
+      local scale = duration / 1000 - 7
       local scaledTotal = duration * scale
       local scaledRemain = scaledTotal - (duration - remain)
       self.cooldown:start(scaledRemain, scaledTotal, true)
@@ -629,7 +710,7 @@ mWidget.updateWithAction = function(self, action, now)
   else
     self.cdMark = 0
     if action:needEndingAlert() then
-      local numSemiSeconds = math.floor((now-action:getEndTime())/200)
+      local numSemiSeconds = math.floor((now - action:getEndTime()) / 200)
       if numSemiSeconds % 2 == 0 then
         self.label:SetHidden(true)
       end
@@ -637,7 +718,7 @@ mWidget.updateWithAction = function(self, action, now)
       self.label:SetHidden(true)
     end
   end
-  local cdHidden = self.cdMark==0 or not l.getSavedVars().barCooldownVisible
+  local cdHidden = self.cdMark == 0 or not l.getSavedVars().barCooldownVisible
   self.cooldown:setHidden(cdHidden)
 
   -- progress bar
@@ -646,7 +727,7 @@ mWidget.updateWithAction = function(self, action, now)
     local duration = action:getDuration()
     if duration > 0 then
       local parent = self.backdrop or self.slotIcon
-      local shrink = 1  -- Match cooldown line shrink
+      local shrink = 1 -- Match cooldown line shrink
       local progress = remain / duration
       self.progressBar:ClearAnchors()
       if savedVars.barProgressDirection == "vertical" then
@@ -659,7 +740,7 @@ mWidget.updateWithAction = function(self, action, now)
       else
         -- Horizontal: left-fixed, shrinks from right to left
         local slotWidth = parent:GetWidth()
-        local lineMargin = savedVars.barCooldownThickness  -- Margin for cooldown line on right side
+        local lineMargin = savedVars.barCooldownThickness -- Margin for cooldown line on right side
         local barWidth = (slotWidth - lineMargin - shrink) * progress
         local barHeight = savedVars.barLabelFontSize + 4
         self.progressBar:SetAnchor(BOTTOMLEFT, parent, BOTTOMLEFT, shrink, savedVars.barLabelYOffset - 2)
@@ -677,10 +758,13 @@ end
 ---@type fun(self: adr.views.Widget, slotNum: number)
 mWidget.updateWithSlot = function(self, slotNum)
   self.visible = true
-  if self.backdrop then self.backdrop:SetHidden(false) end
+  if self.backdrop then
+    self.backdrop:SetHidden(false)
+  end
   if self.background then
-    local texture = GetSlotTexture(slotNum,2-GetActiveWeaponPairInfo())
-    if texture and texture:len()>0 then self.background:SetTexture(texture)
+    local texture = GetSlotTexture(slotNum, 2 - GetActiveWeaponPairInfo())
+    if texture and texture:len() > 0 then
+      self.background:SetTexture(texture)
       self.background:SetHidden(false)
     else
       self.background:SetHidden(true)
@@ -694,7 +778,9 @@ mWidget.updateWithSlot = function(self, slotNum)
   -- cooldown
   self.cooldown:setHidden(true)
   -- progress bar
-  if self.progressBar then self.progressBar:SetHidden(true) end
+  if self.progressBar then
+    self.progressBar:SetHidden(true)
+  end
 end
 --========================================
 --        register

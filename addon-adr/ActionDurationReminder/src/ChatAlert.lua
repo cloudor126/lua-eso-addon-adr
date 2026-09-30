@@ -12,7 +12,7 @@ local addon = ActionDurationReminder
 local settings = addon.load("Settings#M")
 local l = {}
 ---@type adr.chatalert.M
-local m = {l=l}
+local m = { l = l }
 
 --========================================
 --        types
@@ -31,9 +31,9 @@ local m = {l=l}
 
 local DS_CHATALERT = "chatalert" -- debug switch for chat alert
 
-local DSS_CHATALERT_SHOW = {DS_CHATALERT, 'show'}   -- chat alert shown [KS]
-local DSS_CHATALERT_HIDE = {DS_CHATALERT, 'hide'}   -- chat alert hidden [KH]
-local DSS_CHATALERT_SKIP = {DS_CHATALERT, 'skip'}   -- chat alert skipped [K^]
+local DSS_CHATALERT_SHOW = { DS_CHATALERT, "show" } -- chat alert shown [KS]
+local DSS_CHATALERT_HIDE = { DS_CHATALERT, "hide" } -- chat alert hidden [KH]
+local DSS_CHATALERT_SKIP = { DS_CHATALERT, "skip" } -- chat alert skipped [K^]
 
 ---
 ---@type adr.settings.SavedVars
@@ -46,15 +46,15 @@ local chatAlertSavedVarsDefaults = {
   chatAlertChannelWhisper = false,
   chatAlertShowUserId = true,
   chatAlertChannelGuild = false,
-  chatAlertGuildPrefixFormat = "guild",  -- "number", "guild", "number-guild"
-  chatAlertAlignment = "center",  -- "left", "center", "right"
+  chatAlertGuildPrefixFormat = "guild", -- "number", "guild", "number-guild"
+  chatAlertAlignment = "center", -- "left", "center", "right"
   chatAlertOffsetX = 0,
   chatAlertOffsetY = 150,
   chatAlertFontName = "MEDIUM_FONT",
   chatAlertFontSize = 40,
   chatAlertFontStyle = "soft-shadow-thin",
   chatAlertPlaySound = false,
-  chatAlertSoundName = 'NEW_TIMED_NOTIFICATION',
+  chatAlertSoundName = "NEW_TIMED_NOTIFICATION",
   chatAlertOnlyInCombat = true,
   chatAlertMaxMessageLength = 100,
   chatAlertPromptShown = false,
@@ -75,7 +75,7 @@ l.closeBtn = nil
 l.nextUpdateId = 1
 
 l.soundChoices = {}
-for k,v in pairs(SOUNDS) do
+for k, v in pairs(SOUNDS) do
   table.insert(l.soundChoices, k)
 end
 table.sort(l.soundChoices)
@@ -83,7 +83,9 @@ table.sort(l.soundChoices)
 ---@type fun(name: string): number
 l.findSoundIndex = function(name)
   for key, var in ipairs(l.soundChoices) do
-    if var == name then return key end
+    if var == name then
+      return key
+    end
   end
   return -1
 end
@@ -144,7 +146,7 @@ end
 l.returnControl = function(control)
   control.timerId = nil
   if control.updateId then
-    EVENT_MANAGER:UnregisterForUpdate(addon.name.."_ChatAlertBar"..control.updateId)
+    EVENT_MANAGER:UnregisterForUpdate(addon.name .. "_ChatAlertBar" .. control.updateId)
     control.updateId = nil
   end
   if control.cooldownBar then
@@ -169,7 +171,7 @@ l.getAnchorParams = function(alignment, offsetX)
     return BOTTOMLEFT, -150 + offsetX
   elseif alignment == "right" then
     return BOTTOMRIGHT, 150 + offsetX
-  else  -- center
+  else -- center
     return BOTTOM, offsetX
   end
 end
@@ -182,9 +184,7 @@ l.repositionControls = function()
   for i, control in ipairs(l.showedControls) do
     local height = control:GetHeight()
     control:ClearAnchors()
-    control:SetAnchor(anchorPoint, GuiRoot, CENTER,
-      adjustedX,
-      -150 + savedVars.chatAlertOffsetY - yOffset)
+    control:SetAnchor(anchorPoint, GuiRoot, CENTER, adjustedX, -150 + savedVars.chatAlertOffsetY - yOffset)
     yOffset = yOffset + height + 4
   end
 end
@@ -210,8 +210,11 @@ l.showChatAlert = function(channelId, fromName, text, r, g, b)
   end
 
   local control = l.retrieveControl()
-  local fontstr = ("$("..savedVars.chatAlertFontName..")")
-    .."|"..savedVars.chatAlertFontSize.."|"..savedVars.chatAlertFontStyle
+  local fontstr = ("$(" .. savedVars.chatAlertFontName .. ")")
+    .. "|"
+    .. savedVars.chatAlertFontSize
+    .. "|"
+    .. savedVars.chatAlertFontStyle
   control.label:SetFont(fontstr)
   control.senderLabel:SetFont(fontstr)
 
@@ -226,9 +229,7 @@ l.showChatAlert = function(channelId, fromName, text, r, g, b)
   control.label:SetDimensionConstraints(0, 0, maxWidth, 0)
 
   local anchorPoint, adjustedX = l.getAnchorParams(savedVars.chatAlertAlignment, savedVars.chatAlertOffsetX)
-  control:SetAnchor(anchorPoint, GuiRoot, CENTER,
-    adjustedX,
-    -150 + savedVars.chatAlertOffsetY)
+  control:SetAnchor(anchorPoint, GuiRoot, CENTER, adjustedX, -150 + savedVars.chatAlertOffsetY)
   control:SetHidden(false)
 
   -- Calculate actual dimensions after text is set
@@ -266,7 +267,9 @@ l.showChatAlert = function(channelId, fromName, text, r, g, b)
   l.nextUpdateId = l.nextUpdateId + 1
   control.updateId = updateId
   local function updateBar()
-    if not control.timerId then return end
+    if not control.timerId then
+      return
+    end
     if control.cooldownBar and not control:IsHidden() then
       local elapsed = (GetFrameTimeSeconds() - startTime) * 1000
       local remaining = durationMs - elapsed
@@ -278,7 +281,7 @@ l.showChatAlert = function(channelId, fromName, text, r, g, b)
       end
     end
   end
-  EVENT_MANAGER:RegisterForUpdate(addon.name.."_ChatAlertBar"..updateId, 0, updateBar)
+  EVENT_MANAGER:RegisterForUpdate(addon.name .. "_ChatAlertBar" .. updateId, 0, updateBar)
 
   -- Shift existing alerts upward
   local shiftAmount = actualHeight + 4
@@ -301,10 +304,12 @@ l.showChatAlert = function(channelId, fromName, text, r, g, b)
   -- Auto-hide timer
   control.timerId = true
   zo_callLater(function()
-    if not control.timerId then return end
+    if not control.timerId then
+      return
+    end
     control.timerId = nil
     if control.updateId then
-      EVENT_MANAGER:UnregisterForUpdate(addon.name.."_ChatAlertBar"..control.updateId)
+      EVENT_MANAGER:UnregisterForUpdate(addon.name .. "_ChatAlertBar" .. control.updateId)
       control.updateId = nil
     end
     if addon.debugEnabled(DSS_CHATALERT_HIDE, fromName) then
@@ -381,7 +386,7 @@ l.getGuildPrefix = function(channelType)
           return "[" .. guildIndex .. "] "
         elseif format == "number-guild" then
           return "[" .. guildIndex .. "-" .. guildName .. "] "
-        else  -- "guild" (default)
+        else -- "guild" (default)
           return "[" .. guildName .. "] "
         end
       end
@@ -392,7 +397,9 @@ end
 
 ---@type fun(eventCode: number, channelType: MsgChannelType, fromName: string, text: string, isCustomerService: boolean, fromDisplayName: string)
 l.onChatMessageChannel = function(eventCode, channelType, fromName, text, isCustomerService, fromDisplayName)
-  if not l.getAccountSavedVars().chatAlertEnabled then return end
+  if not l.getAccountSavedVars().chatAlertEnabled then
+    return
+  end
   local savedVars = l.getSavedVars()
 
   -- Filter by channel
@@ -403,10 +410,15 @@ l.onChatMessageChannel = function(eventCode, channelType, fromName, text, isCust
     channelAllowed = true
   elseif channelType == CHAT_CHANNEL_WHISPER and savedVars.chatAlertChannelWhisper then
     channelAllowed = true
-  elseif (channelType == CHAT_CHANNEL_GUILD_1 or channelType == CHAT_CHANNEL_GUILD_2
-       or channelType == CHAT_CHANNEL_GUILD_3 or channelType == CHAT_CHANNEL_GUILD_4
-       or channelType == CHAT_CHANNEL_GUILD_5)
-       and savedVars.chatAlertChannelGuild then
+  elseif
+    (
+      channelType == CHAT_CHANNEL_GUILD_1
+      or channelType == CHAT_CHANNEL_GUILD_2
+      or channelType == CHAT_CHANNEL_GUILD_3
+      or channelType == CHAT_CHANNEL_GUILD_4
+      or channelType == CHAT_CHANNEL_GUILD_5
+    ) and savedVars.chatAlertChannelGuild
+  then
     channelAllowed = true
   end
   if not channelAllowed then
@@ -424,7 +436,9 @@ l.onChatMessageChannel = function(eventCode, channelType, fromName, text, isCust
     return
   end
 
-  if isCustomerService then return end
+  if isCustomerService then
+    return
+  end
 
   -- Trim message length
   if #text > savedVars.chatAlertMaxMessageLength then
@@ -475,7 +489,7 @@ l.openChatAlertFrame = function()
     l.frame:SetMouseEnabled(true)
     l.frame:SetMovable(true)
     l.frame:SetDrawLayer(DL_COUNT)
-    l.frame:SetHandler('OnMoveStop', function()
+    l.frame:SetHandler("OnMoveStop", function()
       local left = l.frame:GetLeft()
       local bottom = l.frame:GetBottom()
       local centerX, centerY = GuiRoot:GetCenter()
@@ -489,11 +503,11 @@ l.openChatAlertFrame = function()
     backdrop:SetAnchor(TOPLEFT)
     backdrop:SetAnchor(BOTTOMRIGHT)
     backdrop:SetCenterColor(0.2, 0.2, 0.2, 0.6)
-    backdrop:SetEdgeTexture('/esoui/art/chatwindow/chat_bg_edge.dds', 256, 256, 32)
+    backdrop:SetEdgeTexture("/esoui/art/chatwindow/chat_bg_edge.dds", 256, 256, 32)
     backdrop:SetDrawLayer(DL_COUNT)
     backdrop:SetDrawLevel(0)
     local label = WINDOW_MANAGER:CreateControl(nil, l.frame, CT_LABEL)
-    label:SetFont('$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin')
+    label:SetFont("$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin")
     label:SetColor(1, 1, 1)
     label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     label:SetVerticalAlignment(TEXT_ALIGN_CENTER)
@@ -511,19 +525,19 @@ l.openChatAlertFrame = function()
     local closeTexture = closeBtn:CreateControl(nil, CT_TEXTURE)
     closeTexture:SetAnchor(CENTER)
     closeTexture:SetDimensions(24, 24)
-    closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    closeTexture:SetTexture("/esoui/art/buttons/closebutton_disabled.dds")
     closeTexture:SetDrawLayer(DL_OVERLAY)
     closeBtn.texture = closeTexture
-    closeBtn:SetHandler('OnMouseEnter', function()
-      closeTexture:SetTexture('/esoui/art/buttons/closebutton_up.dds')
+    closeBtn:SetHandler("OnMouseEnter", function()
+      closeTexture:SetTexture("/esoui/art/buttons/closebutton_up.dds")
     end)
-    closeBtn:SetHandler('OnMouseExit', function()
-      closeTexture:SetTexture('/esoui/art/buttons/closebutton_disabled.dds')
+    closeBtn:SetHandler("OnMouseExit", function()
+      closeTexture:SetTexture("/esoui/art/buttons/closebutton_disabled.dds")
     end)
-    closeBtn:SetHandler('OnMouseDown', function()
-      closeTexture:SetTexture('/esoui/art/buttons/closebutton_down.dds')
+    closeBtn:SetHandler("OnMouseDown", function()
+      closeTexture:SetTexture("/esoui/art/buttons/closebutton_down.dds")
     end)
-    closeBtn:SetHandler('OnMouseUp', function(self, button)
+    closeBtn:SetHandler("OnMouseUp", function(self, button)
       if button == 1 then
         self.parentFrame:SetHidden(true)
         self:SetHidden(true)
@@ -533,9 +547,7 @@ l.openChatAlertFrame = function()
   end
   l.frame:SetHidden(false)
   l.frame:ClearAnchors()
-  l.frame:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER,
-    -150 + savedVars.chatAlertOffsetX,
-    -150 + savedVars.chatAlertOffsetY)
+  l.frame:SetAnchor(BOTTOMLEFT, GuiRoot, CENTER, -150 + savedVars.chatAlertOffsetX, -150 + savedVars.chatAlertOffsetY)
   l.closeBtn:ClearAnchors()
   l.closeBtn:SetAnchor(TOPRIGHT, l.frame, TOPRIGHT, 4, -4)
   l.closeBtn:SetHidden(false)
@@ -546,31 +558,27 @@ end
 --========================================
 ---@type fun()
 l.registerWelcomeDialog = function()
-  ESO_Dialogs["ADR_CHAT_ALERT_WELCOME"] =
-  {
-    title =
-    {
+  ESO_Dialogs["ADR_CHAT_ALERT_WELCOME"] = {
+    title = {
       text = addon.text("Chat Alert"),
     },
-    mainText =
-    {
-      text = addon.text("ADR has a new Chat Alert feature! During combat, group chat messages often go unnoticed in the chat window. Chat Alert will display them as popup alerts on screen so you never miss important callouts.\n\nP.S. Yes, this is from 2026, but I promise it's the good CODE. — @Cloudor"),
+    mainText = {
+      text = addon.text(
+        "ADR has a new Chat Alert feature! During combat, group chat messages often go unnoticed in the chat window. Chat Alert will display them as popup alerts on screen so you never miss important callouts.\n\nP.S. Yes, this is from 2026, but I promise it's the good CODE. — @Cloudor"
+      ),
     },
-    buttons =
-    {
-      [1] =
-      {
+    buttons = {
+      [1] = {
         text = addon.text("Enable"),
         callback = function(dialog)
           l.getAccountSavedVars().chatAlertEnabled = true
           l.getAccountSavedVars().chatAlertPromptShown = true
           zo_callLater(function()
-            LibAddonMenu2:OpenToPanel('ADRAddonOptions')
+            LibAddonMenu2:OpenToPanel("ADRAddonOptions")
           end, 100)
         end,
       },
-      [2] =
-      {
+      [2] = {
         text = addon.text("Disable"),
         callback = function(dialog)
           l.getAccountSavedVars().chatAlertEnabled = false
@@ -593,7 +601,9 @@ end
 l.showWelcomePrompt = function()
   -- Always use account-wide storage for welcome prompt
   local accountSavedVars = l.getAccountSavedVars()
-  if accountSavedVars.chatAlertPromptShown then return end
+  if accountSavedVars.chatAlertPromptShown then
+    return
+  end
   l.registerWelcomeDialog()
   ZO_Dialogs_ShowDialog("ADR_CHAT_ALERT_WELCOME")
 end
@@ -603,9 +613,9 @@ end
 --========================================
 ---@type fun()
 l.onStart = function()
-  EVENT_MANAGER:RegisterForEvent(addon.name.."_ChatAlert", EVENT_CHAT_MESSAGE_CHANNEL, l.onChatMessageChannel)
-  EVENT_MANAGER:RegisterForEvent(addon.name.."_ChatAlert", EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
-  l.inCombat = IsUnitInCombat('player')
+  EVENT_MANAGER:RegisterForEvent(addon.name .. "_ChatAlert", EVENT_CHAT_MESSAGE_CHANNEL, l.onChatMessageChannel)
+  EVENT_MANAGER:RegisterForEvent(addon.name .. "_ChatAlert", EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
+  l.inCombat = IsUnitInCombat("player")
   l.showWelcomePrompt()
 end
 
@@ -622,9 +632,9 @@ addon.register("ChatAlert#M", m)
 addon.register("ChatAlert", m)
 
 addon.registerDebugSwitch(DS_CHATALERT, "Chat Alert Debug")
-addon.registerDebugSubSwitch(DSS_CHATALERT_SHOW, 'Chat Alert Show [KS]', 'Log when chat alerts are shown')
-addon.registerDebugSubSwitch(DSS_CHATALERT_HIDE, 'Chat Alert Hide [KH]', 'Log when chat alerts are hidden')
-addon.registerDebugSubSwitch(DSS_CHATALERT_SKIP, 'Chat Alert Skip [K^]', 'Log when chat alerts are skipped')
+addon.registerDebugSubSwitch(DSS_CHATALERT_SHOW, "Chat Alert Show [KS]", "Log when chat alerts are shown")
+addon.registerDebugSubSwitch(DSS_CHATALERT_HIDE, "Chat Alert Hide [KH]", "Log when chat alerts are hidden")
+addon.registerDebugSubSwitch(DSS_CHATALERT_SKIP, "Chat Alert Skip [K^]", "Log when chat alerts are skipped")
 
 addon.hookStart(l.onStart)
 
@@ -642,117 +652,205 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         type = "checkbox",
         name = text("Enable Chat Alert"),
         tooltip = text("Show group chat messages as popup alerts during combat"),
-        getFunc = function() return l.getAccountSavedVars().chatAlertEnabled end,
-        setFunc = function(value) l.getAccountSavedVars().chatAlertEnabled = value end,
+        getFunc = function()
+          return l.getAccountSavedVars().chatAlertEnabled
+        end,
+        setFunc = function(value)
+          l.getAccountSavedVars().chatAlertEnabled = value
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertEnabled,
-      }, {
+      },
+      {
         type = "checkbox",
         name = text("Only Show In Combat"),
         tooltip = text("Only display chat alerts while in combat"),
-        getFunc = function() return l.getSavedVars().chatAlertOnlyInCombat end,
-        setFunc = function(value) l.getSavedVars().chatAlertOnlyInCombat = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertOnlyInCombat
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertOnlyInCombat = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertOnlyInCombat,
-      }, {
+      },
+      {
         type = "checkbox",
         name = text("Show User ID"),
         tooltip = text("Show @UserID instead of character name for message sender"),
-        getFunc = function() return l.getSavedVars().chatAlertShowUserId end,
-        setFunc = function(value) l.getSavedVars().chatAlertShowUserId = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertShowUserId
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertShowUserId = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertShowUserId,
-      }, {
+      },
+      {
         type = "checkbox",
         name = text("Party Channel"),
         tooltip = text("Show messages from party chat"),
-        getFunc = function() return l.getSavedVars().chatAlertChannelParty end,
-        setFunc = function(value) l.getSavedVars().chatAlertChannelParty = value end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertChannelParty
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertChannelParty = value
+        end,
         width = "half",
         default = chatAlertSavedVarsDefaults.chatAlertChannelParty,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "checkbox",
         name = text("Say Channel"),
         tooltip = text("Show messages from say chat"),
-        getFunc = function() return l.getSavedVars().chatAlertChannelSay end,
-        setFunc = function(value) l.getSavedVars().chatAlertChannelSay = value end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertChannelSay
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertChannelSay = value
+        end,
         width = "half",
         default = chatAlertSavedVarsDefaults.chatAlertChannelSay,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "checkbox",
         name = text("Whisper Channel"),
         tooltip = text("Show whisper messages"),
-        getFunc = function() return l.getSavedVars().chatAlertChannelWhisper end,
-        setFunc = function(value) l.getSavedVars().chatAlertChannelWhisper = value end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertChannelWhisper
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertChannelWhisper = value
+        end,
         width = "half",
         default = chatAlertSavedVarsDefaults.chatAlertChannelWhisper,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "checkbox",
         name = text("Guild Channel"),
         tooltip = text("Show messages from guild chat"),
-        getFunc = function() return l.getSavedVars().chatAlertChannelGuild end,
-        setFunc = function(value) l.getSavedVars().chatAlertChannelGuild = value end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertChannelGuild
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertChannelGuild = value
+        end,
         width = "half",
         default = chatAlertSavedVarsDefaults.chatAlertChannelGuild,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "dropdown",
         name = text("Guild Prefix Format"),
         tooltip = text("Format for guild channel prefix: [<Index>], [Guild Name], or [<Index>-<Guild Name>]"),
-        choices = {text("[Guild Name]"), text("[<Index>]"), text("[<Index>-<Guild Name>]")},
-        choicesValues = {"guild", "number", "number-guild"},
-        getFunc = function() return l.getSavedVars().chatAlertGuildPrefixFormat end,
-        setFunc = function(value) l.getSavedVars().chatAlertGuildPrefixFormat = value end,
+        choices = { text("[Guild Name]"), text("[<Index>]"), text("[<Index>-<Guild Name>]") },
+        choicesValues = { "guild", "number", "number-guild" },
+        getFunc = function()
+          return l.getSavedVars().chatAlertGuildPrefixFormat
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertGuildPrefixFormat = value
+        end,
         width = "half",
         default = chatAlertSavedVarsDefaults.chatAlertGuildPrefixFormat,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled or not l.getSavedVars().chatAlertChannelGuild end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled or not l.getSavedVars().chatAlertChannelGuild
+        end,
+      },
+      {
         type = "slider",
         name = text("Chat Alert Duration"),
         tooltip = text("How long to display chat alerts in seconds"),
-        min = 1, max = 15, step = 0.5,
-        getFunc = function() return l.getSavedVars().chatAlertDurationSeconds end,
-        setFunc = function(value) l.getSavedVars().chatAlertDurationSeconds = value end,
+        min = 1,
+        max = 15,
+        step = 0.5,
+        getFunc = function()
+          return l.getSavedVars().chatAlertDurationSeconds
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertDurationSeconds = value
+        end,
         width = "full",
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         default = chatAlertSavedVarsDefaults.chatAlertDurationSeconds,
-      }, {
+      },
+      {
         type = "slider",
         name = text("Max Concurrent Alerts"),
         tooltip = text("Maximum number of chat alerts shown at once"),
-        min = 1, max = 10, step = 1,
-        getFunc = function() return l.getSavedVars().chatAlertMaxAlerts end,
-        setFunc = function(value) l.getSavedVars().chatAlertMaxAlerts = value end,
+        min = 1,
+        max = 10,
+        step = 1,
+        getFunc = function()
+          return l.getSavedVars().chatAlertMaxAlerts
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertMaxAlerts = value
+        end,
         width = "full",
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         default = chatAlertSavedVarsDefaults.chatAlertMaxAlerts,
-      }, {
+      },
+      {
         type = "slider",
         name = text("Max Message Length"),
         tooltip = text("Truncate messages longer than this many characters"),
-        min = 20, max = 200, step = 10,
-        getFunc = function() return l.getSavedVars().chatAlertMaxMessageLength end,
-        setFunc = function(value) l.getSavedVars().chatAlertMaxMessageLength = value end,
+        min = 20,
+        max = 200,
+        step = 10,
+        getFunc = function()
+          return l.getSavedVars().chatAlertMaxMessageLength
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertMaxMessageLength = value
+        end,
         width = "full",
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         default = chatAlertSavedVarsDefaults.chatAlertMaxMessageLength,
-      }, {
+      },
+      {
         type = "dropdown",
         name = text("Chat Alert Alignment"),
         tooltip = text("How messages align relative to the position marker: Left, Center, or Right"),
-        choices = {text("Center"), text("Left"), text("Right")},
-        choicesValues = {"center", "left", "right"},
-        getFunc = function() return l.getSavedVars().chatAlertAlignment end,
-        setFunc = function(value) l.getSavedVars().chatAlertAlignment = value end,
+        choices = { text("Center"), text("Left"), text("Right") },
+        choicesValues = { "center", "left", "right" },
+        getFunc = function()
+          return l.getSavedVars().chatAlertAlignment
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertAlignment = value
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertAlignment,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "button",
         name = text("Move Chat Alert"),
         func = function()
@@ -763,8 +861,11 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           end, 10)
         end,
         width = "half",
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "button",
         name = text("Reset Chat Alert Position"),
         func = function()
@@ -772,53 +873,104 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           l.getSavedVars().chatAlertOffsetY = 150
         end,
         width = "half",
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
-      }, {
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
+      },
+      {
         type = "checkbox",
         name = text("Play Chat Alert Sound"),
         tooltip = text("Play a sound when a chat alert appears"),
-        getFunc = function() return l.getSavedVars().chatAlertPlaySound end,
-        setFunc = function(value) l.getSavedVars().chatAlertPlaySound = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        getFunc = function()
+          return l.getSavedVars().chatAlertPlaySound
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertPlaySound = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertPlaySound,
-      }, {
+      },
+      {
         type = "slider",
         name = text("Chat Alert Sound"),
-        min = 1, max = #l.soundChoices, step = 1,
-        getFunc = function() return l.findSoundIndex(l.getSavedVars().chatAlertSoundName) end,
-        setFunc = function(value) l.getSavedVars().chatAlertSoundName = l.soundChoices[value]; PlaySound(SOUNDS[l.getSavedVars().chatAlertSoundName]) end,
+        min = 1,
+        max = #l.soundChoices,
+        step = 1,
+        getFunc = function()
+          return l.findSoundIndex(l.getSavedVars().chatAlertSoundName)
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertSoundName = l.soundChoices[value]
+          PlaySound(SOUNDS[l.getSavedVars().chatAlertSoundName])
+        end,
         width = "full",
-        disabled = function() return not l.getSavedVars().chatAlertPlaySound or not l.getAccountSavedVars().chatAlertEnabled end,
+        disabled = function()
+          return not l.getSavedVars().chatAlertPlaySound or not l.getAccountSavedVars().chatAlertEnabled
+        end,
         default = l.findSoundIndex(chatAlertSavedVarsDefaults.chatAlertSoundName),
-      }, {
+      },
+      {
         type = "dropdown",
         name = text("Chat Alert Font Name"),
-        choices = {"MEDIUM_FONT", "BOLD_FONT", "CHAT_FONT", "ANTIQUE_FONT", "HANDWRITTEN_FONT", "STONE_TABLET_FONT", "GAMEPAD_MEDIUM_FONT", "GAMEPAD_BOLD_FONT"},
-        getFunc = function() return l.getSavedVars().chatAlertFontName end,
-        setFunc = function(value) l.getSavedVars().chatAlertFontName = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        choices = {
+          "MEDIUM_FONT",
+          "BOLD_FONT",
+          "CHAT_FONT",
+          "ANTIQUE_FONT",
+          "HANDWRITTEN_FONT",
+          "STONE_TABLET_FONT",
+          "GAMEPAD_MEDIUM_FONT",
+          "GAMEPAD_BOLD_FONT",
+        },
+        getFunc = function()
+          return l.getSavedVars().chatAlertFontName
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertFontName = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertFontName,
-      }, {
+      },
+      {
         type = "slider",
         name = text("Chat Alert Font Size"),
-        min = 14, max = 80, step = 2,
-        getFunc = function() return l.getSavedVars().chatAlertFontSize end,
-        setFunc = function(value) l.getSavedVars().chatAlertFontSize = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        min = 14,
+        max = 80,
+        step = 2,
+        getFunc = function()
+          return l.getSavedVars().chatAlertFontSize
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertFontSize = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertFontSize,
-      }, {
+      },
+      {
         type = "dropdown",
         name = text("Chat Alert Font Style"),
-        choices = {"soft-shadow-thin", "soft-shadow-thick", "thick-outline", "outline"},
-        getFunc = function() return l.getSavedVars().chatAlertFontStyle end,
-        setFunc = function(value) l.getSavedVars().chatAlertFontStyle = value end,
-        disabled = function() return not l.getAccountSavedVars().chatAlertEnabled end,
+        choices = { "soft-shadow-thin", "soft-shadow-thick", "thick-outline", "outline" },
+        getFunc = function()
+          return l.getSavedVars().chatAlertFontStyle
+        end,
+        setFunc = function(value)
+          l.getSavedVars().chatAlertFontStyle = value
+        end,
+        disabled = function()
+          return not l.getAccountSavedVars().chatAlertEnabled
+        end,
         width = "full",
         default = chatAlertSavedVarsDefaults.chatAlertFontStyle,
       },
-    }
+    },
   })
 end)

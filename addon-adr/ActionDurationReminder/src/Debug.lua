@@ -1,9 +1,11 @@
 local addon = ActionDurationReminder
 local settings = addon.load("Settings#M")
 local l = {
-  getSavedVars = function() return settings.getSavedVars() end,
+  getSavedVars = function()
+    return settings.getSavedVars()
+  end,
 }
-local m = {l=l}
+local m = { l = l }
 
 --========================================
 --        m
@@ -11,11 +13,15 @@ local m = {l=l}
 
 -- Override addon.debugEnabled with full implementation using Settings
 addon.debugEnabled = function(dss, abilityName)
-  if type(dss) ~= 'table' then return false end
+  if type(dss) ~= "table" then
+    return false
+  end
   local sv = l.getSavedVars()
-  if not sv.debugLoggingEnabled then return false end
+  if not sv.debugLoggingEnabled then
+    return false
+  end
   local switch, subSwitch = dss[1], dss[2]
-  if abilityName and sv.debugFilterPattern ~= '' then
+  if abilityName and sv.debugFilterPattern ~= "" then
     if not abilityName:match(sv.debugFilterPattern) then
       return false
     end
@@ -34,12 +40,11 @@ end
 --========================================
 
 -- Debug module defaults
-local debugSavedVarsDefaults
-  = {
-    debugLogTrackedEffectsInChat = false,
-    debugFilterPattern = '',
-    debugLoggingEnabled = false,
-  }
+local debugSavedVarsDefaults = {
+  debugLogTrackedEffectsInChat = false,
+  debugFilterPattern = "",
+  debugLoggingEnabled = false,
+}
 
 --========================================
 --        init
@@ -53,7 +58,7 @@ addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   for _, subs in pairs(addon.getDebugSettingMap()) do
     for _, info in pairs(subs) do
       local settingKey = info[1]
-      settings.addDefaults({[settingKey] = true})
+      settings.addDefaults({ [settingKey] = true })
     end
   end
 end)
@@ -65,32 +70,50 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       type = "checkbox",
       name = addon.text("Log Tracked Effects"),
       tooltip = addon.text("Print tracked effects to chat when they are applied"),
-      getFunc = function() return l.getSavedVars().debugLogTrackedEffectsInChat end,
-      setFunc = function(value) l.getSavedVars().debugLogTrackedEffectsInChat = value end,
+      getFunc = function()
+        return l.getSavedVars().debugLogTrackedEffectsInChat
+      end,
+      setFunc = function(value)
+        l.getSavedVars().debugLogTrackedEffectsInChat = value
+      end,
       width = "full",
     },
     {
       type = "checkbox",
       name = addon.text("Enable Debug Logging"),
       tooltip = addon.text("Enable fine-grained debug logging without using console commands"),
-      getFunc = function() return l.getSavedVars().debugLoggingEnabled end,
-      setFunc = function(value) l.getSavedVars().debugLoggingEnabled = value end,
+      getFunc = function()
+        return l.getSavedVars().debugLoggingEnabled
+      end,
+      setFunc = function(value)
+        l.getSavedVars().debugLoggingEnabled = value
+      end,
       width = "full",
     },
     {
       type = "submenu",
       name = addon.text("Detailed Debug Options"),
-      disabled = function() return not l.getSavedVars().debugLoggingEnabled end,
+      disabled = function()
+        return not l.getSavedVars().debugLoggingEnabled
+      end,
       controls = {
         {
           type = "editbox",
           name = addon.text("Ability Name Filter"),
-          tooltip = addon.text('Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'),
-          getFunc = function() return l.getSavedVars().debugFilterPattern end,
-          setFunc = function(text) l.getSavedVars().debugFilterPattern = text end,
+          tooltip = addon.text(
+            'Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'
+          ),
+          getFunc = function()
+            return l.getSavedVars().debugFilterPattern
+          end,
+          setFunc = function(text)
+            l.getSavedVars().debugFilterPattern = text
+          end,
           isMultiline = false,
           width = "full",
-          disabled = function() return not l.getSavedVars().debugLoggingEnabled end,
+          disabled = function()
+            return not l.getSavedVars().debugLoggingEnabled
+          end,
         },
         {
           type = "button",
@@ -136,8 +159,12 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         type = "checkbox",
         name = addon.text(subDisplayName),
         tooltip = addon.text(tooltip),
-        getFunc = function() return l.getSavedVars()[settingKey] end,
-        setFunc = function(value) l.getSavedVars()[settingKey] = value end,
+        getFunc = function()
+          return l.getSavedVars()[settingKey]
+        end,
+        setFunc = function(value)
+          l.getSavedVars()[settingKey] = value
+        end,
         width = "full",
       })
     end
