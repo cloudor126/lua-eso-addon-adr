@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "Lua 5.1",
+  "runtime.path": ["?.lua"],
+  "diagnostics.globals": ["ActionDurationReminder", "LibAddonMenu2"],
+  "diagnostics.disable": [
+    "need-check-nil",
+    "assign-type-mismatch",
+    "param-type-mismatch",
+    "unused-local",
+    "redefined-local"
+  ],
+  "workspace.library": [
+    "C:/Users/Cloudor/git/eso-addons/luals-defs/esoapi",
+    "C:/Users/Cloudor/git/eso-addons/esoui/esoui"
+  ],
+  "workspace.ignore": ["build", "docs", ".gradle", ".claude", ".settings", "ActionDurationReminder/i18n"],
+  "workspace.checkThirdParty": false
+}
