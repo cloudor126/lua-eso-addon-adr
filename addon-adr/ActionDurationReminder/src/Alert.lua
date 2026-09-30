@@ -678,6 +678,8 @@ end
 --========================================
 addon.register("Alert#M", m)
 
+addon.register("Alert", m)
+
 -- Register Alert debug switches
 addon.registerDebugSwitch(DS_ALERT, "Alert Debug")
 addon.registerDebugSubSwitch(DSS_ALERT_SHOW, 'Alert Show [LS]', 'Log when alerts are shown')

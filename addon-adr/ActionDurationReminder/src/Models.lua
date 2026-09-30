@@ -1792,6 +1792,8 @@ end
 --========================================
 addon.register("Models#M", m)
 
+addon.register("Models", m)
+
 -- Register Models debug switches
 addon.registerDebugSwitch(DS_MODEL, "Model Debug")
 addon.registerDebugSubSwitch(DSS_MODEL_STACK, 'Model Stack [MS]', 'Log stack count updates')

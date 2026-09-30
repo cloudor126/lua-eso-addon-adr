@@ -86,3 +86,5 @@ end
 --        register
 --========================================
 addon.register("Utils#M", m)
+
+addon.register("Utils", m)

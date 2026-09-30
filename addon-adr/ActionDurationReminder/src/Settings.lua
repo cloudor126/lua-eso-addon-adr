@@ -219,5 +219,6 @@ end
 --========================================
 --        register
 --========================================
-addon.register("Settings#M",m)
+addon.register("Settings#M", m)
+addon.register("Settings", m)
 addon.hookStart(l.onStart)

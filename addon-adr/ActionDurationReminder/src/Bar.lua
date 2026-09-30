@@ -325,7 +325,9 @@ end
 --========================================
 --        register
 --========================================
-addon.register("Bar#M",m)
+addon.register("Bar#M", m)
+
+addon.register("Bar", m)
 
 addon.extend(settings.EXTKEY_ADD_DEFAULTS,function()
   settings.addDefaults(barSavedVarsDefaults)

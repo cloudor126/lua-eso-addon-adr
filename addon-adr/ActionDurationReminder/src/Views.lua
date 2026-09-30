@@ -700,3 +700,5 @@ end
 --        register
 --========================================
 addon.register("Views#M", m)
+
+addon.register("Views", m)

@@ -1865,7 +1865,9 @@ addon.getTimeActionMap = m.getTimeActionMap
 --========================================
 --        register
 --========================================
-addon.register("Core#M",m)
+addon.register("Core#M", m)
+
+addon.register("Core", m)
 
 addon.hookStart(l.onStart)
 

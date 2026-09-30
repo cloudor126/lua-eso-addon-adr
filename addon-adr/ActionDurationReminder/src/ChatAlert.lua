@@ -619,6 +619,8 @@ end
 
 addon.register("ChatAlert#M", m)
 
+addon.register("ChatAlert", m)
+
 addon.registerDebugSwitch(DS_CHATALERT, "Chat Alert Debug")
 addon.registerDebugSubSwitch(DSS_CHATALERT_SHOW, 'Chat Alert Show [KS]', 'Log when chat alerts are shown')
 addon.registerDebugSubSwitch(DSS_CHATALERT_HIDE, 'Chat Alert Hide [KH]', 'Log when chat alerts are hidden')

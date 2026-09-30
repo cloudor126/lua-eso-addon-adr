@@ -154,3 +154,5 @@ end)
 --        register
 --========================================
 addon.register("Debug#M", m)
+
+addon.register("Debug", m)
