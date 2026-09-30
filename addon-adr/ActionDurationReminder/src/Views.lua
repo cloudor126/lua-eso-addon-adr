@@ -31,6 +31,7 @@ local mCooldown = {}
 ---@field left? TextureControl
 ---@field topLeft? TextureControl
 ---@field endingSeconds? number
+---@field noEnding? boolean
 ---@field endingColor? number[]
 ---@field color? number[]
 ---@field alpha? number
@@ -59,7 +60,9 @@ local mCooldown = {}
 ---@field stackLabel2? LabelControl
 ---@field cooldown? adr.views.Cooldown
 ---@field cdMark? number
----@field progressBar? Control
+---@field progressBar? BackdropControl
+---@field hide? fun(self: adr.views.Widget)
+---@field updateWithSlot? fun(self: adr.views.Widget, slotNum: number)
 ---@field updateCooldown? fun(self: adr.views.Widget)
 ---@field updateProgress? fun(self: adr.views.Widget)
 ---@field updateFont? fun(self: adr.views.Widget)
@@ -72,7 +75,7 @@ local mCooldown = {}
 ---@class adr.views.M
 ---@field getSlotBaseSize? fun(): number
 ---@field newCooldown? fun(background: Control, drawTier: number): adr.views.Cooldown
----@field newWidget? fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
+---@field newWidget? fun(slotNum: number, shifted: boolean, appendIndex?: number): adr.views.Widget
 ---@field updateWidgetCooldown? fun(widget: adr.views.Widget)
 ---@field updateWidgetProgress? fun(widget: adr.views.Widget)
 ---@field updateWidgetFont? fun(widget: adr.views.Widget)
@@ -157,7 +160,7 @@ m.newCooldown = function(background, drawTier)
   return setmetatable(inst, { __index = mCooldown })
 end
 
----@type fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
+---@type fun(slotNum: number, shifted: boolean, appendIndex?: number): adr.views.Widget
 m.newWidget = function(slotNum, shifted, appendIndex)
   local savedVars = l.getSavedVars()
   ---@type adr.views.Widget

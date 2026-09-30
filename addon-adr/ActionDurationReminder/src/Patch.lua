@@ -35,6 +35,7 @@ local patchSavedVarsDefaults = {
 ---@field offsetX? number
 ---@field offsetY? number
 ---@field bottom? number
+---@field newRect? adr.patch.Rect
 
 --========================================
 --        l

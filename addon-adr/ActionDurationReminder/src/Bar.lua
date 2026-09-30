@@ -326,7 +326,7 @@ l.openShiftBarFrame = function()
   l.shiftBarCloseBtn:SetHidden(false)
 end
 
----@type fun(func: fun(Views#Widget:widget)->())
+---@type fun(func: fun(widget: adr.views.Widget))
 l.updateWidgets = function(func)
   for _, widget in pairs(l.mainBarWidgetMap) do
     func(widget)

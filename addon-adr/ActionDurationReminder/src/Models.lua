@@ -55,30 +55,36 @@ local mEffect = {}
 ---@field tickEffectDoubled? boolean
 ---@field mainEffectPurged? boolean
 ---@field targetId? number
----@field getAreaEffectCount? fun(self: adr.models.Action): number
+---@field saved? boolean
+---@field alertSkipResult? boolean
+---@field groundFirstEffectId? number
+---@field getStageInfo2_Stamp? number
+---@field getStageInfo2_Cache? number
+---@field stackCountMatch? number|boolean
+---@field getAreaEffectCount? fun(self: adr.models.Action): number?
 ---@field getDuration? fun(self: adr.models.Action): number, string
----@field getEndTime? fun(self: adr.models.Action, debugging: boolean): number
+---@field getEndTime? fun(self: adr.models.Action, debugging?: boolean): number
 ---@field getFullEndTime? fun(self: adr.models.Action): number
 ---@field getFlagsInfo? fun(self: adr.models.Action): string
----@field getMaxOriginEffectDuration? fun(self: adr.models.Action): number
----@field getNewest? fun(self: adr.models.Action): adr.models.Action
----@field getOldest? fun(self: adr.models.Action): adr.models.Action
----@field getStageInfo? fun(self: adr.models.Action): string
----@field getStageInfo2? fun(self: adr.models.Action): number
----@field getStartTime? fun(self: adr.models.Action): number
----@field getStackEffect? fun(self: adr.models.Action): adr.models.Effect
----@field getStackEffect2? fun(self: adr.models.Action): adr.models.Effect
+---@field getMaxOriginEffectDuration? fun(self: adr.models.Action): number?
+---@field getNewest? fun(self: adr.models.Action): adr.models.Action?
+---@field getOldest? fun(self: adr.models.Action): adr.models.Action?
+---@field getStageInfo? fun(self: adr.models.Action): string?
+---@field getStageInfo2? fun(self: adr.models.Action): number?
+---@field getStartTime? fun(self: adr.models.Action): number?
+---@field getStackEffect? fun(self: adr.models.Action): adr.models.Effect?
+---@field getStackEffect2? fun(self: adr.models.Action): adr.models.Effect?
 ---@field needEndingAlert? fun(self: adr.models.Action): boolean
 ---@field hasEffect? fun(self: adr.models.Action): boolean
 ---@field isOnPlayer? fun(self: adr.models.Action): boolean
 ---@field isOnPlayerpet? fun(self: adr.models.Action): boolean
----@field isUnlimited? fun(self: adr.models.Action): boolean
----@field matchesAbility? fun(self: adr.models.Action, ability: adr.models.Ability, strict: boolean): boolean
----@field matchesAbilityId? fun(self: adr.models.Action, abilityId: string): boolean
----@field matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
----@field _matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
----@field matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
----@field _matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+---@field isUnlimited? fun(self: adr.models.Action): boolean?
+---@field matchesAbility? fun(self: adr.models.Action, ability: adr.models.Ability, strict?: boolean): boolean?
+---@field matchesAbilityId? fun(self: adr.models.Action, abilityId: number, strict?: any): boolean?
+---@field matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict?: boolean): boolean
+---@field _matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict?: boolean): boolean
+---@field matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict?: boolean): boolean
+---@field _matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict?: boolean): boolean
 ---@field matchesNewEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
 ---@field _matchesNewEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
 ---@field matchesOldEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
@@ -86,12 +92,12 @@ local mEffect = {}
 ---@field sortEffectList? fun(self: adr.models.Action)
 ---@field recalcEffectLevels? fun(self: adr.models.Action)
 ---@field isFilteredByDynamic? fun(self: adr.models.Action, effect: adr.models.Effect, now: number): boolean
----@field optEffect? fun(self: adr.models.Action, debugging: boolean): adr.models.Effect, string
----@field optGallopEffect? fun(self: adr.models.Action): adr.models.Effect
----@field peekLongDurationEffect? fun(self: adr.models.Action): adr.models.Effect
+---@field optEffect? fun(self: adr.models.Action, debugging?: boolean): adr.models.Effect?, string
+---@field optGallopEffect? fun(self: adr.models.Action): adr.models.Effect|false
+---@field peekLongDurationEffect? fun(self: adr.models.Action): adr.models.Effect?
 ---@field purgeEffectByTargetUnitId? fun(self: adr.models.Action, effect: adr.models.Effect)
----@field purgeEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
----@field saveEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+---@field purgeEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect|false?
+---@field saveEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect?
 ---@field toLogString? fun(self: adr.models.Action): string
 ---@field toLogString_Short? fun(self: adr.models.Action): string
 ---@field toLogString_SingleLine? fun(self: adr.models.Action): string
@@ -127,6 +133,12 @@ local mEffect = {}
 ---@field combatEventId? number 可追踪的特定战斗事件
 ---@field level? number
 ---@field levelIsLow? boolean
+---@field stageInfo? string
+---@field stageInfoBlink? boolean
+---@field activated? boolean
+---@field saveTime? number
+---@field purgingTime? number
+---@field drop? boolean
 ---@field isOnPlayer? fun(self: adr.models.Effect): boolean
 ---@field isOnPlayerpet? fun(self: adr.models.Effect): boolean
 ---@field isLongDuration? fun(self: adr.models.Effect): boolean
@@ -142,6 +154,7 @@ local mEffect = {}
 ---@field forSelf? boolean
 ---@field forTank? boolean
 ---@field shifted? boolean
+---@field isShifted? boolean
 ---@field onlyOneTarget? boolean
 
 ---魔核(crux)管理器
@@ -255,7 +268,7 @@ m.patchAbilityName = function(name)
   end
   for wrong, right in pairs(NAME_PATCH_ZH) do
     if name:find(wrong, 1, true) then
-      return name:gsub(wrong, right)
+      return (name:gsub(wrong, right)) -- 括号截断gsub第二返回值，统一单返回
     end
   end
   return name
@@ -277,7 +290,7 @@ local fRefinePath = function(path)
   return path
 end
 
----@type fun(path: string): string
+---@type fun(path: string): string?
 local fSkillIconName = function(path)
   if not path then
     return nil
@@ -287,7 +300,7 @@ local fSkillIconName = function(path)
   return name:lower()
 end
 
----@type fun(path1: string, path2: string): boolean
+---@type fun(path1: string, path2: string): boolean|number?
 local fMatchIconPath = function(path1, path2)
   if path1 == "" or path1 == "/" or path2 == "" or path2 == "/" then
     return false
@@ -300,7 +313,7 @@ local fMatchIconPath = function(path1, path2)
   return path1:find(path2, 1, true) or path2:find(path1, 1, true)
 end
 
----@type fun(origin: string, zh: boolean): string
+---@type fun(origin: string, zh?: boolean): string, integer
 local fStripBracket = function(origin, zh)
   if zh then
     return origin:gsub("^%s*([^<]+)%s*<.*$", "%1", 1)
@@ -427,6 +440,7 @@ m.newAction = function(slotNum, hotbarCategory)
   end
   pattern = ".-(" .. pattern:gsub("2", "([%%.,%%d]*%%d+).r") .. ")"
   -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..')'
+  ---@type number? offset可为find返回的nil
   local offset = 1
   local num = 0
   while true do
@@ -447,6 +461,7 @@ m.newAction = function(slotNum, hotbarCategory)
   ---@type table<number, boolean>
   action.descriptionNums = {}
   pattern = ".-([%.,%d]*%d+).r"
+  ---@type number? offset可为find返回的nil
   offset = 1
   while true do
     local i, j, numStr = action.description:find(pattern, offset)
@@ -632,7 +647,7 @@ end
 --========================================
 --        mAction
 --========================================
----@type fun(self: adr.models.Action): number
+---@type fun(self: adr.models.Action): number?
 mAction.getAreaEffectCount = function(self)
   local count = 0
   for key, var in pairs(self.effectList) do
@@ -671,7 +686,7 @@ mAction.getDuration = function(self)
   return 0, m.DUR_SOURCE_NONE
 end
 
----@type fun(self: adr.models.Action, debugging: boolean): number
+---@type fun(self: adr.models.Action, debugging?: boolean): number
 mAction.getEndTime = function(self, debugging)
   if self.tickEffect and self.duration == 0 then
     local start = self.tickEffect.startTime
@@ -756,7 +771,7 @@ mAction.getFlagsInfo = function(self)
   )
 end
 
----@type fun(self: adr.models.Action): number
+---@type fun(self: adr.models.Action): number?
 mAction.getMaxOriginEffectDuration = function(self)
   local max = self.duration
   for key, var in ipairs(self.effectList) do
@@ -767,7 +782,7 @@ mAction.getMaxOriginEffectDuration = function(self)
   return max
 end
 
----@type fun(self: adr.models.Action): adr.models.Action
+---@type fun(self: adr.models.Action): adr.models.Action?
 mAction.getNewest = function(self)
   local walker = self
   while walker.newAction do
@@ -776,7 +791,7 @@ mAction.getNewest = function(self)
   return walker
 end
 
----@type fun(self: adr.models.Action): adr.models.Action
+---@type fun(self: adr.models.Action): adr.models.Action?
 mAction.getOldest = function(self)
   local walker = self
   while walker.oldAction do
@@ -785,7 +800,7 @@ mAction.getOldest = function(self)
   return walker
 end
 
----@type fun(self: adr.models.Action): string
+---@type fun(self: adr.models.Action): string?
 mAction.getStageInfo = function(self)
   -- Power Lash Guide: show Power Lash icon
   if self.stackEffect and self.stackEffect.stageInfo then
@@ -912,7 +927,7 @@ self.flags.forGround
   return nil
 end
 
----@type fun(self: adr.models.Action): number
+---@type fun(self: adr.models.Action): number?
 mAction.getStageInfo2 = function(self)
   -- fixed value from stackEffect2
   local stackEffect2 = self:getStackEffect2()
@@ -956,7 +971,7 @@ mAction.getStageInfo2 = function(self)
   return nil
 end
 
----@type fun(self: adr.models.Action): number
+---@type fun(self: adr.models.Action): number?
 mAction.getStartTime = function(self)
   if self.tickEffect and self.duration == 0 then
     local start = self.tickEffect.startTime
@@ -972,7 +987,7 @@ mAction.getStartTime = function(self)
   return optEffect and optEffect.startTime or self.startTime
 end
 
----@type fun(self: adr.models.Action): adr.models.Effect
+---@type fun(self: adr.models.Action): adr.models.Effect?
 mAction.getStackEffect = function(self)
   -- For crux-consuming actions, return global crux effect if no local stackEffect
   if self.showCrux then
@@ -1003,7 +1018,7 @@ mAction.getStackEffect = function(self)
   return nil
 end
 
----@type fun(self: adr.models.Action): adr.models.Effect
+---@type fun(self: adr.models.Action): adr.models.Effect?
 mAction.getStackEffect2 = function(self)
   if
     self.stackEffect2 and (self.stackEffect2.duration == 0 or self.stackEffect2.endTime > GetGameTimeMilliseconds())
@@ -1050,7 +1065,7 @@ mAction.isOnPlayerpet = function(self)
   return false
 end
 
----@type fun(self: adr.models.Action): boolean
+---@type fun(self: adr.models.Action): boolean?
 mAction.isUnlimited = function(self)
   local optEffect = self:optEffect()
   local stackEffect = self:getStackEffect()
@@ -1060,7 +1075,7 @@ mAction.isUnlimited = function(self)
     or (self.oldAction and not optEffect and #self.effectList > 0 and GetGameTimeMilliseconds() - self.startTime < 1000)
 end
 
----@type fun(self: adr.models.Action, ability: adr.models.Ability, strict: boolean): boolean
+---@type fun(self: adr.models.Action, ability: adr.models.Ability, strict?: boolean): boolean?
 mAction.matchesAbility = function(self, ability, strict)
   if self.ability:matches(ability, strict) then
     return true
@@ -1075,7 +1090,7 @@ mAction.matchesAbility = function(self, ability, strict)
   end
 end
 
----@type fun(self: adr.models.Action, abilityId: string): boolean
+---@type fun(self: adr.models.Action, abilityId: number, strict?: any): boolean?
 mAction.matchesAbilityId = function(self, abilityId, strict)
   if self.ability.id == abilityId then
     return true
@@ -1088,7 +1103,7 @@ mAction.matchesAbilityId = function(self, abilityId, strict)
   end
 end
 
----@type fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+---@type fun(self: adr.models.Action, abilityIcon: string, strict?: boolean): boolean
 mAction.matchesAbilityIcon = function(self, abilityIcon, strict)
   local key = self.ability.id .. "/" .. abilityIcon .. "/" .. (strict and "y" or "n")
   local value = m.cacheOfActionMatchingAbilityIcon[key]
@@ -1099,7 +1114,7 @@ mAction.matchesAbilityIcon = function(self, abilityIcon, strict)
   m.cacheOfActionMatchingAbilityIcon[key] = value
   return value
 end
----@type fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+---@type fun(self: adr.models.Action, abilityIcon: string, strict?: boolean): boolean
 mAction._matchesAbilityIcon = function(self, abilityIcon, strict)
   local stripIcon = function(icon)
     return icon:gsub("^(.+%d+).+", "%1", 1)
@@ -1120,7 +1135,7 @@ mAction._matchesAbilityIcon = function(self, abilityIcon, strict)
   return false
 end
 
----@type fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+---@type fun(self: adr.models.Action, abilityName: string, strict?: boolean): boolean
 mAction.matchesAbilityName = function(self, abilityName, strict)
   local key = self.ability.id .. "/" .. abilityName .. "/" .. (strict and "y" or "n")
   local value = m.cacheOfActionMatchingAbilityName[key]
@@ -1131,7 +1146,7 @@ mAction.matchesAbilityName = function(self, abilityName, strict)
   m.cacheOfActionMatchingAbilityName[key] = value
   return value
 end
----@type fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+---@type fun(self: adr.models.Action, abilityName: string, strict?: boolean): boolean
 mAction._matchesAbilityName = function(self, abilityName, strict)
   if
     abilityName:find(self.ability.name, 1, true)
@@ -1383,7 +1398,7 @@ mAction.isFilteredByDynamic = function(self, effect, now)
 end
 
 local debuggingLastTime = 0
----@type fun(self: adr.models.Action, debugging: boolean): adr.models.Effect, string
+---@type fun(self: adr.models.Action, debugging?: boolean): adr.models.Effect?, string
 mAction.optEffect = function(self, debugging)
   if debugging then -- 1 sec threshold
     local now = GetGameTimeMilliseconds()
@@ -1449,7 +1464,7 @@ mAction.optEffect = function(self, debugging)
   return nil, "none"
 end
 
----@type fun(self: adr.models.Action): adr.models.Effect
+---@type fun(self: adr.models.Action): adr.models.Effect|false
 mAction.optGallopEffect = function(self)
   for i, effect in ipairs(self.effectList) do
     -- filter Major Gallop if not mount
@@ -1460,7 +1475,7 @@ mAction.optGallopEffect = function(self)
   return false
 end
 
----@type fun(self: adr.models.Action): adr.models.Effect
+---@type fun(self: adr.models.Action): adr.models.Effect?
 mAction.peekLongDurationEffect = function(self)
   for i, effect in ipairs(self.effectList) do
     if effect:isLongDuration() then
@@ -1473,6 +1488,7 @@ end
 ---@type fun(self: adr.models.Action, effect: adr.models.Effect)
 mAction.purgeEffectByTargetUnitId = function(self, targetUnitId)
   ---@type adr.models.Effect
+  ---@type adr.models.Effect|false?
   local purgedEffect = nil
   for key, var in ipairs(self.effectList) do
     if var.unitId == targetUnitId then
@@ -1489,7 +1505,7 @@ mAction.purgeEffectByTargetUnitId = function(self, targetUnitId)
   end
 end
 
----@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect|false?
 mAction.purgeEffect = function(self, effect)
   ---@type adr.models.Effect
   local oldEffect = effect
@@ -1646,7 +1662,7 @@ self.fake or (self.oldAction and self.oldAction.fake)
   return oldEffect
 end
 
----@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect?
 mAction.saveEffect = function(self, effect)
   if effect.drop then
     return

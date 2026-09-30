@@ -16,12 +16,25 @@ local m = { l = l }
 --========================================
 --        types
 --========================================
+---Core注入addon表的运行时字段(泄漏检测阈值与快捷接口)
+---@class adr.addon.M
+---@field actionLeakLogInterval? number
+---@field actionLeakCntValve? number
+---@field clearActions? fun()
+---@field clear? fun()
+---@field clearAreaActions? fun()
+---@field getIdActionMap? fun(): table<number, adr.models.Action>
+---@field getSnActionMap? fun(): table<number, adr.models.Action>
+---@field getTimeActionMap? fun(): table<number, adr.models.Action>
+---Debug模块注入的默认值
+---@field debugDefaults? table
+
 ---Core模块公开表(addon.register("Core#M"))
 ---@class adr.core.M
 ---@field EXTKEY_UPDATE? string
----@field getActionByAbilityId? fun(abilityId: number): adr.models.Action
----@field getActionByAbilityName? fun(abilityName: string, strict: boolean): adr.models.Action
----@field getActionBySlot? fun(hotbarCategory: number, slotNum: number): adr.models.Action
+---@field getActionByAbilityId? fun(abilityId: number): adr.models.Action?
+---@field getActionByAbilityName? fun(abilityName: string, strict?: boolean): adr.models.Action?
+---@field getActionBySlot? fun(hotbarCategory: number, slotNum: number): adr.models.Action?
 ---@field clearActions? fun()
 ---@field clearAreaActions? fun()
 ---@field getIdActionMap? fun(): table<number, adr.models.Action>
@@ -86,7 +99,7 @@ local coreSavedVarsDefaults = {
 
 local GetGameTimeMilliseconds = GetGameTimeMilliseconds
 
----@type fun(origin: string): string
+---@type fun(origin: string): string, integer
 local fStripBracket = function(origin)
   return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$", "%1", 1)
 end
@@ -137,7 +150,7 @@ l.powerLashGuideState = {
   lastGuideType = nil, -- 'show' or 'hide', tracks last sent guide type
 }
 
----@type fun(): number, number
+---@type fun(): number?, number?
 l.findFlameLashSlot = function()
   for hotbarCategory = 0, 1 do
     for slotNum = 3, 8 do
@@ -259,7 +272,7 @@ addon.registerDebugSubSwitch(DSS_TARGET_TRACK, "Target Track [TT]", "Log target 
 
 -- Register Core debug options for the settings menu
 
----@type fun(effect: adr.models.Effect, stacking: boolean): adr.models.Action
+---@type fun(effect: adr.models.Effect, stacking?: boolean): adr.models.Action?, boolean?
 l.findActionByNewEffect = function(effect, stacking)
   -- 0. cache to avoid repeated matching
   ---@type table<number, boolean>
@@ -339,10 +352,11 @@ l.findActionByNewEffect = function(effect, stacking)
   return nil
 end
 
----@type fun(effect: adr.models.Effect, appending: boolean): adr.models.Action, boolean
+---@type fun(effect: adr.models.Effect, appending?: boolean): adr.models.Action?, boolean?
 l.findActionByOldEffect = function(effect, appending)
   -- 1. find that existed
   for i = 1, #l.actionQueue do
+    ---@type adr.models.Action? getNewest可能返回nil(仅作真值/字段访问)
     local action = l.actionQueue[i]
     if action:matchesOldEffect(effect) then
       if action.newAction then
@@ -384,7 +398,7 @@ l.findActionByOldEffect = function(effect, appending)
   return nil
 end
 
----@type fun(tickEffectId: number, unitId: number): adr.models.Action
+---@type fun(tickEffectId: number, unitId: number): adr.models.Action?
 l.findActionByTick = function(tickEffectId, unitId)
   for key, action in pairs(l.idActionMap) do
     if action.tickEffect and action.tickEffect.ability.id == tickEffectId and action.tickEffect.unitId == unitId then
@@ -397,7 +411,7 @@ l.findActionByTick = function(tickEffectId, unitId)
   return nil
 end
 
----@type fun(effect: adr.models.Effect, stacking: boolean): adr.models.Action
+---@type fun(effect: adr.models.Effect, stacking?: boolean): adr.models.Action?
 l.findBarActionByNewEffect = function(effect, stacking)
   -- Special handling for Power Lash Guide effect
   if effect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
@@ -511,7 +525,7 @@ l.ensureCruxActions = function()
   end
 end
 
----@type fun(abilityId: number): adr.models.Action
+---@type fun(abilityId: number): adr.models.Action?
 l.getActionByAbilityId = function(abilityId)
   local action = l.idActionMap[abilityId]
   if action then
@@ -525,7 +539,7 @@ l.getActionByAbilityId = function(abilityId)
   return nil
 end
 
----@type fun(abilityName: string, strict: boolean): adr.models.Action
+---@type fun(abilityName: string, strict?: boolean): adr.models.Action?
 l.getActionByAbilityName = function(abilityName, strict)
   for id, action in pairs(l.idActionMap) do
     if action:matchesAbilityName(abilityName) then
@@ -535,7 +549,7 @@ l.getActionByAbilityName = function(abilityName, strict)
   return nil
 end
 
----@type fun(action: adr.models.Action): adr.models.Action
+---@type fun(action: adr.models.Action): adr.models.Action?
 l.getActionByNewAction = function(action)
   local abilityName = action.ability.name
   local matcher = function(a)
@@ -614,7 +628,7 @@ l.getActionByNewAction = function(action)
   return nil
 end
 
----@type fun(hotbarCategory: number, slotNum: number): adr.models.Action
+---@type fun(hotbarCategory: number, slotNum: number): adr.models.Action?
 l.getActionBySlot = function(hotbarCategory, slotNum)
   for key, var in pairs(l.idActionMap) do
     if var.hotbarCategory == hotbarCategory and var.slotNum == slotNum then
@@ -665,7 +679,9 @@ l.onActionSlotAbilityUsed = function(eventCode, slotNum)
   l.queueAction(action)
   -- 5. replace saved
   if not action.flags.forGround then -- ground and channel action should not inherit old action effects
-    local sameNameAction = l.getActionByNewAction(action) -- Models#Action
+    ---@type adr.models.Action?
+    ---@type adr.models.Action?
+    local sameNameAction = l.getActionByNewAction(action)
 
     if not sameNameAction then
       if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
@@ -827,6 +843,7 @@ l.onCombatEvent = function(
         sourceUnitId
       )
     end
+    ---@type adr.models.Action?
     local action = l.idActionMap[abilityId]
     if action and action.channelUnitId == targetUnitId then
       if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
@@ -2023,13 +2040,13 @@ m.EXTKEY_UPDATE = "Core:update"
 
 -- debug levels deprecated, use fine-grained settings instead
 
----@type fun(abilityId: number): adr.models.Action
+---@type fun(abilityId: number): adr.models.Action?
 m.getActionByAbilityId = l.getActionByAbilityId
 
----@type fun(abilityName: string, strict: boolean): adr.models.Action
+---@type fun(abilityName: string, strict?: boolean): adr.models.Action?
 m.getActionByAbilityName = l.getActionByAbilityName
 
----@type fun(hotbarCategory: number, slotNum: number): adr.models.Action
+---@type fun(hotbarCategory: number, slotNum: number): adr.models.Action?
 m.getActionBySlot = l.getActionBySlot
 
 ---@type fun()

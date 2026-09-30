@@ -19,6 +19,13 @@ local m = { l = l }
 ---Alert模块公开表(addon.register("Alert#M"))，当前无导出成员
 ---@class adr.alert.M
 
+---提醒控件：TopLevelWindow上挂载icon/label/ability/startTime(ESO惯用法，数据挂控件)
+---@class adr.alert.AlertControl : Control
+---@field icon? TextureControl
+---@field label? LabelControl
+---@field ability? adr.models.Ability
+---@field startTime? number
+
 ---到期提醒对象(l.createAlert构造)
 ---@class adr.alert.Alert
 ---@field rule? table 匹配规则{name=...}
@@ -72,7 +79,7 @@ l.controlPool = {}
 
 l.frame = nil --TopLevelWindow#TopLevelWindow
 
----@type Control[]
+---@type adr.alert.AlertControl[]
 l.showedControls = {}
 
 -- Active alerts: alert objects created by rules
@@ -262,6 +269,7 @@ end
 -- Alert rule: timeout (near expiration)
 l.alertRuleTimeout = {
   name = "Timeout",
+  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean, string
   shouldAlert = function(action, alert)
     -- check id list
     if disabledTimeoutAbilityIds[action.ability.id] then
@@ -335,7 +343,7 @@ l.alertRuleTimeout = {
 -- Alert rule: crux (full cruxes to use)
 l.alertRuleCrux = {
   name = "Crux",
-  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean
+  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean, string
   shouldAlert = function(action, alert)
     if action.showCrux then
       local effect = action:getStackEffect()
@@ -351,6 +359,7 @@ l.alertRuleCrux = {
 -- Alert rule: instant (ready to trigger)
 l.alertRuleInstant = {
   name = "Instant",
+  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean, string
   shouldAlert = function(action, alert)
     if l.isActionInstant(action) then
       return true, "is instant"
@@ -400,7 +409,7 @@ l.shouldLog = function(key)
 end
 
 -- Find active alert for action and rule
----@type fun(action: adr.models.Action, rule: table): adr.alert.Alert
+---@type fun(action: adr.models.Action, rule: table): adr.alert.Alert?
 l.findActiveAlert = function(action, rule)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.rule.name == rule.name and alert.action == action then
@@ -411,7 +420,7 @@ l.findActiveAlert = function(action, rule)
 end
 
 -- Find alert by control
----@type fun(control: Control): adr.alert.Alert
+---@type fun(control: adr.alert.AlertControl): adr.alert.Alert?
 l.findAlertByControl = function(control)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.control == control then
@@ -677,7 +686,7 @@ l.openAlertFrame = function()
   l.closeBtn:SetHidden(false)
 end
 
----@type fun(): Control
+---@type fun(): adr.alert.AlertControl
 l.retrieveControl = function()
   local savedVars = l.getSavedVars()
   if #l.controlPool > 0 then
@@ -687,7 +696,7 @@ l.retrieveControl = function()
     return control
   end
   local control = WINDOW_MANAGER:CreateTopLevelWindow()
-  local icon = control:CreateControl(nil, CT_TEXTURE) -- TextureControl#TextureControl
+  local icon = control:CreateControl(nil, CT_TEXTURE)
   icon:SetDrawLayer(DL_CONTROLS)
   icon:SetDimensions(savedVars.alertIconSize, savedVars.alertIconSize)
   icon:SetAlpha(savedVars.alertIconOpacity / 100.0)
@@ -703,7 +712,7 @@ l.retrieveControl = function()
   return control
 end
 
----@type fun(control: Control)
+---@type fun(control: adr.alert.AlertControl)
 l.returnControl = function(control)
   -- clear alert's control reference if linked
   local alert = l.findAlertByControl(control)

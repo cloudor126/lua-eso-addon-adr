@@ -15,11 +15,11 @@ local LINK_TYPE = "ADR_LINK"
 ---@field name? string
 ---@field version? string
 ---@field title? string
----@field addAction? fun(key: string, action: fun())
+---@field addAction? fun(key: string, action: fun(...: any))
 ---@field callExtension? fun(key: string, ...: any)
 ---@field doAction? fun(key: string, ...: any)
----@field extend? fun(key: string, extension: fun())
----@field hookStart? fun(listener: fun())
+---@field extend? fun(key: string, extension: fun(...: any))
+---@field hookStart? fun(listener: fun(...: any))
 ---@field isSimpleWord? fun(s: string): boolean
 ---@field load? fun(typeName: string): any
 ---@field putText? fun(key: string, value: string)
@@ -30,25 +30,25 @@ local LINK_TYPE = "ADR_LINK"
 ---@field registerDebugSubSwitch? fun(dss: string[], displayName: string, tooltip: string)
 ---@field getDebugSwitchMap? fun(): table<string, string>
 ---@field getDebugSettingMap? fun(): table<string, table<string, string[]>>
----@field debugEnabled? fun(dss: string[], abilityName: string): boolean
+---@field debugEnabled? fun(dss: string[], abilityName?: string): boolean
 ---@field debug? fun(format: string, ...: string)
 
 --========================================
 --        l
 --========================================
 ---store actions for bindings
----@type table<string, fun()>
+---@type table<string, fun(...: any)>
 l.actionMap = {}
 ---@type table<string, string>
 l.dict = {}
 ---store extensions for types
----@type table<string, fun()[]>
+---@type table<string, fun(...: any)[]>
 l.extensionMap = {}
 ---@type table<string, any>
 l.registry = {}
 l.started = false
 ---store start listeners for initiation
----@type fun()[]
+---@type fun(...: any)[]
 l.startListeners = {}
 
 ---@type fun(eventCode: number, addonName: string)

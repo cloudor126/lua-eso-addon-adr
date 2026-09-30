@@ -2,7 +2,17 @@
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "runtime.version": "Lua 5.1",
   "runtime.path": ["?.lua"],
-  "diagnostics.globals": ["ActionDurationReminder", "LibAddonMenu2"],
+  "diagnostics.globals": [
+    "ActionDurationReminder",
+    "LibAddonMenu2",
+    "Azurah",
+    "dui",
+    "DL_COUNT",
+    "ZO_PlayerAttributeHealth",
+    "ZO_PlayerAttributeMagicka",
+    "ZO_PlayerAttributeStamina",
+    "ZO_BuffDebuffTopLevelSelfContainer"
+  ],
   "diagnostics.disable": [
     "need-check-nil",
     "assign-type-mismatch",

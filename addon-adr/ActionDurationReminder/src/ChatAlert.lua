@@ -17,6 +17,14 @@ local m = { l = l }
 --========================================
 --        types
 --========================================
+---聊天提醒控件：TopLevelWindow上挂载backdrop/cooldownBar/senderLabel/label/timerId/updateId(ESO惯用法)
+---@class adr.chatalert.ChatAlertControl : Control
+---@field cooldownBar? BackdropControl
+---@field senderLabel? LabelControl
+---@field label? LabelControl
+---@field timerId? number|boolean
+---@field updateId? number
+
 ---聊天提醒对象(l.createAlert构造)：{channelId, fromName, text, control, timerId}
 ---@class adr.chatalert.ChatAlert
 ---@field channelId? number
@@ -64,7 +72,7 @@ local chatAlertSavedVarsDefaults = {
 --        l
 --========================================
 l.controlPool = {}
----@type Control[]
+---@type adr.chatalert.ChatAlertControl[]
 l.showedControls = {}
 ---each: { channelId, fromName, text, control, timerId }
 ---@type adr.chatalert.ChatAlert[]
@@ -103,7 +111,7 @@ end
 --========================================
 --        control pool
 --========================================
----@type fun(): Control
+---@type fun(): adr.chatalert.ChatAlertControl
 l.retrieveControl = function()
   if #l.controlPool > 0 then
     return table.remove(l.controlPool, #l.controlPool)
@@ -142,7 +150,7 @@ l.retrieveControl = function()
   return control
 end
 
----@type fun(control: Control)
+---@type fun(control: adr.chatalert.ChatAlertControl)
 l.returnControl = function(control)
   control.timerId = nil
   if control.updateId then
