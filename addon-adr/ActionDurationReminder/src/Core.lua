@@ -1,12 +1,37 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.utils.M
 local utils = addon.load("Utils#M")
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
+---@type adr.models.M
 local models = addon.load("Models#M")
-local l = {} -- #L
-local m = {l=l} -- #M
+local l = {}
+---@type adr.core.M
+local m = {l=l}
+
+--========================================
+--        types
+--========================================
+---Core模块公开表(addon.register("Core#M"))
+---@class adr.core.M
+---@field EXTKEY_UPDATE? string
+---@field getActionByAbilityId? fun(abilityId: number): adr.models.Action
+---@field getActionByAbilityName? fun(abilityName: string, strict: boolean): adr.models.Action
+---@field getActionBySlot? fun(hotbarCategory: number, slotNum: number): adr.models.Action
+---@field clearActions? fun()
+---@field clearAreaActions? fun()
+---@field getIdActionMap? fun(): table<number, adr.models.Action>
+---@field getSnActionMap? fun(): table<number, adr.models.Action>
+---@field getTimeActionMap? fun(): table<number, adr.models.Action>
+
+---Power Lash引导状态缓存
+---@class adr.core.PowerLashGuideState
+---@field isDragonknight? boolean
+---@field lastGuideType? string
 
 local DS_ACTION = "action" -- debug switch for action
 local DS_EFFECT = "effect" -- debug switch for effect
@@ -47,8 +72,7 @@ local DSS_EFFECT_MATCH = {DS_EFFECT, 'match'}
 -- Target
 local DSS_TARGET_TRACK = {DS_TARGET, 'track'}
 
----
---@type CoreSavedVars
+---@type adr.settings.SavedVars
 local coreSavedVarsDefaults = {
   coreMultipleTargetTracking = true,
   coreMultipleTargetTrackingWithoutClearing = true,
@@ -62,21 +86,25 @@ local coreSavedVarsDefaults = {
 
 local GetGameTimeMilliseconds =GetGameTimeMilliseconds
 
-local fStripBracket -- #(#string:origin)->(#string)
-= function(origin)
+---@type fun(origin: string): string
+local fStripBracket = function(origin)
   return origin:gsub("^[^<]+<%s*([^>]+)%s*>.*$","%1",1)
 end
 
 --========================================
 --        l
 --========================================
-l.actionQueue = {} --#list<Models#Action>
+---@type adr.models.Action[]
+l.actionQueue = {}
 
-l.idActionMap = {}--#map<#number,Models#Action>
+---@type table<number, adr.models.Action>
+l.idActionMap = {}
 
-l.idDurationMap = {} --#map<#number,#number>
+---@type table<number, number>
+l.idDurationMap = {}
 
-l.idFilteringMap = {} --#map<#number,#boolean>
+---@type table<number, boolean>
+l.idFilteringMap = {}
 
 l.gallopAction = nil -- Models#Action
 
@@ -84,29 +112,33 @@ l.lastAction = nil -- Models#Action
 
 l.lastEffectAction = nil -- Models#Action
 
-l.lastQuickslotTime = 0 -- #number
+l.lastQuickslotTime = 0
 
 l.ignoredCache = utils.newRecentCache(3000, 10)
 
-l.ignoredIds = {} -- #map<#number,#boolean>
+---@type table<number, boolean>
+l.ignoredIds = {}
 
-l.snActionMap = {} --#map<#number,Models#Action>
+---@type table<number, adr.models.Action>
+l.snActionMap = {}
 
-l.timeActionMap = {}--#map<#number,Models#Action>
+---@type table<number, adr.models.Action>
+l.timeActionMap = {}
 
-l.targetId = nil -- #number
+l.targetId = nil
 
-l.cacheOfActionMatchingAction = {} -- #map<#string:#boolean>
+---@type table<string, boolean>
+l.cacheOfActionMatchingAction = {}
 
 -- Power Lash Guide state
----@type PowerLashGuideState
+---@type adr.core.PowerLashGuideState
 l.powerLashGuideState = {
   isDragonknight = nil, -- cached class check
   lastGuideType = nil, -- 'show' or 'hide', tracks last sent guide type
 }
 
-l.findFlameLashSlot -- #()->(#number, #number)
-= function()
+---@type fun(): number, number
+l.findFlameLashSlot = function()
   for hotbarCategory = 0, 1 do
     for slotNum = 3, 8 do
       local texture = GetSlotTexture(slotNum, hotbarCategory)
@@ -118,8 +150,8 @@ l.findFlameLashSlot -- #()->(#number, #number)
   return nil, nil
 end
 
-l.checkAbilityIdAndNameOk -- #(#number:abilityId, #string:abilityName)->(#boolean)
-= function(abilityId, abilityName)
+---@type fun(abilityId: number, abilityName: string): boolean
+l.checkAbilityIdAndNameOk = function(abilityId, abilityName)
   local savedValue = l.idFilteringMap[abilityId]
   if savedValue ~= nil then return savedValue end
 
@@ -223,10 +255,11 @@ addon.registerDebugSubSwitch(DSS_TARGET_TRACK, 'Target Track [TT]', 'Log target 
 
 -- Register Core debug options for the settings menu
 
-l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
-= function(effect,stacking)
+---@type fun(effect: adr.models.Effect, stacking: boolean): adr.models.Action
+l.findActionByNewEffect = function(effect,stacking)
   -- 0. cache to avoid repeated matching
-  local notMatched = {} -- #map<#number,#bool>
+  ---@type table<number, boolean>
+  local notMatched = {}
   -- try last performed action
   if l.lastAction and l.lastAction.flags.forGround then
     if not notMatched[l.lastAction.sn] and l.lastAction:matchesNewEffect(effect) then
@@ -288,8 +321,8 @@ l.findActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Ac
   return nil
 end
 
-l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Action, #boolean)
-= function(effect, appending)
+---@type fun(effect: adr.models.Effect, appending: boolean): adr.models.Action, boolean
+l.findActionByOldEffect = function(effect, appending)
   -- 1. find that existed
   for i = 1,#l.actionQueue do
     local action = l.actionQueue[i]
@@ -327,8 +360,8 @@ l.findActionByOldEffect --#(Models#Effect:effect,#boolean:appending)->(Models#Ac
   return nil
 end
 
-l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
-= function(tickEffectId, unitId)
+---@type fun(tickEffectId: number, unitId: number): adr.models.Action
+l.findActionByTick = function(tickEffectId, unitId)
   for key, action in pairs(l.idActionMap) do
     if action.tickEffect and action.tickEffect.ability.id == tickEffectId
       and action.tickEffect.unitId == unitId
@@ -342,8 +375,8 @@ l.findActionByTick --#(#number:tickEffectId, #number:unitId)->(Models#Action)
   return nil
 end
 
-l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models#Action)
-= function(effect, stacking)
+---@type fun(effect: adr.models.Effect, stacking: boolean): adr.models.Action
+l.findBarActionByNewEffect = function(effect, stacking)
   -- Special handling for Power Lash Guide effect
   if effect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
     local hotbarCategory, slotNum = l.findFlameLashSlot()
@@ -414,13 +447,13 @@ l.findBarActionByNewEffect --#(Models#Effect:effect, #boolean:stacking)->(Models
   return nil
 end
 
-l.getSavedVars -- #()->(#CoreSavedVars)
-= function()
+---@type fun(): adr.core.CoreSavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
-l.ensureCruxActions -- #()->()
-= function()
+---@type fun()
+l.ensureCruxActions = function()
   -- Find all crux-consuming slots on the bar and ensure actions exist
   local currentHotbarCategory = GetActiveHotbarCategory()
   local indices = {currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP}
@@ -446,8 +479,8 @@ l.ensureCruxActions -- #()->()
   end
 end
 
-l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
-= function(abilityId)
+---@type fun(abilityId: number): adr.models.Action
+l.getActionByAbilityId = function(abilityId)
   local action = l.idActionMap[abilityId]
   if action then return action end
   for key, var in pairs(l.idActionMap) do
@@ -456,19 +489,18 @@ l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
   return nil
 end
 
-l.getActionByAbilityName -- #(#string:abilityName, #boolean:strict)->(Models#Action)
-= function(abilityName, strict)
+---@type fun(abilityName: string, strict: boolean): adr.models.Action
+l.getActionByAbilityName = function(abilityName, strict)
   for id, action in pairs(l.idActionMap) do
     if action:matchesAbilityName(abilityName) then return action end
   end
   return nil
 end
 
-l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
-= function(action)
+---@type fun(action: adr.models.Action): adr.models.Action
+l.getActionByNewAction = function(action)
   local abilityName = action.ability.name
-  local matcher -- #(Models#Action:a)->(#boolean, #string)
-  = function(a)
+  local matcher = function(a)
     if a:getDuration() > 0 and a:getEndTime(false) < action.startTime then return false end
     if a.ability.id == action.ability.id then return true end
     -- check cache for non-trivial matches
@@ -534,8 +566,8 @@ l.getActionByNewAction -- #(Models#Action:action)->(Models#Action)
   return nil
 end
 
-l.getActionBySlot --#(#number:hotbarCategory, #number:slotNum)->(Models#Action)
-= function(hotbarCategory, slotNum)
+---@type fun(hotbarCategory: number, slotNum: number): adr.models.Action
+l.getActionBySlot = function(hotbarCategory, slotNum)
   for key, var in pairs(l.idActionMap) do
     if var.hotbarCategory == hotbarCategory and var.slotNum == slotNum then
       return var
@@ -544,8 +576,8 @@ l.getActionBySlot --#(#number:hotbarCategory, #number:slotNum)->(Models#Action)
   return nil
 end
 
-l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
-= function(eventCode,slotNum)
+---@type fun(eventCode: number, slotNum: number)
+l.onActionSlotAbilityUsed = function(eventCode,slotNum)
   -- 1. filter other actions
   if slotNum < 3 or slotNum > 8 then return end
   -- 2. create action
@@ -624,8 +656,7 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
         and sameNameAction.descriptionDuration >0 then
         action.inheritDuration = sameNameAction.descriptionDuration
       end
-      local abilityAccepter -- # (#Ability:relatedAbility)->()
-      = function(relatedAbility)
+      local abilityAccepter = function(relatedAbility)
         if not action.ability.name:find(relatedAbility.name,1,true) then
           table.insert(action.relatedAbilityList, relatedAbility)
           if addon.debugEnabled(DSS_ACTION_MATCH, action.ability.name) then
@@ -669,8 +700,8 @@ l.onActionSlotAbilityUsed -- #(#number:eventCode,#number:slotNum)->()
   end
 end
 
-l.onActionUpdateCooldowns -- #(#number:eventCode)->()
-= function(eventCode)
+---@type fun(eventCode: number)
+l.onActionUpdateCooldowns = function(eventCode)
   local remain,duration = GetSlotCooldownInfo(GetCurrentQuickslot(),HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
   if remain>1000 and duration>1000 and duration-remain<100 then
     l.lastQuickslotTime = GetGameTimeMilliseconds()
@@ -678,11 +709,8 @@ l.onActionUpdateCooldowns -- #(#number:eventCode)->()
 end
 
 local flags = {}
-l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
---#string:abilityName,#number:abilityGraphic,#number:abilityActionSlotType,#string:sourceName,
---#number:sourceType,#string:targetName,#number:targetType,#number:hitValue,#number:powerType,
---#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
-= function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
+---@type fun(eventCode: number, result: number, isError: boolean, abilityName: string, abilityGraphic: number, abilityActionSlotType: number, sourceName: string, sourceType: number, targetName: string, targetType: number, hitValue: number, powerType: number, damageType: number, log: boolean, sourceUnitId: number, targetUnitId: number, abilityId: number, overflow: number)
+l.onCombatEvent = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   local now = GetGameTimeMilliseconds()
   abilityName = zo_strformat("<<1>>", abilityName)
@@ -762,11 +790,8 @@ l.onCombatEvent -- #(#number:eventCode,#number:result,#boolean:isError,
   end
 end
 
-l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError,
---#string:abilityName,#number:abilityGraphic,#number:abilityActionSlotType,#string:sourceName,
---#number:sourceType,#string:targetName,#number:targetType,#number:hitValue,#number:powerType,
---#number:damageType,#boolean:log,#number:sourceUnitId,#number:targetUnitId,#number:abilityId,#number:overflow)->()
-= function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
+---@type fun(eventCode: number, result: number, isError: boolean, abilityName: string, abilityGraphic: number, abilityActionSlotType: number, sourceName: string, sourceType: number, targetName: string, targetType: number, hitValue: number, powerType: number, damageType: number, log: boolean, sourceUnitId: number, targetUnitId: number, abilityId: number, overflow: number)
+l.onCombatEventFromPlayer = function(eventCode,result,isError,abilityName,abilityGraphic,abilityActionSlotType,sourceName,sourceType,targetName,
   targetType,hitValue,powerType,damageType,log,sourceUnitId,targetUnitId,abilityId,overflow)
   --
   abilityName = zo_strformat("<<1>>", abilityName)
@@ -949,11 +974,8 @@ l.onCombatEventFromPlayer -- #(#number:eventCode,#number:result,#boolean:isError
   end
 end
 
-l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#string:effectName,
--- #string:unitTag,#number:beginTimeSec,#number:endTimeSec,#number:stackCount,#string:iconName,#string:buffType,
--- #number:effectType,#number:abilityType,#number:statusEffectType,#string:unitName,
--- #number:unitId,#number:abilityId,#number:sourceType)->()
-= function(eventCode,changeType,effectSlot,effectName,unitTag,beginTimeSec,endTimeSec,stackCount,iconName,buffType,
+---@type fun(eventCode: number, changeType: number, effectSlot: number, effectName: string, unitTag: string, beginTimeSec: number, endTimeSec: number, stackCount: number, iconName: string, buffType: string, effectType: number, abilityType: number, statusEffectType: number, unitName: string, unitId: number, abilityId: number, sourceType: number)
+l.onEffectChanged = function(eventCode,changeType,effectSlot,effectName,unitTag,beginTimeSec,endTimeSec,stackCount,iconName,buffType,
   effectType,abilityType,statusEffectType,unitName,unitId,abilityId,sourceType)
   local now = GetGameTimeMilliseconds()
   effectName = effectName:gsub('^.*< (.*) >$','%1'):gsub('%^%w','')
@@ -1047,7 +1069,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   }
   for key, var in pairs(ignoredIdsConfig) do
     if not l.ignoredIds[key] and iconName:find(key,1,true) then
-      local info = 'ignored '..var --#string
+      local info = 'ignored '..var
       l.ignoredIds[key]=info
       l.ignoredIds[abilityId]=info
       return
@@ -1214,7 +1236,7 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
       l.saveAction(action)
       if firstSave then
         -- search player stack buff effects and save them in the newly saved action
-        local numBuffs = GetNumBuffs('player') -- #number
+        local numBuffs = GetNumBuffs('player')
         for i = 1, numBuffs do
           local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
             statusEffectType,abilityId,canClickOff,castByPlayer = GetUnitBuffInfo('player', i)
@@ -1313,8 +1335,8 @@ l.onEffectChanged -- #(#number:eventCode,#number:changeType,#number:effectSlot,#
   end
 end
 
-l.onMountedStateChanged -- #(#number:eventCode,#boolean:mounted)->()
-= function(eventCode,mounted)
+---@type fun(eventCode: number, mounted: boolean)
+l.onMountedStateChanged = function(eventCode,mounted)
   if mounted and l.gallopAction then
     local gallopEffect = l.gallopAction:optGallopEffect()
     if gallopEffect and gallopEffect.endTime>GetGameTimeMilliseconds() then
@@ -1324,16 +1346,18 @@ l.onMountedStateChanged -- #(#number:eventCode,#boolean:mounted)->()
   end
 end
 
-l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
-= function(eventCode,initial)
+---@type fun(eventCode: number, initial: boolean)
+l.onPlayerActivated = function(eventCode,initial)
   -- check toggled actions
-  local tickedActions = {} -- #list<Models#Action>
+  ---@type adr.models.Action[]
+  local tickedActions = {}
   for key,action in pairs(l.idActionMap) do
     if action.tickEffect then
       table.insert(tickedActions,action)
     end
   end
-  local toggledIdInfo = {} -- #map<#number,#boolean>
+  ---@type table<number, boolean>
+  local toggledIdInfo = {}
   local hotbarCategory = GetActiveHotbarCategory()
   for slotNum=3, 8 do
     if IsSlotToggled(slotNum, hotbarCategory) then
@@ -1351,8 +1375,8 @@ l.onPlayerActivated -- #(#number:eventCode,#boolean:initial)->()
   end
 end
 
-l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
-= function(eventCode,inCombat)
+---@type fun(eventCode: number, inCombat: boolean)
+l.onPlayerCombatState = function(eventCode,inCombat)
   if not l.getSavedVars().coreClearAreaActionsOnCombatEnd then return end
   zo_callLater(
     function()
@@ -1364,8 +1388,8 @@ l.onPlayerCombatState -- #(#number:eventCode,#boolean:inCombat)->()
   )
 end
 
-l.onReticleTargetChanged -- #(#number:eventCode)->()
-= function(eventCode)
+---@type fun(eventCode: number)
+l.onReticleTargetChanged = function(eventCode)
   l.targetId = nil
   if not l.getSavedVars().coreMultipleTargetTracking then return end
   if not DoesUnitExist('reticleover') then return end
@@ -1391,7 +1415,7 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
     end
   end
   -- 2. scan all matched buffs
-  local numBuffs = GetNumBuffs('reticleover') -- #number
+  local numBuffs = GetNumBuffs('reticleover')
   local numRestored = 0
   for i = 1, numBuffs do
     local buffName,timeStarted,timeEnding,buffSlot,stackCount,iconFilename,buffType,effectType,abilityType,
@@ -1426,8 +1450,8 @@ l.onReticleTargetChanged -- #(#number:eventCode)->()
   end
 end
 
-l.onStart -- #()->()
-= function()
+---@type fun()
+l.onStart = function()
   EVENT_MANAGER:RegisterForEvent(addon.name, EVENT_ACTION_SLOT_ABILITY_USED, l.onActionSlotAbilityUsed)
   EVENT_MANAGER:RegisterForUpdate(addon.name, 100, l.onUpdate)
   EVENT_MANAGER:RegisterForUpdate(addon.name..'_PowerLash', 200, l.onUpdateForPowerLash)
@@ -1437,9 +1461,9 @@ l.onStart -- #()->()
   EVENT_MANAGER:AddFilterForEvent(addon.name..'_pet', EVENT_EFFECT_CHANGED, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER_PET)
 
   EVENT_MANAGER:RegisterForEvent(addon.name..'_patch', EVENT_EFFECT_CHANGED, function(...)
-    local sourceType = select(17, ... ) -- #string
+    local sourceType = select(17, ... )
     if sourceType == COMBAT_UNIT_TYPE_NONE or sourceType == COMBAT_UNIT_TYPE_TARGET_DUMMY then
-      local icon = select(9, ...) -- #string
+      local icon = select(9, ...)
       -- patch for Force Siphon, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
       if icon:find('minor_lifesteal',1,true) then l.onEffectChanged(...) end
       -- patch for Restoring Aura, this skill effect can only be filtered by COMBAT_UNIT_TYPE_NONE
@@ -1460,8 +1484,8 @@ l.onStart -- #()->()
 end
 
 l.lastUpdateLog = 0
-l.onUpdate -- #()->()
-= function()
+---@type fun()
+l.onUpdate = function()
   l.refineActions()
   l.checkActionLeaks()
   addon.callExtension(m.EXTKEY_UPDATE)
@@ -1472,15 +1496,17 @@ addon.actionLeakLogInterval = 300 -- seconds
 addon.actionLeakCntValve = 20 -- threshold for warning
 l.lastLeakLog = 0
 
-l.checkActionLeaks -- #()->()
-= function()
+---@type fun()
+l.checkActionLeaks = function()
   local savedVars = l.getSavedVars()
   local now = GetGameTimeSeconds()
   if now - l.lastLeakLog < addon.actionLeakLogInterval then return end
 
   -- count actions by ability id
-  local cntMap = {} -- #map<#number,#number>
-  local maxSnMap = {} -- #map<#number,#number>
+  ---@type table<number, number>
+  local cntMap = {}
+  ---@type table<number, number>
+  local maxSnMap = {}
   for sn, action in pairs(l.snActionMap) do
     cntMap[action.ability.id] = (cntMap[action.ability.id] or 0) + 1
     maxSnMap[action.ability.id] = math.max(maxSnMap[action.ability.id] or 0, action.sn)
@@ -1494,7 +1520,8 @@ l.checkActionLeaks -- #()->()
         df("[!ADR!] |t24:24:%s|t%s(%d) #%d", GetAbilityIcon(id), GetAbilityName(id), id, cnt)
       end
       -- remove potential leaked actions (keep the one with highest sn)
-      local toRemove = {} --#list<Models#Action>
+      ---@type adr.models.Action[]
+      local toRemove = {}
       for sn, action in pairs(l.snActionMap) do
         if action.ability.id == id and sn < maxSnMap[id] then
           toRemove[#toRemove+1] = action
@@ -1508,10 +1535,11 @@ l.checkActionLeaks -- #()->()
   if didLog then l.lastLeakLog = now end
 end
 
-l.queueAction -- #(Models#Action:action)->()
-= function(action)
+---@type fun(action: adr.models.Action)
+l.queueAction = function(action)
   l.lastAction = action
-  local newQueue = {} --#list<Models#Action>
+  ---@type adr.models.Action[]
+  local newQueue = {}
   newQueue[1] = action
   local now = GetGameTimeMilliseconds()
   for key, a in ipairs(l.actionQueue) do
@@ -1522,8 +1550,8 @@ l.queueAction -- #(Models#Action:action)->()
   l.actionQueue = newQueue
 end
 
-l.refineActions -- #()->()
-= function()
+---@type fun()
+l.refineActions = function()
   local now = GetGameTimeMilliseconds()
   local endLimit = now - l.getSavedVars().coreSecondsBeforeFade * 1000
   for key,action in pairs(l.idActionMap) do
@@ -1553,8 +1581,8 @@ l.refineActions -- #()->()
   end
 end
 
-l.removeAction -- #(Models#Action:action)->(#boolean)
-= function(action)
+---@type fun(action: adr.models.Action): boolean
+l.removeAction = function(action)
   local removed = false
   -- remove from idActionMap
   local old = l.idActionMap[action.ability.id]
@@ -1579,7 +1607,8 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   l.snActionMap[action.sn] = nil
   -- remove fake/trigger actions from queue, otherwise next fake action will failed to recognize i.e. Crystal Fragment
   if action.oldAction and action.oldAction.fake then
-    local newQueue = {} --#list<Models#Action>
+    ---@type adr.models.Action[]
+    local newQueue = {}
     for key, a in ipairs(l.actionQueue) do
       if a.ability.id ~= action.ability.id and a.ability.id~= action.oldAction.ability.id then
         table.insert(newQueue,a)
@@ -1591,8 +1620,9 @@ l.removeAction -- #(Models#Action:action)->(#boolean)
   return removed
 end
 
-l.isPlayerDragonknight -- #()->(#boolean)Check if player is Dragonknight (cached)
-= function()
+---检查玩家是否龙骑士(缓存)
+---@type fun(): boolean
+l.isPlayerDragonknight = function()
   if l.powerLashGuideState.isDragonknight == nil then
     l.powerLashGuideState.isDragonknight = GetUnitClassId("player") == models.DRAGONKNIGHT_CLASS_ID
   end
@@ -1612,8 +1642,8 @@ l.targetHasOffBalance = function()
   return false
 end
 
-l.sendPowerLashGuide -- #(#string:show)->()
-= function(show)
+---@type fun(show: string)
+l.sendPowerLashGuide = function(show)
   -- Avoid sending same type repeatedly
   if l.powerLashGuideState.lastGuideType == (show and 'show' or 'hide') then
     return
@@ -1674,8 +1704,8 @@ l.sendPowerLashGuide -- #(#string:show)->()
   end
 end
 
-l.onUpdateForPowerLash -- #()->()
-= function()
+---@type fun()
+l.onUpdateForPowerLash = function()
   -- Check if player is Dragonknight
   if not l.isPlayerDragonknight() then
     return
@@ -1717,8 +1747,8 @@ l.onUpdateForPowerLash -- #()->()
   end
 end
 
-l.saveAction -- #(Models#Action:action)->()
-= function(action)
+---@type fun(action: adr.models.Action)
+l.saveAction = function(action)
   l.lastEffectAction = action
 
   -- clear same name action that can have a different id
@@ -1737,16 +1767,14 @@ l.saveAction -- #(Models#Action:action)->()
   for i, effect in ipairs(action.effectList) do
     l.timeActionMap[effect.startTime] = action
   end
-  local getValueActionsInfo -- #(#map<#any,Models#Action>:t)->(#string)
-  = function(t)
+  local getValueActionsInfo = function(t)
     local names = ''
     for key, var in pairs(t) do
       names = names..' '..var:toLogString_Short()
     end
     return names
   end
-  local getKeyNames-- #(#map<#string,#any>:t)->(#string)
-  = function(t)
+  local getKeyNames = function(t)
     local names = ''
     for key, var in pairs(t) do
       names = names..' '..key
@@ -1771,14 +1799,17 @@ m.EXTKEY_UPDATE = "Core:update"
 
 -- debug levels deprecated, use fine-grained settings instead
 
-m.getActionByAbilityId = l.getActionByAbilityId -- #(#number:abilityId)->(Models#Action)
+---@type fun(abilityId: number): adr.models.Action
+m.getActionByAbilityId = l.getActionByAbilityId
 
-m.getActionByAbilityName = l.getActionByAbilityName-- #(#string:abilityName)->(Models#Action)
+---@type fun(abilityName: string, strict: boolean): adr.models.Action
+m.getActionByAbilityName = l.getActionByAbilityName
 
-m.getActionBySlot = l.getActionBySlot-- #(#number:hotbarCategory,#number:slotNum)->(Models#Action)
+---@type fun(hotbarCategory: number, slotNum: number): adr.models.Action
+m.getActionBySlot = l.getActionBySlot
 
-m.clearActions -- #()->()
-= function()
+---@type fun()
+m.clearActions = function()
   if addon.debugEnabled(DSS_ACTION_CLEAR) then
     addon.debug('[AC]')
   end
@@ -1790,8 +1821,8 @@ end
 addon.clearActions = m.clearActions
 addon.clear = m.clearActions
 
-m.clearAreaActions -- #()->()
-= function()
+---@type fun()
+m.clearAreaActions = function()
   if addon.debugEnabled(DSS_ACTION_CLEAR) then
     addon.debug('[ACA]')
   end
@@ -1813,20 +1844,20 @@ m.clearAreaActions -- #()->()
 end
 addon.clearAreaActions = m.clearAreaActions
 
-m.getIdActionMap -- #()->(#map<#number,Models#Action>)
-= function()
+---@type fun(): table<number, adr.models.Action>
+m.getIdActionMap = function()
   return l.idActionMap
 end
 addon.getIdActionMap = m.getIdActionMap
 
-m.getSnActionMap -- #()->(#map<#number,Models#Action>)
-= function()
+---@type fun(): table<number, adr.models.Action>
+m.getSnActionMap = function()
   return l.snActionMap
 end
 addon.getSnActionMap = m.getSnActionMap
 
-m.getTimeActionMap -- #()->(#map<#number,Models#Action>)
-= function()
+---@type fun(): table<number, adr.models.Action>
+m.getTimeActionMap = function()
   return l.timeActionMap
 end
 addon.getTimeActionMap = m.getTimeActionMap
