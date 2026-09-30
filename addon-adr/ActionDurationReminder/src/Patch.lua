@@ -1,50 +1,58 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
+---@type adr.models.M
 local models = addon.load("Models#M")
+---@type adr.core.M
 local core = addon.load("Core#M")
-local l = {} -- #L
-local m = {l=l} -- #M
+local l = {}
+local m = {l=l}
 
----
---@type PatchSavedVars
+--========================================
+--        types
+--========================================
+---@type adr.settings.SavedVars
 local patchSavedVarsDefaults ={
   patchMoveBarsEnabled = true,
 }
 
----
---@type Rect
---@field #number left
---@field #number top
---@field #number right
---@field #number bottom
+---矩形边界(上下左右)
+---@class adr.patch.Rect
+---@field left? number
+---@field top? number
+---@field right? number
+---@field bottom? number
 
----
---@type Info
---@field #number point
---@field Control#Control relativeTo
---@field #number relativePoint
---@field #number offsetX
---@field #number offsetY
---@field #number bottom
+---性条栏锚点信息
+---@class adr.patch.Info
+---@field point? number
+---@field relativeTo? Control
+---@field relativePoint? number
+---@field offsetX? number
+---@field offsetY? number
+---@field bottom? number
 
 --========================================
 --        l
 --========================================
-l.hudInfo = {} -- #map<#string,#Info>
-l.newRectReady = false -- #boolean
-l.shifted = false -- #boolean
+---@type table<string, adr.patch.Info>
+l.hudInfo = {}
+l.newRectReady = false
+l.shifted = false
 
-l.computeNewOffsetY -- #(#list<#Rect>:rectList,#string:name,Control#Control:hud,#number:gap)->(#Rect,#number,#number)
-= function(rectList, name, hud, gap)
+---@type fun(rectList: adr.patch.Rect[], name: string, hud: Control, gap: number): adr.patch.Rect, number, number
+l.computeNewOffsetY = function(rectList, name, hud, gap)
+  ---@type adr.patch.Rect
   local hudRect = {
     left = hud:GetLeft(),
     right = hud:GetRight(),
     top = hud:GetTop(), -- bar have out margin
     bottom = hud:GetBottom(), -- bar have out margin
-  } -- #Rect
+  }
   local delta = 0
   for _,rect in pairs(rectList) do
     delta = delta + l.moveUp(hudRect, rect, gap)
@@ -52,13 +60,13 @@ l.computeNewOffsetY -- #(#list<#Rect>:rectList,#string:name,Control#Control:hud,
   return hudRect, l.hudInfo[name].offsetY + delta, l.hudInfo[name].bottom + delta
 end
 
-l.getSavedVars -- #()->(#PatchSavedVars)
-= function()
+---@type fun(): adr.settings.SavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
-l.moveUp -- #(#Rect:movingRect, #Rect:rect, #number:gap)->(#number)
-= function(movingRect, rect, gap)
+---@type fun(movingRect: adr.patch.Rect, rect: adr.patch.Rect, gap: number): number
+l.moveUp = function(movingRect, rect, gap)
   if movingRect.left > rect.right or movingRect.right < rect.left then return 0 end
   if movingRect.bottom + gap < rect.top or movingRect.top - gap > rect.bottom then return 0 end
   local delta = rect.top - gap - movingRect.bottom
@@ -67,8 +75,8 @@ l.moveUp -- #(#Rect:movingRect, #Rect:rect, #number:gap)->(#number)
   return delta
 end
 
-l.onCoreUpdate -- #()->()
-= function()
+---@type fun()
+l.onCoreUpdate = function()
   -- 1.1 check if enabled
   if not l.getSavedVars().patchMoveBarsEnabled then return end
   -- 1.2 check if we have done
@@ -86,12 +94,13 @@ l.onCoreUpdate -- #()->()
   if shiftBarVisible and l.shifted then return end
   -- 2. collect info
   local gap = 5
+  ---@type table<string, Control>
   local hudTable = {
     hb = ZO_PlayerAttributeHealth,
     mb = ZO_PlayerAttributeMagicka,
     sb = ZO_PlayerAttributeStamina,
     bb = ZO_BuffDebuffTopLevelSelfContainer,
-  } -- #map<#string,Control#Control>
+  }
   -- 2.1 record their original info
   for name,hud in pairs(hudTable) do
     if not l.hudInfo[name] then

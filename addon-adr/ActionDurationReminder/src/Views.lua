@@ -1,23 +1,96 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
-local l = {} -- #L
-local m = {l=l} -- #M
-local mWidget = {} -- #Widget
-local mCooldown = {} -- #Cooldown
+local l = {}
+---@type adr.views.M
+local m = {l=l}
+---@type adr.views.Widget
+local mWidget = {}
+---@type adr.views.Cooldown
+local mCooldown = {}
+
+--========================================
+--        types
+--========================================
+---冷却扫光控件(m.newCooldown构造)，setmetatable({},{__index=mCooldown})
+---@class adr.views.Cooldown
+---@field id? number
+---@field background? Control
+---@field drawTier? number
+---@field hidden? boolean
+---@field shifted? boolean
+---@field duration? number
+---@field endTime? number
+---@field topRight? TextureControl
+---@field right? TextureControl
+---@field bottom? TextureControl
+---@field left? TextureControl
+---@field topLeft? TextureControl
+---@field endingSeconds? number
+---@field endingColor? number[]
+---@field color? number[]
+---@field alpha? number
+---@field createPart? fun(self: adr.views.Cooldown): TextureControl
+---@field draw? fun(self: adr.views.Cooldown, duration: number, endTime: number)
+---@field drawRemain? fun(self: adr.views.Cooldown, remain: number)
+---@field setAlpha? fun(self: adr.views.Cooldown, alpha: number)
+---@field setColor? fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
+---@field setEndingColor? fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
+---@field setEndingSeconds? fun(self: adr.views.Cooldown, endingSeconds: number)
+---@field setHidden? fun(self: adr.views.Cooldown, hidden: boolean)
+---@field start? fun(self: adr.views.Cooldown, remain: number, duration: number, noEnding?: boolean)
+---@field updateColor? fun(self: adr.views.Cooldown, ending: boolean)
+
+---槽位计时控件(m.newWidget构造)，setmetatable({},{__index=mWidget})
+---@class adr.views.Widget
+---@field slotNum? number
+---@field shifted? boolean
+---@field appendIndex? number
+---@field visible? boolean
+---@field slotIcon? Control
+---@field backdrop? TextureControl
+---@field background? TextureControl
+---@field label? LabelControl
+---@field stackLabel? LabelControl
+---@field stackLabel2? LabelControl
+---@field cooldown? adr.views.Cooldown
+---@field cdMark? number
+---@field progressBar? Control
+---@field updateCooldown? fun(self: adr.views.Widget)
+---@field updateProgress? fun(self: adr.views.Widget)
+---@field updateFont? fun(self: adr.views.Widget)
+---@field updateLabelYOffset? fun(self: adr.views.Widget)
+---@field updateStackLabelYOffset? fun(self: adr.views.Widget)
+---@field updateShiftOffset? fun(self: adr.views.Widget)
+---@field updateWithAction? fun(self: adr.views.Widget, action: adr.models.Action, now: number)
+
+---Views模块公开表(addon.register("Views#M"))
+---@class adr.views.M
+---@field getSlotBaseSize? fun(): number
+---@field newCooldown? fun(background: Control, drawTier: number): adr.views.Cooldown
+---@field newWidget? fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
+---@field updateWidgetCooldown? fun(widget: adr.views.Widget)
+---@field updateWidgetProgress? fun(widget: adr.views.Widget)
+---@field updateWidgetFont? fun(widget: adr.views.Widget)
+---@field updateWidgetLabelYOffset? fun(widget: adr.views.Widget)
+---@field updateWidgetShiftOffset? fun(widget: adr.views.Widget)
+---@field updateWidgetShiftScalePercent? fun(widget: adr.views.Widget)
+---@field updateWidgetStackLabelYOffset? fun(widget: adr.views.Widget)
 
 --========================================
 --        l
 --========================================
-l.getSavedVars -- #()->(Bar#BarSavedVars)
-= function()
+---@type fun(): adr.bar.BarSavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
-l.getSlotBaseSize -- #()->(#number)
-= function()
+---@type fun(): number
+l.getSlotBaseSize = function()
   -- Get actual slot size from the game's action bar
   -- ZO_ActionBar_GetButton works for both keyboard and gamepad modes
   local button = ZO_ActionBar_GetButton(3)
@@ -29,42 +102,44 @@ l.getSlotBaseSize -- #()->(#number)
   return height
 end
 
-l.getSlotBaseGap -- #()->(#number)
-= function()
+---@type fun(): number
+l.getSlotBaseGap = function()
   return 5 -- fixed gap, same as before
 end
 
-l.getLabelFont -- #()->(#string)
-= function()
+---@type fun(): string
+l.getLabelFont = function()
   return "$("..l.getSavedVars().barLabelFontName..")|"..l.getSavedVars().barLabelFontSize.."|"..l.getSavedVars().barLabelFontStyle
 end
 
-l.getStackLabelFont -- #()->(#string)
-= function()
+---@type fun(): string
+l.getStackLabelFont = function()
   return "$("..l.getSavedVars().barStackLabelFontName..")|"..l.getSavedVars().barStackLabelFontSize.."|"..l.getSavedVars().barStackLabelFontStyle
 end
 
-l.debugIdList = {} -- #list<#number>
+---@type number[]
+l.debugIdList = {}
 --========================================
 --        m
 --========================================
 m.getSlotBaseSize = l.getSlotBaseSize
-m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
-= function(background, drawTier)
-  local inst = {} -- #Cooldown
+---@type fun(background: Control, drawTier: number): adr.views.Cooldown
+m.newCooldown = function(background, drawTier)
+  ---@type adr.views.Cooldown
+  local inst = {}
   inst.id = GetGameTimeMilliseconds()
   table.insert(l.debugIdList,inst.id)
-  inst.background = background -- Control#Control
-  inst.drawTier = drawTier -- #number
+  inst.background = background
+  inst.drawTier = drawTier
   inst.hidden = false
   inst.shifted = false
-  inst.duration = 0 -- #number
-  inst.endTime = 0 -- #number
-  inst.topRight = nil -- TextureControl#TextureControl
-  inst.right = nil -- TextureControl#TextureControl
-  inst.bottom = nil -- TextureControl#TextureControl
-  inst.left = nil -- TextureControl#TextureControl
-  inst.topLeft = nil -- TextureControl#TextureControl
+  inst.duration = 0
+  inst.endTime = 0
+  inst.topRight = nil
+  inst.right = nil
+  inst.bottom = nil
+  inst.left = nil
+  inst.topLeft = nil
   inst.endingSeconds = l.getSavedVars().barCooldownEndingSeconds
   inst.endingColor = l.getSavedVars().barCooldownEndingColor
   inst.color = l.getSavedVars().barCooldownColor
@@ -72,19 +147,20 @@ m.newCooldown -- #(Control#Control:background, #number:drawTier)->(#Cooldown)
   return setmetatable(inst, {__index=mCooldown})
 end
 
-m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widget)
-= function(slotNum, shifted, appendIndex)
+---@type fun(slotNum: number, shifted: boolean, appendIndex: number): adr.views.Widget
+m.newWidget = function(slotNum, shifted, appendIndex)
   local savedVars = l.getSavedVars() -- Bar#BarSavedVars
-  local inst = {} -- #Widget
-  inst.slotNum = slotNum --#number
-  inst.shifted = shifted --#boolean
-  inst.appendIndex = appendIndex --#number
+  ---@type adr.views.Widget
+  local inst = {}
+  inst.slotNum = slotNum
+  inst.shifted = shifted
+  inst.appendIndex = appendIndex
   --
   inst.visible = true
   local slot = ZO_ActionBar_GetButton(slotNum, slotNum >8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
   local slotIcon = slot:GetNamedChild("Icon")
   --  local flipCard = slot:GetNamedChild("FlipCard")
-  inst.slotIcon = slotIcon --Control#Control
+  inst.slotIcon = slotIcon
   --  inst.flipCard = flipCard --Control#Control
   --========================================
   local backdrop = nil
@@ -97,7 +173,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     if l.getSavedVars().barShowShiftScalePercent<100 then
       backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
     end
-    inst.backdrop = backdrop --TextureControl#TextureControl
+    inst.backdrop = backdrop
     backdrop:SetDrawLayer(DL_BACKGROUND)
     if appendIndex then
       backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (appendIndex-1) * (baseSize + 5), offsetY)
@@ -107,13 +183,13 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     backdrop:SetDimensions(baseSize, baseSize)
     backdrop:SetTexture("esoui/art/actionbar/abilityframe64_up.dds")
     background = WINDOW_MANAGER:CreateControl(nil, backdrop, CT_TEXTURE)
-    inst.background = background--TextureControl#TextureControl
+    inst.background = background
     local offset = dui and 4.2 or 2
     background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, offset, offset)
     background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset )
   end
   local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)  --LabelControl#LabelControl
-  inst.label = label --LabelControl#LabelControl
+  inst.label = label
   label:SetFont(l.getLabelFont())
   label:SetColor(1,1,1)
   label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -126,7 +202,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
     label:SetAnchor(BOTTOM, backdrop or slotIcon, BOTTOM, 0, shifted and (-savedVars.barLabelYOffsetInShift+1) or (-savedVars.barLabelYOffset + 3))
   end
   local stackLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
-  inst.stackLabel = stackLabel --LabelControl#LabelControl
+  inst.stackLabel = stackLabel
   stackLabel:SetFont(l.getStackLabelFont())
   stackLabel:SetColor(1,1,1)
   stackLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -134,7 +210,7 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(TOPRIGHT, backdrop or slotIcon, TOPRIGHT, -5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
   local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
-  inst.stackLabel2 = stackLabel2 --LabelControl#LabelControl
+  inst.stackLabel2 = stackLabel2
   stackLabel2:SetFont(l.getStackLabelFont())
   stackLabel2:SetColor(1,1,1)
   stackLabel2:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
@@ -142,7 +218,8 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel2:SetAnchor(TOPLEFT, backdrop or slotIcon, TOPLEFT, 5, shifted and( - savedVars.barStackLabelYOffsetInShift + 2) or ( - savedVars.barStackLabelYOffset + 0))
 
-  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH) --#Cooldown
+  ---@type adr.views.Cooldown
+  inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH)
   inst.cooldown.shifted = shifted
   inst.cdMark = 0
 
@@ -161,8 +238,8 @@ m.newWidget -- #(#number:slotNum,#boolean:shifted, #number:appendIndex)->(#Widge
   return setmetatable(inst, {__index=mWidget})
 end
 
-m.updateWidgetCooldown -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetCooldown = function(widget)
   local savedVars = l.getSavedVars()
   if widget.cooldown then
     widget.cooldown:setHidden(not savedVars.barCooldownVisible)
@@ -177,8 +254,8 @@ m.updateWidgetCooldown -- #(#Widget:widget)->()
   end
 end
 
-m.updateWidgetProgress -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetProgress = function(widget)
   local savedVars = l.getSavedVars()
   if widget.progressBar then
     local r, g, b = unpack(savedVars.barProgressColor)
@@ -187,15 +264,15 @@ m.updateWidgetProgress -- #(#Widget:widget)->()
   end
 end
 
-m.updateWidgetFont -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetFont = function(widget)
   if widget.label then widget.label:SetFont(l.getLabelFont()) end
   if widget.stackLabel then widget.stackLabel:SetFont(l.getStackLabelFont()) end
   if widget.stackLabel2 then widget.stackLabel2:SetFont(l.getStackLabelFont()) end
 end
 
-m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetLabelYOffset = function(widget)
   if widget.label then
     widget.label:ClearAnchors()
     widget.label:SetAnchor(BOTTOM, widget.label:GetParent(), BOTTOM, 0,
@@ -203,8 +280,8 @@ m.updateWidgetLabelYOffset -- #(#Widget:widget)->()
   end
 end
 
-m.updateWidgetShiftOffset -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetShiftOffset = function(widget)
   if not widget.shifted then return end
   local offsetX = l.getSavedVars().barShiftOffsetX
   local offsetY = l.getSavedVars().barShiftOffsetY
@@ -220,16 +297,16 @@ m.updateWidgetShiftOffset -- #(#Widget:widget)->()
   end
 end
 
-m.updateWidgetShiftScalePercent -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetShiftScalePercent = function(widget)
   if not widget.shifted then return end
   if widget.backdrop then
     widget.backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent/100)
   end
 end
 
-m.updateWidgetStackLabelYOffset -- #(#Widget:widget)->()
-= function(widget)
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetStackLabelYOffset = function(widget)
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()
     widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, 0,
@@ -245,8 +322,8 @@ end
 --========================================
 --        mCooldown
 --========================================
-mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
-= function(self)
+---@type fun(self: adr.views.Cooldown): TextureControl
+mCooldown.createPart = function(self)
   local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
   if self.drawTier and self.drawTier>0 then
     part:SetDrawTier(self.drawTier)
@@ -256,13 +333,13 @@ mCooldown.createPart --#(#Cooldown:self)->(TextureControl#TextureControl)
     part:SetDrawLevel(2)
   end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
-  local opacity = l.getSavedVars().barCooldownOpacity -- #number
+  local opacity = l.getSavedVars().barCooldownOpacity
   if opacity<100 then part:SetAlpha(opacity/100) end
   return part
 end
 
-mCooldown.draw -- #(#Cooldown:self, #number:duration, #number:endTime)->()
-= function(self, duration, endTime)
+---@type fun(self: adr.views.Cooldown, duration: number, endTime: number)
+mCooldown.draw = function(self, duration, endTime)
   if self.duration~=duration or self.endTime ~= endTime then return end -- another start happened
   local remain = endTime - GetGameTimeMilliseconds()
   self:drawRemain(remain)
@@ -273,11 +350,12 @@ mCooldown.draw -- #(#Cooldown:self, #number:duration, #number:endTime)->()
   end
 end
 
-mCooldown.drawRemain -- #(#Cooldown:self, #number:remain, #boolean:shifted)->()
-= function(self, remain)
+---@type fun(self: adr.views.Cooldown, remain: number, shifted: boolean)
+mCooldown.drawRemain = function(self, remain)
   -- 0. check hidden
   if not l.getSavedVars().barCooldownVisible or self.duration == 0 or self.hidden or remain<=0 then
-    local controlList = {self.topLeft,self.left,self.bottom,self.right, self.topRight} --#list<TextureControl#TextureControl>
+    ---@type TextureControl[]
+    local controlList = {self.topLeft,self.left,self.bottom,self.right, self.topRight}
     for key, var in pairs(controlList) do
       if var then var:SetHidden(true) end
     end
@@ -367,35 +445,35 @@ mCooldown.drawRemain -- #(#Cooldown:self, #number:remain, #boolean:shifted)->()
   self:updateColor(not self.noEnding and remain<self.endingSeconds*1000)
 end
 
-mCooldown.setAlpha -- #(#Cooldown:self, #number:alpha)->()
-= function(self, alpha)
+---@type fun(self: adr.views.Cooldown, alpha: number)
+mCooldown.setAlpha = function(self, alpha)
   self.alpha = alpha
 end
 
-mCooldown.setColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
-= function(self, r,g,b,a)
+---@type fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
+mCooldown.setColor = function(self, r,g,b,a)
   self.color = {r,g,b,a}
 end
 
-mCooldown.setEndingColor -- #(#Cooldown:self, #number:r, #number:g, #number:b, #number:a)->()
-= function(self, r,g,b,a)
+---@type fun(self: adr.views.Cooldown, r: number, g: number, b: number, a: number)
+mCooldown.setEndingColor = function(self, r,g,b,a)
   self.endingColor = {r,g,b,a}
 end
 
-mCooldown.setEndingSeconds -- #(#Cooldown:self, #number:endingSeconds)->()
-= function(self, endingSeconds)
+---@type fun(self: adr.views.Cooldown, endingSeconds: number)
+mCooldown.setEndingSeconds = function(self, endingSeconds)
   self.endingSeconds = endingSeconds
 end
 
-mCooldown.setHidden -- #(#Cooldown:self, #boolean:hidden)->()
-= function(self, hidden)
+---@type fun(self: adr.views.Cooldown, hidden: boolean)
+mCooldown.setHidden = function(self, hidden)
   if hidden == self.hidden then return end
   self.hidden = hidden
   self:draw(self.duration, self.endTime)
 end
 
-mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration, #boolean:noEnding)->()
-= function(self, remain, duration, noEnding)
+---@type fun(self: adr.views.Cooldown, remain: number, duration: number, noEnding: boolean)
+mCooldown.start = function(self, remain, duration, noEnding)
   local endTime = GetGameTimeMilliseconds() + remain
   if not self.hidden and self.duration == duration and self.endTime == endTime then
     return
@@ -407,9 +485,10 @@ mCooldown.start -- #(#Cooldown:self, #number:remain, #number:duration, #boolean:
   self:draw(duration, self.endTime)
 end
 
-mCooldown.updateColor --#(#Cooldown:self, #boolean:ending)->()
-= function(self, ending)
-  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight} -- #list<TextureControl#TextureControl>
+---@type fun(self: adr.views.Cooldown, ending: boolean)
+mCooldown.updateColor = function(self, ending)
+  ---@type TextureControl[]
+  local list = {self.topLeft,self.left,self.bottom,self.right,self.topRight}
   for key, var in ipairs(list) do
     if var then
       var:SetColor(unpack(ending and self.endingColor or self.color))
@@ -421,8 +500,8 @@ end
 --========================================
 --        mWidget
 --========================================
-mWidget.hide  -- #(#Widget:self)->()
-= function(self)
+---@type fun(self: adr.views.Widget)
+mWidget.hide = function(self)
   if self.backdrop then self.backdrop:SetHidden(true) end
   if self.background then self.background:SetHidden(true) end
   self.label:SetHidden(true)
@@ -433,20 +512,26 @@ mWidget.hide  -- #(#Widget:self)->()
   self.visible = false
 end
 
-mWidget.updateCooldown = m.updateWidgetCooldown -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateCooldown = m.updateWidgetCooldown
 
-mWidget.updateProgress = m.updateWidgetProgress -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateProgress = m.updateWidgetProgress
 
-mWidget.updateFont = m.updateWidgetFont -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateFont = m.updateWidgetFont
 
-mWidget.updateLabelYOffset = m.updateWidgetLabelYOffset -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateLabelYOffset = m.updateWidgetLabelYOffset
 
-mWidget.updateStackLabelYOffset = m.updateWidgetStackLabelYOffset -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateStackLabelYOffset = m.updateWidgetStackLabelYOffset
 
-mWidget.updateShiftOffset = m.updateWidgetShiftOffset -- #(#Widget:self)->()
+---@type fun(self: adr.views.Widget)
+mWidget.updateShiftOffset = m.updateWidgetShiftOffset
 
-mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->()
-= function(self, action, now)
+---@type fun(self: adr.views.Widget, action: adr.models.Action, now: number)
+mWidget.updateWithAction = function(self, action, now)
   self.visible = true
   if self.backdrop then self.backdrop:SetHidden(false) end
   if self.background then
@@ -589,8 +674,8 @@ mWidget.updateWithAction -- #(#Widget:self, Models#Action:action,#number:now)->(
   end
 end
 
-mWidget.updateWithSlot -- #(#Widget:self, #number:slotNum)->()
-= function(self, slotNum)
+---@type fun(self: adr.views.Widget, slotNum: number)
+mWidget.updateWithSlot = function(self, slotNum)
   self.visible = true
   if self.backdrop then self.backdrop:SetHidden(false) end
   if self.background then

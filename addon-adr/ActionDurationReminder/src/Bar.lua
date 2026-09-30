@@ -1,16 +1,27 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
+---@type adr.core.M
 local core = addon.load("Core#M")
+---@type adr.views.M
 local views = addon.load("Views#M")
+---@type adr.models.M
 local models = addon.load("Models#M")
-local l = {} -- #L
-local m = {l=l} -- #M
+local l = {}
+---@type adr.bar.M
+local m = {l=l}
 
----
---@type BarSavedVars
+--========================================
+--        types
+--========================================
+---Bar模块公开表(addon.register("Bar#M"))，当前无导出成员
+---@class adr.bar.M
+
+---@type adr.settings.SavedVars
 local barSavedVarsDefaults
   = {
     barEnabled = true,
@@ -53,20 +64,26 @@ local barSavedVarsDefaults
 --========================================
 --        l
 --========================================
-l.shiftBarFrame = nil -- BackdropControl#BackdropControl
-l.mainBarWidgetMap = {}--#map<#number, Views#Widget>
-l.quickslotWidget = nil --Views#Widget
-l.quickslotFakeAction = nil --Models#Action
-l.shiftedBarWidgetMap = {}--#map<#number, Views#Widget>
-l.appendedBarWidgetMap = {}--#map<#number, Views#Widget>
+---@type BackdropControl
+l.shiftBarFrame = nil
+---@type table<number, adr.views.Widget>
+l.mainBarWidgetMap = {}
+---@type adr.views.Widget
+l.quickslotWidget = nil
+---@type adr.models.Action
+l.quickslotFakeAction = nil
+---@type table<number, adr.views.Widget>
+l.shiftedBarWidgetMap = {}
+---@type table<number, adr.views.Widget>
+l.appendedBarWidgetMap = {}
 
-l.getSavedVars -- #()->(#BarSavedVars)
-= function()
+---@type fun(): adr.settings.SavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
-l.hideWidgets -- #()->()
-= function()
+---@type fun()
+l.hideWidgets = function()
   for key, var in pairs(l.mainBarWidgetMap) do
     var:hide()
   end
@@ -78,11 +95,12 @@ l.hideWidgets -- #()->()
   end
 end
 
-l.onCoreUpdate -- #()->()
-= function()
+---@type fun()
+l.onCoreUpdate = function()
   if not l.getSavedVars().barEnabled then return end
   local now = GetGameTimeMilliseconds()
-  local showedActionMap = {} --#map<#number,Models#Action>
+  ---@type table<number, adr.models.Action>
+  local showedActionMap = {}
   local hotbarCategory = GetActiveHotbarCategory()
   -- 1. show in action bar widgets
   for slotNum = 3,8 do
@@ -140,8 +158,10 @@ l.onCoreUpdate -- #()->()
   end
   -- 4. prepare to show shift and extend
   if not l.getSavedVars().barShowShift then return end
-  local toShowActionMap = {} --#map<#number,adr.model.Action#Action>
-  local toShowIdList = {} --#list<#number>
+  ---@type table<number, adr.models.Action>
+  local toShowActionMap = {}
+  ---@type number[]
+  local toShowIdList = {}
   for id, action in pairs(core.getIdActionMap()) do
     if not showedActionMap[id] then
       -- filter removed long-stack action (but keep actions with stackEffect)
@@ -202,8 +222,8 @@ l.onCoreUpdate -- #()->()
   end
 end
 
-l.openShiftBarFrame -- #()->()
-= function()
+---@type fun()
+l.openShiftBarFrame = function()
   local slot3 = ZO_ActionBar_GetButton(3).slot -- Control#Control
   local slot7 = ZO_ActionBar_GetButton(7).slot -- Control#Control
   if not l.shiftBarFrame then
@@ -285,8 +305,8 @@ l.openShiftBarFrame -- #()->()
   l.shiftBarCloseBtn:SetHidden(false)
 end
 
-l.updateWidgets -- #(#(Views#Widget:widget)->():func)->()
-= function(func)
+---@type fun(func: fun(Views#Widget:widget)->())
+l.updateWidgets = function(func)
   for _, widget in pairs(l.mainBarWidgetMap) do
     func(widget)
   end

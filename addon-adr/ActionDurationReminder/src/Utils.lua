@@ -2,19 +2,40 @@
 --        vars
 --========================================
 
-local addon = ActionDurationReminder -- Addon#M
-local m = {} -- #M
-local mRecentCache = {} -- #RecentCache
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.utils.M
+local m = {}
+---@type adr.utils.RecentCache
+local mRecentCache = {}
+
+--========================================
+--        types
+--========================================
+---近期计数缓存(滑动窗口)对象，构造于m.newRecentCache，setmetatable({},{__index=mRecentCache})
+---@class adr.utils.RecentCache
+---@field num? number 窗口槽数
+---@field unit? number 每槽时长(ms)
+---@field offset? number 当前窗口序号
+---@field data? table<number, table<any, number>> 各槽计数
+---@field get? fun(self: adr.utils.RecentCache, key: any): number
+---@field mark? fun(self: adr.utils.RecentCache, key: any)
+---@field roll? fun(self: adr.utils.RecentCache)
+
+---Utils模块公开表(addon.register("Utils#M"))
+---@class adr.utils.M
+---@field newRecentCache? fun(duration: number, num: number): adr.utils.RecentCache
 
 --========================================
 --        m
 --========================================
 
-m.newRecentCache -- #(#number:duration,#number:num)->(#RecentCache)
-= function(duration, num)
-  local recentCache = {} -- #RecentCache
-  recentCache.num = num --#number
-  recentCache.unit = math.floor(duration/num) --#number
+---@type fun(duration: number, num: number): adr.utils.RecentCache
+m.newRecentCache = function(duration, num)
+  ---@type adr.utils.RecentCache
+  local recentCache = {}
+  recentCache.num = num
+  recentCache.unit = math.floor(duration/num)
   recentCache.offset = 0
   recentCache.data = {}
   setmetatable(recentCache,{__index=mRecentCache})
@@ -24,8 +45,8 @@ end
 --========================================
 --        mRecentCache
 --========================================
-mRecentCache.get -- #(#RecentCache:self, #any:key)->(#number)
-= function(self, key)
+---@type fun(self: adr.utils.RecentCache, key: any): number
+mRecentCache.get = function(self, key)
   self:roll()
   local result = 0
   for index=1, self.num do
@@ -35,8 +56,8 @@ mRecentCache.get -- #(#RecentCache:self, #any:key)->(#number)
   return result
 end
 
-mRecentCache.mark -- #(#RecentCache:self, #any:key)->()
-= function(self, key)
+---@type fun(self: adr.utils.RecentCache, key: any)
+mRecentCache.mark = function(self, key)
   self:roll()
   self.data[1] = self.data[1] or {}
   local slot = self.data[1]
@@ -47,8 +68,8 @@ mRecentCache.mark -- #(#RecentCache:self, #any:key)->()
   end
 end
 
-mRecentCache.roll -- #(#RecentCache:self)->()
-= function(self)
+---@type fun(self: adr.utils.RecentCache)
+mRecentCache.roll = function(self)
   local newOffset = math.floor(GetGameTimeMilliseconds()/self.unit)
 
   local shift = newOffset-self.offset

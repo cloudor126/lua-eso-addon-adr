@@ -1,12 +1,31 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
+---@type adr.models.M
 local models = addon.load("Models#M")
+---@type adr.core.M
 local core = addon.load("Core#M")
-local l = {} -- #L
-local m = {l=l} -- #M
+local l = {}
+---@type adr.alert.M
+local m = {l=l}
+
+--========================================
+--        types
+--========================================
+---Alert模块公开表(addon.register("Alert#M"))，当前无导出成员
+---@class adr.alert.M
+
+---到期提醒对象(l.createAlert构造)
+---@class adr.alert.Alert
+---@field rule? table 匹配规则{name=...}
+---@field action? adr.models.Action
+---@field ability? adr.models.Ability 展示用副本
+---@field startTime? number
+---@field control? Control
 
 local DS_ALERT = "alert" -- debug switch for alert
 
@@ -18,16 +37,16 @@ local DSS_ALERT_SKIP = {DS_ALERT, 'skip'}      -- alert skipped
 local DSS_ALERT_REMOVE = {DS_ALERT, 'remove'}  -- alert removed by rule
 local DSS_ALERT_CREATE = {DS_ALERT, 'create'}  -- alert created by rule
 
+---@type table<string, boolean>
 local zhFlags = {
   zh = true,
   ze = true,
   zf = true,
   zg = true,
   jf = true,
-} -- #map<#string,#boolean>
+}
 
----
---@type AlertSavedVars
+---@type adr.settings.SavedVars
 local alertSavedVarsDefaults ={
   alertEnabled = true,
   alertIconOnly = false,
@@ -54,13 +73,16 @@ l.controlPool = {}
 
 l.frame = nil --TopLevelWindow#TopLevelWindow
 
-l.showedControls = {} -- #list<Control#Control>
+---@type Control[]
+l.showedControls = {}
 
 -- Active alerts: alert objects created by rules
 -- Each alert: { rule, action, ability, startTime, control }
-l.activeAlerts = {} -- #list<#Alert>
+---@type adr.alert.Alert[]
+l.activeAlerts = {}
 
-l.soundChoices = {} -- #list<#number>
+---@type number[]
+l.soundChoices = {}
 for k,v in pairs(SOUNDS) do
   table.insert(l.soundChoices, k)
 end
@@ -72,8 +94,8 @@ local disabledTimeoutAbilityIds = {
   [20824] = true,
 }
 -- Check if ability passes whitelist/blacklist filters
-l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
-= function(ability)
+---@type fun(ability: adr.models.Ability): boolean
+l.shouldShowAbility = function(ability)
   local keywords = l.getSavedVars().alertKeyWords:lower()
   local checked = false
   local checkOk = false
@@ -119,8 +141,8 @@ l.shouldShowAbility -- #(Models#Ability:ability)->(#boolean)
 end
 
 -- Show alert UI for an alert object
-l.showAlert -- #(#Alert:alert)->()
-= function(alert)
+---@type fun(alert: adr.alert.Alert)
+l.showAlert = function(alert)
   if alert.control then return end -- already shown
 
   local savedVars = l.getSavedVars()
@@ -157,8 +179,8 @@ end
 --========================================
 
 -- Shared detection: is action in instant/ready-to-trigger state?
-l.isActionInstant --#(Models#Action:action)->(#boolean)
-= function(action)
+---@type fun(action: adr.models.Action): boolean
+l.isActionInstant = function(action)
   local stackEffect = action:getStackEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
   -- check fakeInstant i.e. Crystal Fragment
@@ -196,8 +218,8 @@ l.isActionInstant --#(Models#Action:action)->(#boolean)
 end
 
 -- Check if action should skip common preconditions
-l.shouldSkipAction --#(Models#Action:action)->(#boolean)
-= function(action)
+---@type fun(action: adr.models.Action): boolean
+l.shouldSkipAction = function(action)
   if action.alertSkipResult ~= nil then return action.alertSkipResult end
 
   local skipReason = nil
@@ -276,8 +298,8 @@ l.alertRuleTimeout
 -- Alert rule: crux (full cruxes to use)
 l.alertRuleCrux = {
   name = "Crux",
-  shouldAlert -- #(Models#Action:action, #Alert:alert)->(#boolean)
-  = function(action, alert)
+  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean
+  shouldAlert = function(action, alert)
     if action.showCrux then
       local effect = action:getStackEffect()
       if effect and effect.stackCount == 3 then
@@ -305,8 +327,8 @@ l.alertRuleInstant = {
 l.alertRulePowerLash --
 = {
   name = "PowerLash",
-  shouldAlert -- #(Models#Action:action, #Alert:alert)->(#boolean, #string)
-  = function(action, alert)
+  ---@type fun(action: adr.models.Action, alert: adr.alert.Alert): boolean, string
+  shouldAlert = function(action, alert)
     local stackEffect = action:getStackEffect() -- Models#Effect
     if stackEffect and stackEffect.ability.id == models.POWER_LASH_GUIDE_ABILITY_ID then
       return true, "power lash ready"
@@ -326,10 +348,12 @@ l.alertRules = {
 
 -- Debug log throttle: prevent repeated logs within interval
 local logThrottleInterval = 1 -- seconds
-local logThrottleMap = {} -- #map<#string,#number> key lastLogTime
+---key lastLogTime
+---@type table<string, number>
+local logThrottleMap = {}
 
-l.shouldLog -- #(#string:key)->(#boolean)
-= function(key)
+---@type fun(key: string): boolean
+l.shouldLog = function(key)
   local now = GetGameTimeSeconds()
   local lastTime = logThrottleMap[key]
   if lastTime and now - lastTime < logThrottleInterval then
@@ -340,8 +364,8 @@ l.shouldLog -- #(#string:key)->(#boolean)
 end
 
 -- Find active alert for action and rule
-l.findActiveAlert --#(Models#Action:action, #table:rule)->(#Alert)
-= function(action, rule)
+---@type fun(action: adr.models.Action, rule: table): adr.alert.Alert
+l.findActiveAlert = function(action, rule)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.rule.name == rule.name and alert.action == action then
       return alert
@@ -351,8 +375,8 @@ l.findActiveAlert --#(Models#Action:action, #table:rule)->(#Alert)
 end
 
 -- Find alert by control
-l.findAlertByControl --#(#Control:control)->(#Alert)
-= function(control)
+---@type fun(control: Control): adr.alert.Alert
+l.findAlertByControl = function(control)
   for _, alert in ipairs(l.activeAlerts) do
     if alert.control == control then
       return alert
@@ -362,8 +386,8 @@ l.findAlertByControl --#(#Control:control)->(#Alert)
 end
 
 -- Create a new alert for action and rule
-l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
-= function(action, rule, reason)
+---@type fun(action: adr.models.Action, rule: table, reason: string): adr.alert.Alert
+l.createAlert = function(action, rule, reason)
   if addon.debugEnabled(DSS_ALERT_CREATE, action.ability.name) then
     addon.debug("[L+]rule '%s' created(%s) alert for %s", rule.name, reason or "?", action:toLogString())
   end
@@ -383,12 +407,14 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
   end
   local stackEffect = action:getStackEffect()
 
-  local alert = {} -- #Alert
+  ---@type adr.alert.Alert
+  local alert = {}
   alert.rule = rule
-  alert.action = action -- Modles#Action
-  alert.ability = showAbility -- Models#Ability
-  alert.startTime = action.startTime -- #number
-  alert.control = nil -- #Control
+  alert.action = action
+  alert.ability = showAbility
+  alert.startTime = action.startTime
+  ---@type Control
+  alert.control = nil
   table.insert(l.activeAlerts, alert)
 
   -- show UI immediately
@@ -397,8 +423,8 @@ l.createAlert --#(Models#Action:action, #table:rule, #string:reason)->(#Alert)
 end
 
 -- Remove an alert
-l.removeAlert --#(#Alert:alert, #string:reason)->()
-= function(alert, reason)
+---@type fun(alert: adr.alert.Alert, reason: string)
+l.removeAlert = function(alert, reason)
   -- hide control if associated
   if alert.control then
     if addon.debugEnabled(DSS_ALERT_REMOVE, alert.ability.name) then
@@ -416,8 +442,8 @@ l.removeAlert --#(#Alert:alert, #string:reason)->()
   end
 end
 
-l.removeAllAlertsByAction --#(Models#Action:action, #string:reason)->()
-= function(action, reason)
+---@type fun(action: adr.models.Action, reason: string)
+l.removeAllAlertsByAction = function(action, reason)
   -- remove from activeAlerts
   for i, a in ipairs(l.activeAlerts) do
     if a.action == action then
@@ -426,8 +452,8 @@ l.removeAllAlertsByAction --#(Models#Action:action, #string:reason)->()
   end
 end
 
-l.checkAction --#(Models#Action:action)->()
-= function(action)
+---@type fun(action: adr.models.Action)
+l.checkAction = function(action)
   -- common static preconditions
   if l.shouldSkipAction(action) then return end
 
@@ -451,23 +477,24 @@ l.checkAction --#(Models#Action:action)->()
   end
 end
 
-l.findSoundIndex -- #(#string:name)->(#number)
-= function(name)
+---@type fun(name: string): number
+l.findSoundIndex = function(name)
   for key, var in ipairs(l.soundChoices) do
     if var==name then return key end
   end
   return -1
 end
 
-l.getSavedVars -- #()->(#AlertSavedVars)
-= function()
+---@type fun(): adr.settings.SavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
 -- Remove alerts whose action no longer exists
-l.cleanupStaleAlerts -- #(#map<#number,Models#Action>:snActionMap)->()
-= function(snActionMap)
-  local toRemove = {} -- #list<Alert>
+---@type fun(snActionMap: table<number, adr.models.Action>)
+l.cleanupStaleAlerts = function(snActionMap)
+  ---@type adr.alert.Alert[]
+  local toRemove = {}
   for _, alert in ipairs(l.activeAlerts) do
     local actionExists = false
     for _, a in pairs(snActionMap) do
@@ -486,8 +513,8 @@ l.cleanupStaleAlerts -- #(#map<#number,Models#Action>:snActionMap)->()
 end
 
 -- Check orphaned controls (controls without active alerts)
-l.checkOrphanedControls -- #()->()
-= function()
+---@type fun()
+l.checkOrphanedControls = function()
   for _, control in ipairs(l.showedControls) do
     if not control:IsHidden() then
       local alert = l.findAlertByControl(control)
@@ -501,8 +528,8 @@ l.checkOrphanedControls -- #()->()
   end
 end
 
-l.onCoreUpdate -- #()->()
-= function()
+---@type fun()
+l.onCoreUpdate = function()
   local savedVars = l.getSavedVars()
   if not savedVars.alertEnabled then return end
 
@@ -524,8 +551,8 @@ l.onCoreUpdate -- #()->()
   l.checkOrphanedControls()
 end
 
-l.openAlertFrame -- #()->()
-= function()
+---@type fun()
+l.openAlertFrame = function()
   local savedVars = l.getSavedVars()
   if not l.frame then
     l.frame = WINDOW_MANAGER:CreateTopLevelWindow()
@@ -602,8 +629,8 @@ end
 
 
 
-l.retrieveControl -- #()->(Control#Control)
-= function()
+---@type fun(): Control
+l.retrieveControl = function()
   local savedVars = l.getSavedVars()
   if #l.controlPool >0 then
     local control = table.remove(l.controlPool,#l.controlPool)
@@ -628,8 +655,8 @@ l.retrieveControl -- #()->(Control#Control)
   return control
 end
 
-l.returnControl -- #(Control#Control:control)->()
-= function(control)
+---@type fun(control: Control)
+l.returnControl = function(control)
   -- clear alert's control reference if linked
   local alert = l.findAlertByControl(control)
   if alert then

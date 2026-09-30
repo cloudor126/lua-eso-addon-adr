@@ -6,10 +6,28 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
+---@type adr.addon.M
+local addon = ActionDurationReminder
+---@type adr.settings.M
 local settings = addon.load("Settings#M")
-local l = {} -- #L
-local m = {l=l} -- #M
+local l = {}
+---@type adr.chatalert.M
+local m = {l=l}
+
+--========================================
+--        types
+--========================================
+---聊天提醒对象(l.createAlert构造)：{channelId, fromName, text, control, timerId}
+---@class adr.chatalert.ChatAlert
+---@field channelId? number
+---@field fromName? string
+---@field text? string
+---@field control? Control
+---@field timerId? number
+
+---ChatAlert模块公开表(addon.register("ChatAlert#M"))
+---@class adr.chatalert.M
+---@field resetWelcomePrompt? fun()
 
 local DS_CHATALERT = "chatalert" -- debug switch for chat alert
 
@@ -18,7 +36,7 @@ local DSS_CHATALERT_HIDE = {DS_CHATALERT, 'hide'}   -- chat alert hidden [KH]
 local DSS_CHATALERT_SKIP = {DS_CHATALERT, 'skip'}   -- chat alert skipped [K^]
 
 ---
---@type ChatAlertSavedVars
+---@type adr.settings.SavedVars
 local chatAlertSavedVarsDefaults = {
   chatAlertEnabled = false,
   chatAlertDurationSeconds = 3,
@@ -46,8 +64,11 @@ local chatAlertSavedVarsDefaults = {
 --        l
 --========================================
 l.controlPool = {}
-l.showedControls = {} -- #list<Control#Control>
-l.activeAlerts = {}   -- #list<#ChatAlert>  each: { channelId, fromName, text, control, timerId }
+---@type Control[]
+l.showedControls = {}
+---each: { channelId, fromName, text, control, timerId }
+---@type adr.chatalert.ChatAlert[]
+l.activeAlerts = {}
 l.inCombat = false
 l.frame = nil
 l.closeBtn = nil
@@ -59,29 +80,29 @@ for k,v in pairs(SOUNDS) do
 end
 table.sort(l.soundChoices)
 
-l.findSoundIndex -- #(#string:name)->(#number)
-= function(name)
+---@type fun(name: string): number
+l.findSoundIndex = function(name)
   for key, var in ipairs(l.soundChoices) do
     if var == name then return key end
   end
   return -1
 end
 
-l.getSavedVars -- #()->(#ChatAlertSavedVars)
-= function()
+---@type fun(): adr.settings.SavedVars
+l.getSavedVars = function()
   return settings.getSavedVars()
 end
 
-l.getAccountSavedVars -- #()->(#ChatAlertSavedVars)
-= function()
+---@type fun(): adr.settings.SavedVars
+l.getAccountSavedVars = function()
   return settings.getAccountSavedVars()
 end
 
 --========================================
 --        control pool
 --========================================
-l.retrieveControl -- #()->(Control#Control)
-= function()
+---@type fun(): Control
+l.retrieveControl = function()
   if #l.controlPool > 0 then
     return table.remove(l.controlPool, #l.controlPool)
   end
@@ -119,8 +140,8 @@ l.retrieveControl -- #()->(Control#Control)
   return control
 end
 
-l.returnControl -- #(Control#Control:control)->()
-= function(control)
+---@type fun(control: Control)
+l.returnControl = function(control)
   control.timerId = nil
   if control.updateId then
     EVENT_MANAGER:UnregisterForUpdate(addon.name.."_ChatAlertBar"..control.updateId)
@@ -142,8 +163,8 @@ end
 --========================================
 --        display
 --========================================
-l.getAnchorParams -- #(#string:alignment, #number:offsetX)->(#number:anchorPoint, #number:adjustedX)
-= function(alignment, offsetX)
+---@type fun(alignment: string, offsetX: number): number, number
+l.getAnchorParams = function(alignment, offsetX)
   if alignment == "left" then
     return BOTTOMLEFT, -150 + offsetX
   elseif alignment == "right" then
@@ -153,8 +174,8 @@ l.getAnchorParams -- #(#string:alignment, #number:offsetX)->(#number:anchorPoint
   end
 end
 
-l.repositionControls -- #()->()
-= function()
+---@type fun()
+l.repositionControls = function()
   local savedVars = l.getSavedVars()
   local yOffset = 0
   local anchorPoint, adjustedX = l.getAnchorParams(savedVars.chatAlertAlignment, savedVars.chatAlertOffsetX)
@@ -168,8 +189,8 @@ l.repositionControls -- #()->()
   end
 end
 
-l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text, #number:r, #number:g, #number:b)->()
-= function(channelId, fromName, text, r, g, b)
+---@type fun(channelId: number, fromName: string, text: string, r: number, g: number, b: number)
+l.showChatAlert = function(channelId, fromName, text, r, g, b)
   local savedVars = l.getSavedVars()
 
   -- Enforce max concurrent alerts: remove oldest if at limit
@@ -300,8 +321,8 @@ l.showChatAlert -- #(#number:channelId, #string:fromName, #string:text, #number:
   end, savedVars.chatAlertDurationSeconds * 1000)
 end
 
-l.hideAllAlerts -- #()->()
-= function()
+---@type fun()
+l.hideAllAlerts = function()
   while #l.showedControls > 0 do
     l.returnControl(l.showedControls[1])
   end
@@ -325,8 +346,8 @@ l.channelToCategoryMap = {
   [CHAT_CHANNEL_GUILD_5] = CHAT_CATEGORY_GUILD_5,
 }
 
-l.getChannelColor -- #(#number:channelType)->(#number,#number,#number)
-= function(channelType)
+---@type fun(channelType: number): number, number, number
+l.getChannelColor = function(channelType)
   local category = l.channelToCategoryMap[channelType]
   if category then
     local r, g, b = GetChatCategoryColor(category)
@@ -347,8 +368,8 @@ l.getChannelColor -- #(#number:channelType)->(#number,#number,#number)
   return 1, 1, 1
 end
 
-l.getGuildPrefix -- #(#number:channelType)->(#string|nil)
-= function(channelType)
+---@type fun(channelType: number): string|nil
+l.getGuildPrefix = function(channelType)
   if channelType >= CHAT_CHANNEL_GUILD_1 and channelType <= CHAT_CHANNEL_GUILD_5 then
     local guildIndex = channelType - CHAT_CHANNEL_GUILD_1 + 1
     local guildId = GetGuildId(guildIndex)
@@ -369,8 +390,8 @@ l.getGuildPrefix -- #(#number:channelType)->(#string|nil)
   return nil
 end
 
-l.onChatMessageChannel -- #(#number:eventCode,#MsgChannelType:channelType,#string:fromName,#string:text,#boolean:isCustomerService,#string:fromDisplayName)->()
-= function(eventCode, channelType, fromName, text, isCustomerService, fromDisplayName)
+---@type fun(eventCode: number, channelType: MsgChannelType, fromName: string, text: string, isCustomerService: boolean, fromDisplayName: string)
+l.onChatMessageChannel = function(eventCode, channelType, fromName, text, isCustomerService, fromDisplayName)
   if not l.getAccountSavedVars().chatAlertEnabled then return end
   local savedVars = l.getSavedVars()
 
@@ -434,8 +455,8 @@ end
 --========================================
 --        combat state
 --========================================
-l.onPlayerCombatState -- #(#number:eventCode, #boolean:inCombat)->()
-= function(eventCode, inCombat)
+---@type fun(eventCode: number, inCombat: boolean)
+l.onPlayerCombatState = function(eventCode, inCombat)
   l.inCombat = inCombat
   if not inCombat and l.getSavedVars().chatAlertOnlyInCombat then
     l.hideAllAlerts()
@@ -445,8 +466,8 @@ end
 --========================================
 --        positioning frame
 --========================================
-l.openChatAlertFrame -- #()->()
-= function()
+---@type fun()
+l.openChatAlertFrame = function()
   local savedVars = l.getSavedVars()
   if not l.frame then
     l.frame = WINDOW_MANAGER:CreateTopLevelWindow()
@@ -523,8 +544,8 @@ end
 --========================================
 --        first-run prompt
 --========================================
-l.registerWelcomeDialog -- #()->()
-= function()
+---@type fun()
+l.registerWelcomeDialog = function()
   ESO_Dialogs["ADR_CHAT_ALERT_WELCOME"] =
   {
     title =
@@ -568,8 +589,8 @@ l.registerWelcomeDialog -- #()->()
   }
 end
 
-l.showWelcomePrompt -- #()->()
-= function()
+---@type fun()
+l.showWelcomePrompt = function()
   -- Always use account-wide storage for welcome prompt
   local accountSavedVars = l.getAccountSavedVars()
   if accountSavedVars.chatAlertPromptShown then return end
@@ -580,8 +601,8 @@ end
 --========================================
 --        start
 --========================================
-l.onStart -- #()->()
-= function()
+---@type fun()
+l.onStart = function()
   EVENT_MANAGER:RegisterForEvent(addon.name.."_ChatAlert", EVENT_CHAT_MESSAGE_CHANNEL, l.onChatMessageChannel)
   EVENT_MANAGER:RegisterForEvent(addon.name.."_ChatAlert", EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
   l.inCombat = IsUnitInCombat('player')
