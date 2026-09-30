@@ -1,12 +1,177 @@
 --========================================
 --        vars
 --========================================
-local addon = ActionDurationReminder -- Addon#M
-local l = {} -- #L
-local m = {l=l} -- #M
-local mAction = {} -- #Action
-local mAbility = {} -- #Ability
-local mEffect = {} -- #Effect
+---@type adr.addon.M
+local addon = ActionDurationReminder
+local l = {}
+---@type adr.models.M
+local m = {l=l}
+---@type adr.models.Action
+local mAction = {}
+---@type adr.models.Ability
+local mAbility = {}
+---@type adr.models.Effect
+local mEffect = {}
+
+--========================================
+--        types
+--========================================
+---主键槽位动作(面板技能)运行时对象，构造于m.newAction，setmetatable({},{__index=mAction})
+---@class adr.models.Action
+---@field fake? boolean
+---@field sn? number
+---@field targetOut? boolean
+---@field slotNum? number
+---@field crafted? boolean
+---@field craftedId? number
+---@field ability? adr.models.Ability
+---@field relatedAbilityList? adr.models.Ability[]
+---@field channeled? boolean
+---@field castTime? number
+---@field startTime? number
+---@field duration? number
+---@field configDuration? number
+---@field inheritDuration? number
+---@field showCrux? number 仅作真值用
+---@field description? string
+---@field effectEndTimes? number[]
+---@field descriptionDuration? number
+---@field descriptionNums? table<number, boolean>
+---@field endTime? number
+---@field inCombat? boolean
+---@field lastEffectTime? number
+---@field channelStartTime? number
+---@field channelEndTime? number
+---@field channelUnitId? number
+---@field oldAction? adr.models.Action
+---@field newAction? adr.models.Action
+---@field hotbarCategory? number
+---@field flags? adr.models.ActionFlags
+---@field data? table
+---@field effectList? adr.models.Effect[]
+---@field stackEffect? adr.models.Effect
+---@field stackEffect2? adr.models.Effect 触发加成层数
+---@field tickEffect? adr.models.Effect
+---@field tickEffectDoubled? boolean
+---@field mainEffectPurged? boolean
+---@field targetId? number
+---@field getAreaEffectCount? fun(self: adr.models.Action): number
+---@field getDuration? fun(self: adr.models.Action): number, string
+---@field getEndTime? fun(self: adr.models.Action, debugging: boolean): number
+---@field getFullEndTime? fun(self: adr.models.Action): number
+---@field getFlagsInfo? fun(self: adr.models.Action): string
+---@field getMaxOriginEffectDuration? fun(self: adr.models.Action): number
+---@field getNewest? fun(self: adr.models.Action): adr.models.Action
+---@field getOldest? fun(self: adr.models.Action): adr.models.Action
+---@field getStageInfo? fun(self: adr.models.Action): string
+---@field getStageInfo2? fun(self: adr.models.Action): number
+---@field getStartTime? fun(self: adr.models.Action): number
+---@field getStackEffect? fun(self: adr.models.Action): adr.models.Effect
+---@field getStackEffect2? fun(self: adr.models.Action): adr.models.Effect
+---@field needEndingAlert? fun(self: adr.models.Action): boolean
+---@field hasEffect? fun(self: adr.models.Action): boolean
+---@field isOnPlayer? fun(self: adr.models.Action): boolean
+---@field isOnPlayerpet? fun(self: adr.models.Action): boolean
+---@field isUnlimited? fun(self: adr.models.Action): boolean
+---@field matchesAbility? fun(self: adr.models.Action, ability: adr.models.Ability, strict: boolean): boolean
+---@field matchesAbilityId? fun(self: adr.models.Action, abilityId: string): boolean
+---@field matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+---@field _matchesAbilityIcon? fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+---@field matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+---@field _matchesAbilityName? fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+---@field matchesNewEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+---@field _matchesNewEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+---@field matchesOldEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+---@field calclevel? fun(self: adr.models.Action, effect: adr.models.Effect): number
+---@field sortEffectList? fun(self: adr.models.Action)
+---@field recalcEffectLevels? fun(self: adr.models.Action)
+---@field isFilteredByDynamic? fun(self: adr.models.Action, effect: adr.models.Effect, now: number): boolean
+---@field optEffect? fun(self: adr.models.Action, debugging: boolean): adr.models.Effect, string
+---@field optGallopEffect? fun(self: adr.models.Action): adr.models.Effect
+---@field peekLongDurationEffect? fun(self: adr.models.Action): adr.models.Effect
+---@field purgeEffectByTargetUnitId? fun(self: adr.models.Action, effect: adr.models.Effect)
+---@field purgeEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+---@field saveEffect? fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+---@field toLogString? fun(self: adr.models.Action): string
+---@field toLogString_Short? fun(self: adr.models.Action): string
+---@field toLogString_SingleLine? fun(self: adr.models.Action): string
+---@field updateStackInfo? fun(self: adr.models.Action, stackCount: number, effect: adr.models.Effect): boolean
+
+---技能静态信息对象，构造于m.newAbility，setmetatable({},{__index=mAbility})
+---@class adr.models.Ability
+---@field id? number
+---@field type? number
+---@field showName? string
+---@field name? string
+---@field icon? string
+---@field icon2? string
+---@field progressionName? string
+---@field icon3? string
+---@field description? string
+---@field matches? fun(self: adr.models.Ability, other: adr.models.Ability, strict: boolean): boolean
+---@field toLogString? fun(self: adr.models.Ability): string
+
+---效果(玩家/目标身上的buff、dot、tick)运行时对象，构造于m.newEffect，setmetatable({},{__index=mEffect})
+---@class adr.models.Effect
+---@field ability? adr.models.Ability
+---@field isCrux? boolean
+---@field unitTag? string player|playerpet|others
+---@field unitId? number
+---@field startTime? number
+---@field endTime? number
+---@field duration? number
+---@field ignored? boolean
+---@field ignorableDebuff? boolean
+---@field stackCount? number
+---@field tickRate? number
+---@field combatEventId? number 可追踪的特定战斗事件
+---@field level? number
+---@field levelIsLow? boolean
+---@field isOnPlayer? fun(self: adr.models.Effect): boolean
+---@field isOnPlayerpet? fun(self: adr.models.Effect): boolean
+---@field isLongDuration? fun(self: adr.models.Effect): boolean
+---@field isMajorMinorBuff? fun(self: adr.models.Effect): boolean
+---@field isMinorBuff? fun(self: adr.models.Effect): boolean
+---@field toLogString? fun(self: adr.models.Effect): string
+
+---动作标志位集合(见m.newAction构造)
+---@class adr.models.ActionFlags
+---@field forArea? boolean
+---@field forEnemy? boolean
+---@field forGround? boolean
+---@field forSelf? boolean
+---@field forTank? boolean
+---@field shifted? boolean
+---@field onlyOneTarget? boolean
+
+---魔核(crux)管理器
+---@class adr.models.Crux
+---@field effect? adr.models.Effect
+---@field getEffect? fun(): adr.models.Effect
+---@field setEffect? fun(effect: adr.models.Effect)
+
+---Models模块公开表(addon.register("Models#M"))
+---@class adr.models.M
+---@field DRAGONKNIGHT_CLASS_ID? number
+---@field FLAME_LASH_ICON_KEYWORD? string
+---@field OFF_BALANCE_ICON_KEYWORD? string
+---@field POWER_LASH_ABILITY_ID? number
+---@field POWER_LASH_GUIDE_ABILITY_ID? number
+---@field DUR_SOURCE_TICK? string
+---@field DUR_SOURCE_CHANNEL? string
+---@field DUR_SOURCE_FILTER? string
+---@field DUR_SOURCE_PRIORITY? string
+---@field DUR_SOURCE_SELF? string
+---@field DUR_SOURCE_DESC? string
+---@field DUR_SOURCE_NONE? string
+---@field crux? adr.models.Crux
+---@field cacheOfActionMatchingEffect? table<string, boolean>
+---@field cacheOfActionMatchingAbilityName? table<string, boolean>
+---@field cacheOfActionMatchingAbilityIcon? table<string, boolean>
+---@field patchAbilityName? fun(name: string): string
+---@field newAbility? fun(id: number, name: string, icon: string): adr.models.Ability
+---@field newAction? fun(slotNum: number, hotbarCategory: number): adr.models.Action
+---@field newEffect? fun(ability: adr.models.Ability, unitTag: string, unitId: number, startTime: number, endTime: number, stackCount: number, tickRate: number): adr.models.Effect
 
 local DS_MODEL = "model" -- debug switch for model
 
@@ -53,18 +218,19 @@ m.DUR_SOURCE_NONE = ''         -- no duration
 --========================================
 --        Global Crux Registry
 --========================================
+---@type adr.models.Crux
 local mCrux = {}  -- private table for crux management
 m.crux = mCrux    -- expose to public
 
 mCrux.effect = nil  -- current active crux effect
 
-mCrux.getEffect -- #()->(#Effect)
-= function()
+---@type fun(): adr.models.Effect
+mCrux.getEffect = function()
   return mCrux.effect
 end
 
-mCrux.setEffect -- #(#Effect:effect)->()
-= function(effect)
+---@type fun(effect: adr.models.Effect)
+mCrux.setEffect = function(effect)
   if effect then
     effect.level = LEVEL_CRUX
     effect.levelIsLow = true
@@ -82,8 +248,8 @@ local NAME_PATCH_ZH = {
 }
 
 -- 应用技能名补丁，返回修正后的名称
-m.patchAbilityName -- #(#string:name)->(#string)
-= function(name)
+---@type fun(name: string): string
+m.patchAbilityName = function(name)
   if GetCVar("language.2") ~= 'zh' then return name end
   for wrong, right in pairs(NAME_PATCH_ZH) do
     if name:find(wrong, 1, true) then
@@ -93,8 +259,8 @@ m.patchAbilityName -- #(#string:name)->(#string)
   return name
 end
 
-local fRefinePath -- #(#string:path)->(#string)
-= function(path)
+---@type fun(path: string): string
+local fRefinePath = function(path)
   if not path then return path end
   path = path:lower()
   -- 过滤三个数字后的部分，例如 "/esoui/art/icons/ability_werewolf_002_rend_b.dds"
@@ -107,16 +273,16 @@ local fRefinePath -- #(#string:path)->(#string)
   return path
 end
 
-local fSkillIconName -- #(#string:path)->(#string)
-= function(path)
+---@type fun(path: string): string
+local fSkillIconName = function(path)
   if not path then return nil end
   local name = path:match("([^/]+)%.") or path
   name = name:gsub("_[ab]$", "")
   return name:lower()
 end
 
-local fMatchIconPath -- #(#string:path1,#string:path2)->(#boolean)
-= function(path1, path2)
+---@type fun(path1: string, path2: string): boolean
+local fMatchIconPath = function(path1, path2)
   if path1=='' or path1=='/' or path2=='' or path2=='/' then return false end
   if path1 == path2 then return true end -- fast check
   path1 = fRefinePath(path1)
@@ -124,8 +290,8 @@ local fMatchIconPath -- #(#string:path1,#string:path2)->(#boolean)
   return path1:find(path2,1,true) or path2:find(path1,1,true)
 end
 
-local fStripBracket -- #(#string:origin,#boolean:zh)->(#string)
-= function(origin, zh)
+---@type fun(origin: string, zh: boolean): string
+local fStripBracket = function(origin, zh)
   if zh then
     return origin:gsub("^%s*([^<]+)%s*<.*$","%1",1)
   else
@@ -140,28 +306,32 @@ end
 --========================================
 --        m
 --========================================
-m.cacheOfActionMatchingEffect = {} -- #map<#string:#boolean>
-m.cacheOfActionMatchingAbilityName = {} -- #map<#string:#boolean>
-m.cacheOfActionMatchingAbilityIcon = {} -- #map<#string:#boolean>
-m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
-= function(id, name, icon)
-  local ability = {} -- #Ability
-  local getIconPath -- #(#string:icon)->(#string)
-  = function(icon)
+---@type table<string, boolean>
+m.cacheOfActionMatchingEffect = {}
+---@type table<string, boolean>
+m.cacheOfActionMatchingAbilityName = {}
+---@type table<string, boolean>
+m.cacheOfActionMatchingAbilityIcon = {}
+---@type fun(id: number, name: string, icon: string): adr.models.Ability
+m.newAbility = function(id, name, icon)
+  ---@type adr.models.Ability
+  local ability = {}
+  ---@type fun(icon: string): string
+  local getIconPath = function(icon)
     return icon:sub(1,1)=='/' and icon or ('/'..icon)
   end
   icon = getIconPath(icon)
-  ability.id = id -- #number
+  ability.id = id
   ability.type = 0
-  ability.showName = zo_strformat("<<1>>", name) --#string
-  ability.name= fStripBracket(ability.showName) --#string
+  ability.showName = zo_strformat("<<1>>", name)
+  ability.name= fStripBracket(ability.showName)
   if ability.showName ~= ability.name then
     ability.showName = fStripBracket(ability.showName,true)
   end
-  ability.icon = icon -- #string
+  ability.icon = icon
   local icon2 = getIconPath(GetAbilityIcon(id))
   if icon2 ~= icon then
-    ability.icon2 = icon2 -- #string
+    ability.icon2 = icon2
   end
   local hasProgression,progressionIndex = GetAbilityProgressionXPInfoFromAbilityId(id)
   ability.progressionName = hasProgression and GetAbilityProgressionInfo(progressionIndex) or nil
@@ -174,10 +344,10 @@ m.newAbility -- #(#number:id, #string:name, #string:icon)->(#Ability)
   if hasProgression and progressionIndex then
     local _,icon3,_ = GetAbilityProgressionAbilityInfo(progressionIndex,0,1)
     if icon3 ~= icon then
-      ability.icon3 = icon3 -- #string
+      ability.icon3 = icon3
     end
   end
-  ability.description = GetAbilityDescription(id):gsub('%^%w','') -- #string
+  ability.description = GetAbilityDescription(id):gsub('%^%w','')
   setmetatable(ability,{__index=mAbility})
   return ability
 end
@@ -187,31 +357,35 @@ local nextSeed = function()
   seed = seed+1
   return seed
 end
-m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
-= function(slotNum, hotbarCategory)
-  local action = {} -- #Action
+---@type fun(slotNum: number, hotbarCategory: number): adr.models.Action
+m.newAction = function(slotNum, hotbarCategory)
+  ---@type adr.models.Action
+  local action = {}
   action.fake = false
-  action.sn = nextSeed() --#number
+  action.sn = nextSeed()
   action.targetOut = false
-  action.slotNum = slotNum --#number
+  action.slotNum = slotNum
   local abilityId = GetSlotBoundId(slotNum, hotbarCategory)
   local slotType = GetSlotType(slotNum,hotbarCategory)
   action.crafted = false
   if slotType == ACTION_TYPE_CRAFTED_ABILITY then
     action.crafted = true
-    action.craftedId = abilityId -- #number
+    action.craftedId = abilityId
     abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
   end
-  action.ability = m.newAbility(abilityId, m.patchAbilityName(GetSlotName(slotNum,hotbarCategory)),GetSlotTexture(slotNum, hotbarCategory)) -- #Ability
-  action.relatedAbilityList = {} --#list<#Ability> for matching
+  ---@type adr.models.Ability
+  action.ability = m.newAbility(abilityId, m.patchAbilityName(GetSlotName(slotNum,hotbarCategory)),GetSlotTexture(slotNum, hotbarCategory))
+  ---for matching
+  ---@type adr.models.Ability[]
+  action.relatedAbilityList = {}
   local channeled,castTime = GetAbilityCastInfo(action.ability.id)
-  action.channeled = channeled --#boolean
-  action.castTime = castTime or 0 --#number
-  action.startTime = GetGameTimeMilliseconds() --#number
-  action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0 --#number
-  action.configDuration = nil --#number
+  action.channeled = channeled
+  action.castTime = castTime or 0
+  action.startTime = GetGameTimeMilliseconds()
+  action.duration = SPECIAL_DURATION_PATCH[action.ability.icon] or GetAbilityDuration(action.ability.id) or 0
+  action.configDuration = nil
   if action.duration<1000 then action.duration = 0 end
-  action.inheritDuration = 0 --#number
+  action.inheritDuration = 0
   action.showCrux = action.ability.icon:find('arcanist_002',18,true) or action.ability.icon:find('arcanist_003_b',18,true)
   local description = action.ability.description
   if action.crafted then
@@ -220,12 +394,13 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
       ..'\n'..GetCraftedAbilityScriptDescription(action.craftedId, sid2)
       ..'\n'..GetCraftedAbilityScriptDescription(action.craftedId, sid3)
   end
-  action.description = zo_strformat("<<1>>", description) --#string
+  action.description = zo_strformat("<<1>>", description)
   action.ability.description = action.description
-  action.effectEndTimes = {} --#list<#number>
+  ---@type number[]
+  action.effectEndTimes = {}
 
   -- look for XX seconds in description i.e. in eso 8.2.0 Dark Donvertion has 10s duration but a 20s description duration
-  local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2) --#string
+  local pattern = zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2)
   if GetCVar("language.2")=='zh' then pattern = '2秒' end
   pattern = '.-('..pattern:gsub("2","([%%.,%%d]*%%d+).r")..')'
   -- /script pattern = '.-('..zo_strformat(GetString(SI_TIME_FORMAT_SECONDS_DESC),2):gsub("2","([%%.,%%d]*%%d+).r")..')'
@@ -241,10 +416,11 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
     end
   end
   if num > 0 then
-    action.descriptionDuration = num --#number
+    action.descriptionDuration = num
   end
   -- find number for stack times
-  action.descriptionNums = {} -- #map<#number, #boolean>
+  ---@type table<number, boolean>
+  action.descriptionNums = {}
   pattern = '.-([%.,%d]*%d+).r'
   offset=1
   while true do
@@ -258,16 +434,18 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
     end
   end
 
-  action.endTime = action.duration==0 and 0 or action.startTime + action.duration--#number
-  action.inCombat = IsUnitInCombat('player') --#boolean
-  action.lastEffectTime = 0 --#number
-  action.channelStartTime = 0 --#number
-  action.channelEndTime = 0 --#number
-  action.channelUnitId = 0 --#number
-  action.oldAction = nil --#Action
-  action.newAction = nil --#Action
+  action.endTime = action.duration==0 and 0 or action.startTime + action.duration
+  action.inCombat = IsUnitInCombat('player')
+  action.lastEffectTime = 0
+  action.channelStartTime = 0
+  action.channelEndTime = 0
+  action.channelUnitId = 0
+  ---@type adr.models.Action
+  action.oldAction = nil
+  ---@type adr.models.Action
+  action.newAction = nil
 
-  action.hotbarCategory = hotbarCategory --#number
+  action.hotbarCategory = hotbarCategory
   local target = GetAbilityTargetDescription(action.ability.id)
   local radius = GetAbilityRadius(action.ability.id)
   local forArea = target==GetString(SI_ABILITY_TOOLTIP_TARGET_TYPE_AREA) and (radius==0 or radius>200)
@@ -279,56 +457,54 @@ m.newAction -- #(#number:slotNum,#number:hotbarCategory)->(#Action)
     -- Frost Clench can taunt
     or action.ability.icon:find('destructionstaff_005_a',18,true)
 
-  ---
-  --@type ActionFlags
-  action.flags
-  = {
-    forArea -- #boolean
-    = forArea,
-    forEnemy -- #boolean
-    = forEnemy,
-    forGround -- #boolean
-    = forGround,
-    forSelf -- #boolean
-    = forSelf,
-    forTank -- #boolean
-    = forTank,
-    shifted -- #boolean
-    = false,
-    onlyOneTarget -- #boolean
-    = false
+  ---@type adr.models.ActionFlags
+  action.flags = {
+    forArea = forArea,
+    forEnemy = forEnemy,
+    forGround = forGround,
+    forSelf = forSelf,
+    forTank = forTank,
+    shifted = false,
+    onlyOneTarget = false,
   }
-  action.data = {} -- #table to store data in
-  action.effectList = {} -- #list<#Effect>
-  action.stackEffect = nil -- #Effect
-  action.stackEffect2 = nil -- #Effect for triggered bonus stacks
-  action.tickEffect = nil -- #Effect
-  action.tickEffectDoubled = false -- #boolean
-  action.mainEffectPurged = false -- #boolean
-  action.targetId = nil --#number
+  action.data = {}  --to store data in
+  ---@type adr.models.Effect[]
+  action.effectList = {}
+  ---@type adr.models.Effect
+  action.stackEffect = nil
+  ---for triggered bonus stacks
+  ---@type adr.models.Effect
+  action.stackEffect2 = nil
+  ---@type adr.models.Effect
+  action.tickEffect = nil
+  action.tickEffectDoubled = false
+  action.mainEffectPurged = false
+  action.targetId = nil
   setmetatable(action,{__index=mAction})
   return action
 end
 
-m.newEffect -- #(#Ability:ability, #string:unitTag, #number:unitId, #number:startTime, #number:endTime, #number:stackCount, #number:tickRate)->(#Effect)
-=  function(ability, unitTag, unitId, startTime, endTime, stackCount, tickRate)
-  local effect = {} -- #Effect
-  effect.ability = ability --#Ability
+---@type fun(ability: adr.models.Ability, unitTag: string, unitId: number, startTime: number, endTime: number, stackCount: number, tickRate: number): adr.models.Effect
+m.newEffect =  function(ability, unitTag, unitId, startTime, endTime, stackCount, tickRate)
+  ---@type adr.models.Effect
+  local effect = {}
+  ---@type adr.models.Ability
+  effect.ability = ability
   if effect.ability.icon:find('arcanist_crux',18,true) then
-    effect.isCrux = true --#boolean
+    effect.isCrux = true
   end
-  effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others' -- #string player or playerpet or others
-  effect.unitId = unitId -- #number
-  effect.startTime = startTime -- #number
-  effect.endTime = endTime -- #number
-  effect.duration = endTime-startTime -- #number
-  effect.ignored = false -- #boolean
-  effect.ignorableDebuff = false -- #boolean
-  effect.stackCount = stackCount or 0 -- #number
-  effect.tickRate = tickRate or 0 -- #number
-  effect.combatEventId = nil -- #number can be used to track one more special combat event
-  effect.level = 99 -- #number
-  effect.levelIsLow = true -- #boolean
+  effect.unitTag = unitTag:find('player',1,true) and unitTag or 'others'  --player or playerpet or others
+  effect.unitId = unitId
+  effect.startTime = startTime
+  effect.endTime = endTime
+  effect.duration = endTime-startTime
+  effect.ignored = false
+  effect.ignorableDebuff = false
+  effect.stackCount = stackCount or 0
+  effect.tickRate = tickRate or 0
+  effect.combatEventId = nil  --can be used to track one more special combat event
+  effect.level = 99
+  effect.levelIsLow = true
   setmetatable(effect,{__index=mEffect})
   return effect
 end
@@ -358,8 +534,8 @@ end
 --========================================
 --        mAbility
 --========================================
-mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean)
-= function(self, other, strict)
+---@type fun(self: adr.models.Ability, other: adr.models.Ability, strict: boolean): boolean
+mAbility.matches = function(self, other, strict)
   local idHash = getIdHash(self.id, other.id or 0)
   local stringMatchRes = matchesMemo[strict or false][idHash]
   if stringMatchRes ~= nil then
@@ -412,16 +588,16 @@ mAbility.matches -- #(#Ability:self, #Ability:other, #boolean:strict)->(#boolean
   return false
 end
 
-mAbility.toLogString --#(#Ability:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Ability): string
+mAbility.toLogString = function(self)
   return string.format("|t24:24:%s|t %s(%i/%s)", self.icon, self.name, self.id, self.icon:match("([^/]+)%.%w+$"))
 end
 
 --========================================
 --        mAction
 --========================================
-mAction.getAreaEffectCount -- #(#Action:self)->(#number)
-= function(self)
+---@type fun(self: adr.models.Action): number
+mAction.getAreaEffectCount = function(self)
   local count = 0
   for key, var in pairs(self.effectList) do
     if var.ability.type == ABILITY_TYPE_AREAEFFECT then count = count+1 end
@@ -429,8 +605,8 @@ mAction.getAreaEffectCount -- #(#Action:self)->(#number)
   return count > 0 and count or nil
 end
 
-mAction.getDuration -- #(#Action:self)->(#number,#string)
-= function(self)
+---@type fun(self: adr.models.Action): number, string
+mAction.getDuration = function(self)
   if self.tickEffect and self.duration==0 then
     return self.tickEffect.tickRate, m.DUR_SOURCE_TICK
   end
@@ -438,7 +614,8 @@ mAction.getDuration -- #(#Action:self)->(#number,#string)
     return self.channelEndTime - self.channelStartTime, m.DUR_SOURCE_CHANNEL
   end
   if self.configDuration then return self.configDuration, m.DUR_SOURCE_FILTER end
-  local optEffect,reason = self:optEffect() -- #Effect
+  ---@type adr.models.Effect
+  local optEffect,reason = self:optEffect()
   if optEffect then return optEffect.duration, m.DUR_SOURCE_PRIORITY end
   if self.showCrux and not self:getStackEffect() then return 0, m.DUR_SOURCE_NONE end
   if self.duration and self.duration>0 then return self.duration, m.DUR_SOURCE_SELF end
@@ -446,8 +623,8 @@ mAction.getDuration -- #(#Action:self)->(#number,#string)
   return 0, m.DUR_SOURCE_NONE
 end
 
-mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
-= function(self, debugging)
+---@type fun(self: adr.models.Action, debugging: boolean): number
+mAction.getEndTime = function(self, debugging)
   if self.tickEffect and self.duration==0 then
     local start = self.tickEffect.startTime
     local now = GetGameTimeMilliseconds()
@@ -457,7 +634,8 @@ mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
   end
   if self.channelEndTime >0 then return self.channelEndTime end
   if self.configDuration then return self.startTime + self.configDuration end
-  local optEffect,reason = self:optEffect() -- #Effect
+  ---@type adr.models.Effect
+  local optEffect,reason = self:optEffect()
   reason = reason or 'nil'
   local now = GetGameTimeMilliseconds()
   if optEffect then
@@ -481,8 +659,8 @@ mAction.getEndTime -- #(#Action:self,#boolean:debugging)->(#number)
   return self.startTime
 end
 
-mAction.getFullEndTime -- #(#Action:self)->(#number)
-= function(self)
+---@type fun(self: adr.models.Action): number
+mAction.getFullEndTime = function(self)
   if self.configDuration then return self.startTime+self.configDuration end
   local endTime = 0;
   for key, var in ipairs(self.effectList) do
@@ -496,8 +674,8 @@ mAction.getFullEndTime -- #(#Action:self)->(#number)
   return self.startTime
 end
 
-mAction.getFlagsInfo -- #(#Action:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Action): string
+mAction.getFlagsInfo = function(self)
   return string.format('forArea:%s,forGround:%s,forSelf:%s,forTank:%s,forEnemy:%s',
     tostring(self.flags.forArea),
     tostring(self.flags.forGround),
@@ -507,9 +685,9 @@ mAction.getFlagsInfo -- #(#Action:self)->(#string)
   )
 end
 
-mAction.getMaxOriginEffectDuration -- #(#Action:self)->(#number)
-= function(self)
-  local max = self.duration -- #number
+---@type fun(self: adr.models.Action): number
+mAction.getMaxOriginEffectDuration = function(self)
+  local max = self.duration
   for key, var in ipairs(self.effectList) do
     if math.abs(var.startTime - self.startTime)<500 then
       max = math.max(max,var.duration)
@@ -518,8 +696,8 @@ mAction.getMaxOriginEffectDuration -- #(#Action:self)->(#number)
   return max
 end
 
-mAction.getNewest -- #(#Action:self)->(#Action)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Action
+mAction.getNewest = function(self)
   local walker = self
   while walker.newAction do
     walker = walker.newAction
@@ -527,8 +705,8 @@ mAction.getNewest -- #(#Action:self)->(#Action)
   return walker
 end
 
-mAction.getOldest -- #(#Action:self)->(#Action)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Action
+mAction.getOldest = function(self)
   local walker = self
   while walker.oldAction do
     walker = walker.oldAction
@@ -536,8 +714,8 @@ mAction.getOldest -- #(#Action:self)->(#Action)
   return walker
 end
 
-mAction.getStageInfo -- #(#Action:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Action): string
+mAction.getStageInfo = function(self)
   -- Power Lash Guide: show Power Lash icon
   if self.stackEffect and self.stackEffect.stageInfo then
     return self.stackEffect.stageInfo
@@ -578,12 +756,13 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
     return '1/2'
   end
   -- 1/2 by normal effect with long duration effect present
-  local longDurationEffect = self:peekLongDurationEffect() -- #Effect
+  ---@type adr.models.Effect
+  local longDurationEffect = self:peekLongDurationEffect()
   if self.flags.forArea
     and not optEffect:isLongDuration()
     and longDurationEffect
   then
-    self.data.firstStageId = optEffect.ability.id -- #number
+    self.data.firstStageId = optEffect.ability.id
     return '1/2'
   end
   if self.data.firstStageId and self.data.firstStageId ~= optEffect.ability.id then
@@ -650,8 +829,8 @@ mAction.getStageInfo -- #(#Action:self)->(#string)
   return nil
 end
 
-mAction.getStageInfo2 -- #(#Action:self)->(#number)
-= function(self)
+---@type fun(self: adr.models.Action): number
+mAction.getStageInfo2 = function(self)
   -- fixed value from stackEffect2
   local stackEffect2 = self:getStackEffect2()
   if stackEffect2 and stackEffect2.stackCount and stackEffect2.stackCount > 0 then
@@ -694,8 +873,8 @@ mAction.getStageInfo2 -- #(#Action:self)->(#number)
   return nil
 end
 
-mAction.getStartTime -- #(#Action:self)->(#number)
-= function(self)
+---@type fun(self: adr.models.Action): number
+mAction.getStartTime = function(self)
   if self.tickEffect and self.duration==0 then
     local start = self.tickEffect.startTime
     local now = GetGameTimeMilliseconds()
@@ -708,8 +887,8 @@ mAction.getStartTime -- #(#Action:self)->(#number)
   return optEffect and optEffect.startTime or self.startTime
 end
 
-mAction.getStackEffect -- #(#Action:self)->(#Effect)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Effect
+mAction.getStackEffect = function(self)
   -- For crux-consuming actions, return global crux effect if no local stackEffect
   if self.showCrux then
     local cruxEffect = m.crux.getEffect()
@@ -735,27 +914,27 @@ mAction.getStackEffect -- #(#Action:self)->(#Effect)
   return nil
 end
 
-mAction.getStackEffect2 -- #(#Action:self)->(#Effect)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Effect
+mAction.getStackEffect2 = function(self)
   if self.stackEffect2 and (self.stackEffect2.duration == 0 or self.stackEffect2.endTime > GetGameTimeMilliseconds()) then
     return self.stackEffect2
   end
   return nil
 end
 
-mAction.needEndingAlert -- #(#Action:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Action): boolean
+mAction.needEndingAlert = function(self)
   -- tick/channel skills don't benefit from ending alerts (automatic or requring crux, not re-cast)
   return not self.tickEffect and not (self.channelStartTime and self.channelStartTime > 0)
 end
 
-mAction.hasEffect -- #(#Action:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Action): boolean
+mAction.hasEffect = function(self)
   return #self.effectList >0
 end
 
-mAction.isOnPlayer -- #(#Action:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Action): boolean
+mAction.isOnPlayer = function(self)
   if self.flags.forSelf then return true end
   for i, effect in ipairs(self.effectList) do
     if effect:isOnPlayer() then return true end
@@ -763,8 +942,8 @@ mAction.isOnPlayer -- #(#Action:self)->(#boolean)
   return false
 end
 
-mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Action): boolean
+mAction.isOnPlayerpet = function(self)
   if self.flags.forSelf then return true end
   for i, effect in ipairs(self.effectList) do
     if effect:isOnPlayerpet() then return true end
@@ -772,8 +951,8 @@ mAction.isOnPlayerpet -- #(#Action:self)->(#boolean)
   return false
 end
 
-mAction.isUnlimited -- #(#Action:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Action): boolean
+mAction.isUnlimited = function(self)
   local optEffect = self:optEffect()
   local stackEffect = self:getStackEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
@@ -788,18 +967,19 @@ mAction.isUnlimited -- #(#Action:self)->(#boolean)
     or (self.oldAction and not optEffect and #self.effectList>0 and GetGameTimeMilliseconds()-self.startTime<1000)
 end
 
-mAction.matchesAbility -- #(#Action:self,#Ability:ability, #boolean:strict)->(#boolean)
-= function(self, ability, strict)
+---@type fun(self: adr.models.Action, ability: adr.models.Ability, strict: boolean): boolean
+mAction.matchesAbility = function(self, ability, strict)
   if self.ability:matches(ability, strict) then return true end
   -- check related
   for key, var in ipairs(self.relatedAbilityList) do
-    local a = var -- #Ability
+    ---@type adr.models.Ability
+    local a = var
     if a:matches(ability, strict) then return true end
   end
 end
 
-mAction.matchesAbilityId -- #(#Action:self,#string:abilityId)->(#boolean)
-= function(self, abilityId, strict)
+---@type fun(self: adr.models.Action, abilityId: string): boolean
+mAction.matchesAbilityId = function(self, abilityId, strict)
   if self.ability.id == abilityId then return true end
   -- check related
   for key, var in ipairs(self.relatedAbilityList) do
@@ -807,8 +987,8 @@ mAction.matchesAbilityId -- #(#Action:self,#string:abilityId)->(#boolean)
   end
 end
 
-mAction.matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:strict)->(#boolean)
-= function(self, abilityIcon, strict)
+---@type fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+mAction.matchesAbilityIcon = function(self, abilityIcon, strict)
   local key = self.ability.id..'/'..abilityIcon..'/'..(strict and 'y' or 'n')
   local value = m.cacheOfActionMatchingAbilityIcon[key]
   if value~=nil then return value end
@@ -816,14 +996,12 @@ mAction.matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:stric
   m.cacheOfActionMatchingAbilityIcon[key] = value
   return value
 end
-mAction._matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:strict)->(#boolean)
-= function(self, abilityIcon, strict)
-  local stripIcon -- #(#string:icon)->(#string)
-  = function(icon)
+---@type fun(self: adr.models.Action, abilityIcon: string, strict: boolean): boolean
+mAction._matchesAbilityIcon = function(self, abilityIcon, strict)
+  local stripIcon = function(icon)
     return icon:gsub("^(.+%d+).+","%1",1)
   end
-  local m -- #(#Ability:a)->(#boolean)
-  = function(a)
+  local m = function(a)
     return (a.icon and abilityIcon:find(stripIcon(a.icon),1,true))
       or (a.icon2 and abilityIcon:find(stripIcon(a.icon2),1, true))
   end
@@ -837,8 +1015,8 @@ mAction._matchesAbilityIcon -- #(#Action:self,#string:abilityIcon, #boolean:stri
   return false
 end
 
-mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
-= function(self, abilityName, strict)
+---@type fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+mAction.matchesAbilityName = function(self, abilityName, strict)
   local key = self.ability.id..'/'..abilityName..'/'..(strict and 'y' or 'n')
   local value = m.cacheOfActionMatchingAbilityName[key]
   if value~=nil then return value end
@@ -846,8 +1024,8 @@ mAction.matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:stric
   m.cacheOfActionMatchingAbilityName[key] = value
   return value
 end
-mAction._matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:strict)->(#boolean)
-= function(self, abilityName, strict)
+---@type fun(self: adr.models.Action, abilityName: string, strict: boolean): boolean
+mAction._matchesAbilityName = function(self, abilityName, strict)
   if abilityName:find(self.ability.name,1,true)
     -- i.e. Assassin's Will name can match Merciless Resolve action by its description
     or (not strict and not addon.isSimpleWord(abilityName) and self.description:find(abilityName,1,true))
@@ -861,8 +1039,8 @@ mAction._matchesAbilityName -- #(#Action:self,#string:abilityName, #boolean:stri
   return false
 end
 
-mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
-= function(self, effect)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+mAction.matchesNewEffect = function(self, effect)
   -- 0. filter ended action
   if not self.flags.forGround and self.endTime > self.startTime and self.endTime + 500 < effect.startTime then
     return false
@@ -876,8 +1054,8 @@ mAction.matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return value
 end
 
-mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
-= function(self, effect)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+mAction._matchesNewEffect = function(self, effect)
   -- 1. tank skills can taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
@@ -886,7 +1064,8 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   local isBuff = effect.ability.icon:find('ability_buff_m',1,true)
   if not isBuff then
     for i, var in ipairs(self.effectList) do
-      local e = var --#Effect
+      ---@type adr.models.Effect
+      local e = var
       if effect.ability.id == e.ability.id then return true end
     end
   end
@@ -927,8 +1106,8 @@ mAction._matchesNewEffect -- #(#Action:self,#Effect:effect)->(#boolean)
   return false
 end
 
-mAction.matchesOldEffect -- #(#Action:self,#Effect:effect)->(#boolean)
-= function(self, effect)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+mAction.matchesOldEffect = function(self, effect)
   -- 1. taunt
   if effect.ability.icon:find('quest_shield_001',18,true) and self.flags.forTank then
     return true
@@ -957,8 +1136,8 @@ end
 --        Effect Priority Level Methods
 --========================================
 
-mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
-= function(self, effect)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): number
+mAction.calclevel = function(self, effect)
   local duration = self.duration > 0 and self.duration or self.inheritDuration
   if duration == 0 then duration = self.descriptionDuration or 0 end
 
@@ -1022,8 +1201,8 @@ mAction.calclevel -- #(#Action:self, #Effect:effect)->(#number)
   return LEVEL_LONGER_DURATION
 end
 
-mAction.sortEffectList -- #(#Action:self)->()
-= function(self)
+---@type fun(self: adr.models.Action)
+mAction.sortEffectList = function(self)
   table.sort(self.effectList, function(a, b)
     if a.level ~= b.level then
       return a.level < b.level
@@ -1037,19 +1216,19 @@ mAction.sortEffectList -- #(#Action:self)->()
   end)
 end
 
-mAction.recalcEffectLevels -- #(#Action:self)->()
-= function(self)
+---@type fun(self: adr.models.Action)
+mAction.recalcEffectLevels = function(self)
   -- Recalculate static level for all effects
   for _, effect in ipairs(self.effectList) do
-    effect.level = self:calclevel(effect) -- #number
-    effect.levelIsLow = effect.level >= LEVEL_THRESHOLD_LOW -- #boolean
+    effect.level = self:calclevel(effect)
+    effect.levelIsLow = effect.level >= LEVEL_THRESHOLD_LOW
   end
   -- Re-sort the list
   self:sortEffectList()
 end
 
-mAction.isFilteredByDynamic -- #(#Action:self, #Effect:effect, #number:now)->(#boolean)
-= function(self, effect, now)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect, now: number): boolean
+mAction.isFilteredByDynamic = function(self, effect, now)
   -- Filter 1: expired effect
   if now > effect.endTime then
     effect.ignored = true
@@ -1078,9 +1257,9 @@ mAction.isFilteredByDynamic -- #(#Action:self, #Effect:effect, #number:now)->(#b
   return false
 end
 
-local debuggingLastTime = 0 --#number
-mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
-= function(self, debugging)
+local debuggingLastTime = 0
+---@type fun(self: adr.models.Action, debugging: boolean): adr.models.Effect, string
+mAction.optEffect = function(self, debugging)
   if debugging then -- 1 sec threshold
     local now = GetGameTimeMilliseconds()
     if now - debuggingLastTime > 1000 then
@@ -1145,8 +1324,8 @@ mAction.optEffect -- #(#Action:self,#boolean:debugging)->(#Effect,#string)
   return nil, 'none'
 end
 
-mAction.optGallopEffect -- #(#Action:self)->(#Effect)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Effect
+mAction.optGallopEffect = function(self)
   for i, effect in ipairs(self.effectList) do
     -- filter Major Gallop if not mount
     if effect.ability.icon:find("major_gallop",1,true) then
@@ -1156,17 +1335,18 @@ mAction.optGallopEffect -- #(#Action:self)->(#Effect)
   return false
 end
 
-mAction.peekLongDurationEffect -- #(#Action:self)->(#Effect)
-= function(self)
+---@type fun(self: adr.models.Action): adr.models.Effect
+mAction.peekLongDurationEffect = function(self)
   for i, effect in ipairs(self.effectList) do
     if effect:isLongDuration() then return effect end
   end
   return nil
 end
 
-mAction.purgeEffectByTargetUnitId  -- #(#Action:self,#Effect:effect)->()
-= function(self, targetUnitId)
-  local purgedEffect = nil -- #Effect
+---@type fun(self: adr.models.Action, effect: adr.models.Effect)
+mAction.purgeEffectByTargetUnitId = function(self, targetUnitId)
+  ---@type adr.models.Effect
+  local purgedEffect = nil
   for key, var in ipairs(self.effectList) do
     if var.unitId == targetUnitId then
       purgedEffect = self:purgeEffect(var)
@@ -1182,9 +1362,10 @@ mAction.purgeEffectByTargetUnitId  -- #(#Action:self,#Effect:effect)->()
   end
 end
 
-mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
-= function(self, effect)
-  local oldEffect = effect -- #Effect
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+mAction.purgeEffect = function(self, effect)
+  ---@type adr.models.Effect
+  local oldEffect = effect
   local now = GetGameTimeMilliseconds()
   -- process tickEffect
   if self.tickEffect and self.tickEffect.ability.id==oldEffect.ability.id then
@@ -1320,8 +1501,8 @@ mAction.purgeEffect  -- #(#Action:self,#Effect:effect)->(#Effect)
   return oldEffect
 end
 
-mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
-= function(self, effect)
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): adr.models.Effect
+mAction.saveEffect = function(self, effect)
   if effect.drop then return end
   -- ignore pure stack effect, they should have been saved using updateStackInfo
   if effect.stackCount>0 and effect.duration==0 then
@@ -1374,7 +1555,8 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   end
   -- adjust effect for covering i.e. lightning splash
   if self.duration and self.duration > 0 and effect.duration == self.duration + 1000 then
-    local existedEffect = self:optEffect() -- #Effect:effect
+    ---@type adr.models.Effect
+    local existedEffect = self:optEffect()
     if existedEffect and existedEffect.duration == self.duration then
       effect.endTime = effect.endTime - 1000
       effect.duration = effect.duration - 1000
@@ -1421,7 +1603,7 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
         -- Sort effect list by priority
         self:sortEffectList()
       end
-      self.effectList[i].saveTime = now -- #number
+      self.effectList[i].saveTime = now
       return e
     end
   end
@@ -1439,13 +1621,13 @@ mAction.saveEffect -- #(#Action:self, #Effect:effect)->(#Effect)
   -- record first ground effect id for triggering recognition
   if #self.effectList == 1 and self.flags.forGround
     and (self.groundFirstEffectId~=-1 or self.ability.id==effect.ability.id)then
-    self.groundFirstEffectId = effect.ability.id -- #number
+    self.groundFirstEffectId = effect.ability.id
   end
   return nil
 end
 
-mAction.toLogString --#(#Action:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Action): string
+mAction.toLogString = function(self)
   local effectListLog = #self.effectList>0 and ':' or ''
   local stackEffect = self:getStackEffect()
   if stackEffect then
@@ -1476,8 +1658,8 @@ mAction.toLogString --#(#Action:self)->(#string)
   )
 end
 
-mAction.toLogString_Short --#(#Action:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Action): string
+mAction.toLogString_Short = function(self)
   return string.format("A%d%s-%s@%.2f<%.2f>",
     self.sn,
     self.fake and '(fake)' or '',
@@ -1487,8 +1669,8 @@ mAction.toLogString_Short --#(#Action:self)->(#string)
   )
 end
 
-mAction.toLogString_SingleLine --#(#Action:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Action): string
+mAction.toLogString_SingleLine = function(self)
   local stackEffect = self:getStackEffect()
   local stackCount = stackEffect and stackEffect.stackCount or 0
   return string.format("A%d%s-%s@%s%.2f~%.2f(%.2f)<%.2f>%s bar%dslot%d",
@@ -1504,8 +1686,8 @@ mAction.toLogString_SingleLine --#(#Action:self)->(#string)
   )
 end
 
-mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(#boolean)
-= function(self, stackCount, effect)
+---@type fun(self: adr.models.Action, stackCount: number, effect: adr.models.Effect): boolean
+mAction.updateStackInfo = function(self, stackCount, effect)
   if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
     addon.debug('[MS~]updating stackCount to %d from %s in %s',stackCount, effect:toLogString(), self:toLogString());
   end
@@ -1549,7 +1731,7 @@ mAction.updateStackInfo --#(#Action:self, #number:stackCount, #Effect:effect)->(
   end
   if addType == 1 then
     self.stackEffect = effect
-    self.stackCountMatch = false -- #boolean
+    self.stackCountMatch = false
     self.stackCountMatch = stackCount>=3 and self.descriptionNums[stackCount]
   elseif addType == 2 then
     self.stackEffect2 = effect
@@ -1568,35 +1750,35 @@ end
 --========================================
 --        mEffect
 --========================================
-mEffect.isOnPlayer -- #(#Effect:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Effect): boolean
+mEffect.isOnPlayer = function(self)
   return self.unitTag == 'player'
 end
 
-mEffect.isOnPlayerpet -- #(#Effect:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Effect): boolean
+mEffect.isOnPlayerpet = function(self)
   return not not self.unitTag:find('playerpet', 1, true)
 end
 
-mEffect.isLongDuration  -- #(#Effect:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Effect): boolean
+mEffect.isLongDuration = function(self)
   return self.duration > 39000
 end
 
-mEffect.isMajorMinorBuff -- #(#Effect:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Effect): boolean
+mEffect.isMajorMinorBuff = function(self)
   local icon = self.ability.icon
   return not not (icon and (icon:find('ability_buff_ma', 1, true) or icon:find('ability_buff_mi', 1, true)))
 end
 
-mEffect.isMinorBuff -- #(#Effect:self)->(#boolean)
-= function(self)
+---@type fun(self: adr.models.Effect): boolean
+mEffect.isMinorBuff = function(self)
   local icon = self.ability.icon
   return not not (icon and icon:find('ability_buff_mi', 1, true))
 end
 
-mEffect.toLogString --#(#Effect:self)->(#string)
-= function(self)
+---@type fun(self: adr.models.Effect): string
+mEffect.toLogString = function(self)
   return string.format("%s, %.2f~%.2f<%d>, L%d, S%d, %sUnit:%s(%d)%s",
     self.ability:toLogString(),
     self.startTime/1000, self.endTime/1000, self.duration/1000,
