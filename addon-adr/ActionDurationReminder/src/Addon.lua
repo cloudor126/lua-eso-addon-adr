@@ -60,14 +60,6 @@ l.onAddonStarted = function(eventCode, addonName)
   l.start()
 end
 
--- 1. 定义一个函数，用于在鼠标悬浮时更新工具提示
-local function onTooltipShow(tooltipControl, linkData)
-  -- linkData 就是你在 |H...|h 中传入的自定义数据
-  tooltipControl:ClearLines()
-  tooltipControl:AddLine(linkData.title, 1, 1, 0) -- 标题用黄色
-  tooltipControl:AddLine(linkData.content, 0.8, 0.8, 0.8) -- 内容用灰色
-end
-
 l.start = function()
   if l.started then
     return
