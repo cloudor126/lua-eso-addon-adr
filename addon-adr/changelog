@@ -1,3 +1,8 @@
+3.163
+
+### New Features
+- Nothing Wasted (Necromancer) tracking: the hidden stacking buff is now displayed on the Shocking Siphon (and its morphs) slot with the current stack count and a 12s window countdown; stack decay refreshes the window, and the display bootstraps after login/zone changes with stacks already running.
+
 3.162
 
 ### New Features

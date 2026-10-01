@@ -525,6 +525,31 @@ l.ensureCruxActions = function()
   end
 end
 
+---@type fun()
+l.ensureNothingWastedActions = function()
+  -- Find all Nothing Wasted displaying slots on the bar and ensure actions exist
+  local currentHotbarCategory = GetActiveHotbarCategory()
+  local indices = { currentHotbarCategory, HOTBAR_CATEGORY_PRIMARY, HOTBAR_CATEGORY_BACKUP }
+  for i = 1, 3 do
+    local hotbarCategory = indices[i]
+    for slotNum = 3, 8 do
+      local slotIcon = GetSlotTexture(slotNum, hotbarCategory)
+      -- Check if this slot displays Nothing Wasted (necromancer_005 icon)
+      if slotIcon:find("necromancer_005", 18, true) then
+        local action = l.getActionBySlot(hotbarCategory, slotNum)
+        if not action then
+          action = models.newAction(slotNum, hotbarCategory)
+          action.fake = true
+          l.saveAction(action)
+          if addon.debugEnabled(DSS_ACTION_NEW, action.ability.name) then
+            addon.debug("[AN+]created Nothing Wasted action:%s@%.2f", action.ability.name, action.startTime / 1000)
+          end
+        end
+      end
+    end
+  end
+end
+
 ---@type fun(abilityId: number): adr.models.Action?
 l.getActionByAbilityId = function(abilityId)
   local action = l.idActionMap[abilityId]
@@ -1675,6 +1700,19 @@ l.onPlayerActivated = function(eventCode, initial)
       l.removeAction(action)
     end
   end
+  -- bootstrap Nothing Wasted state after login/zone change with stacks already running:
+  -- the hidden buff may not re-deliver EFFECT_CHANGED, so scan the buff list once.
+  -- remaining window time is unknowable (API reports 0~0); assume a full window and let
+  -- the next decay event correct it
+  local numBuffs = GetNumBuffs("player")
+  for i = 1, numBuffs do
+    local _, _, _, _, stackCount, _, _, _, _, _, abilityId = GetUnitBuffInfo("player", i)
+    if abilityId == models.NOTHING_WASTED_ABILITY_ID and stackCount > 0 then
+      models.nothingWasted.update(stackCount, GetGameTimeMilliseconds() + models.NOTHING_WASTED_WINDOW_MS)
+      l.ensureNothingWastedActions()
+      break
+    end
+  end
 end
 
 ---@type fun(eventCode: number, inCombat: boolean)
@@ -1786,6 +1824,24 @@ l.onStart = function()
     REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE,
     COMBAT_UNIT_TYPE_PLAYER
   )
+  -- Nothing Wasted (Necromancer's hidden stack buff): its EFFECT_CHANGED events are not
+  -- delivered through the source-filtered registrations above, so listen unfiltered
+  EVENT_MANAGER:RegisterForEvent(addon.name .. "_nothingWasted", EVENT_EFFECT_CHANGED, function(...)
+    local abilityId = select(16, ...)
+    if abilityId == models.NOTHING_WASTED_ABILITY_ID then
+      local changeType = select(2, ...)
+      if changeType == EFFECT_RESULT_FADED then
+        models.nothingWasted.clear()
+      else
+        local unitTag = select(5, ...)
+        if unitTag == "player" then
+          local stackCount = select(8, ...)
+          models.nothingWasted.update(stackCount, GetGameTimeMilliseconds() + models.NOTHING_WASTED_WINDOW_MS)
+          l.ensureNothingWastedActions()
+        end
+      end
+    end
+  end)
   EVENT_MANAGER:RegisterForEvent(addon.name .. "_pet", EVENT_EFFECT_CHANGED, l.onEffectChanged)
   EVENT_MANAGER:AddFilterForEvent(
     addon.name .. "_pet",

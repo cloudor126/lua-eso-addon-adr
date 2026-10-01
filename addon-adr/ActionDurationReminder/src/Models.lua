@@ -36,6 +36,7 @@ local mEffect = {}
 ---@field configDuration? number
 ---@field inheritDuration? number
 ---@field showCrux? number 仅作真值用
+---@field showNothingWasted? number 仅作真值用
 ---@field description? string
 ---@field effectEndTimes? number[]
 ---@field descriptionDuration? number
@@ -168,6 +169,13 @@ local mEffect = {}
 ---@field getEffect? fun(): adr.models.Effect
 ---@field setEffect? fun(effect: adr.models.Effect)
 
+---Nothing Wasted(死灵隐藏叠层buff)管理器：纯事件驱动，12秒窗口由自身维护
+---@class adr.models.NothingWasted
+---@field effect? adr.models.Effect
+---@field getEffect? fun(): adr.models.Effect?
+---@field update? fun(stackCount: number, windowEndTime: number)
+---@field clear? fun()
+
 ---Models模块公开表(addon.register("Models#M"))
 ---@class adr.models.M
 ---@field DRAGONKNIGHT_CLASS_ID? number
@@ -175,6 +183,8 @@ local mEffect = {}
 ---@field OFF_BALANCE_ICON_KEYWORD? string
 ---@field POWER_LASH_ABILITY_ID? number
 ---@field POWER_LASH_GUIDE_ABILITY_ID? number
+---@field NOTHING_WASTED_ABILITY_ID? number
+---@field NOTHING_WASTED_WINDOW_MS? number
 ---@field DUR_SOURCE_TICK? string
 ---@field DUR_SOURCE_CHANNEL? string
 ---@field DUR_SOURCE_FILTER? string
@@ -183,6 +193,7 @@ local mEffect = {}
 ---@field DUR_SOURCE_DESC? string
 ---@field DUR_SOURCE_NONE? string
 ---@field crux? adr.models.Crux
+---@field nothingWasted? adr.models.NothingWasted
 ---@field cacheOfActionMatchingEffect? table<string, boolean>
 ---@field cacheOfActionMatchingAbilityName? table<string, boolean>
 ---@field cacheOfActionMatchingAbilityIcon? table<string, boolean>
@@ -241,7 +252,6 @@ local mCrux = {} -- private table for crux management
 m.crux = mCrux -- expose to public
 
 mCrux.effect = nil -- current active crux effect
-
 ---@type fun(): adr.models.Effect
 mCrux.getEffect = function()
   return mCrux.effect
@@ -254,6 +264,48 @@ mCrux.setEffect = function(effect)
     effect.levelIsLow = true
   end
   mCrux.effect = effect
+end
+
+--========================================
+--        Global Nothing Wasted Registry (Necromancer)
+--========================================
+m.NOTHING_WASTED_ABILITY_ID = 263461
+m.NOTHING_WASTED_WINDOW_MS = 12000 -- the buff API reports no timing (0~0), window maintained from events
+
+---@type adr.models.NothingWasted
+local mNW = {}
+m.nothingWasted = mNW
+
+---@type fun(): adr.models.Effect?
+mNW.getEffect = function()
+  local effect = mNW.effect
+  if effect and effect.stackCount > 0 and effect.endTime > GetGameTimeMilliseconds() then
+    return effect
+  end
+  return nil
+end
+
+---@type fun(stackCount: number, windowEndTime: number)
+mNW.update = function(stackCount, windowEndTime)
+  if not mNW.effect then
+    local ability = m.newAbility(
+      m.NOTHING_WASTED_ABILITY_ID,
+      GetAbilityName(m.NOTHING_WASTED_ABILITY_ID),
+      GetAbilityIcon(m.NOTHING_WASTED_ABILITY_ID)
+    )
+    mNW.effect = m.newEffect(ability, "player", 0, GetGameTimeMilliseconds(), windowEndTime, stackCount, 0)
+  else
+    mNW.effect.stackCount = stackCount
+    mNW.effect.endTime = windowEndTime
+    mNW.effect.duration = windowEndTime - mNW.effect.startTime
+  end
+  mNW.effect.level = LEVEL_CRUX
+  mNW.effect.levelIsLow = true
+end
+
+---@type fun()
+mNW.clear = function()
+  mNW.effect = nil
 end
 
 local SPECIAL_DURATION_PATCH = {
@@ -422,6 +474,7 @@ m.newAction = function(slotNum, hotbarCategory)
   action.inheritDuration = 0
   action.showCrux = action.ability.icon:find("arcanist_002", 18, true)
     or action.ability.icon:find("arcanist_003_b", 18, true)
+  action.showNothingWasted = action.ability.icon:find("necromancer_005", 18, true)
   local description = action.ability.description
   if action.crafted then
     local sid1, sid2, sid3 = GetCraftedAbilityActiveScriptIds(action.craftedId)
@@ -1002,6 +1055,13 @@ mAction.getStackEffect = function(self)
       return cruxEffect
     end
   end
+  -- For Nothing Wasted displaying actions, return the global effect if no local stackEffect
+  if self.showNothingWasted then
+    local nwEffect = m.nothingWasted.getEffect()
+    if nwEffect and (not self.stackEffect or self.stackEffect.duration == 0) then
+      return nwEffect
+    end
+  end
   if self.stackEffect and (self.stackEffect.duration == 0 or self.stackEffect.endTime > GetGameTimeMilliseconds()) then
     -- Permanent stack effect (e.g. Fire Keeper's tracker buff) goes stale when
     -- the action's real timed effects have all faded. Skip this for pure
@@ -1477,6 +1537,14 @@ mAction.optEffect = function(self, debugging)
       if now <= cruxEffect.endTime then
         return cruxEffect, "crux"
       end
+    end
+  end
+
+  -- Check global Nothing Wasted effect (lowest priority)
+  if self.showNothingWasted then
+    local nwEffect = m.nothingWasted.getEffect()
+    if nwEffect then
+      return nwEffect, "nothingWasted"
     end
   end
 
