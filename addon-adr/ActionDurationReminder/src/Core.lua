@@ -863,12 +863,20 @@ l.onCombatEvent = function(
       end
       if effect ~= nil then
         action = var
-        if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
-          addon.debug("[C-s]cancel stack %s", action:toLogString())
-        end
-        local oldEffect = action:purgeEffect(effect)
-        if oldEffect then
-          l.timeActionMap[oldEffect.startTime] = nil
+        if l.isRecentCombatGrant(effect, now) then
+          -- fade of the old buff instance right after a re-grant (re-cast replacement):
+          -- keep the freshly granted stack
+          if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
+            addon.debug("[CSf]ignored fade right after re-grant %s", action:toLogString())
+          end
+        else
+          if addon.debugEnabled(DSS_COMBAT_FADE, action.ability.name) then
+            addon.debug("[C-s]cancel stack %s", action:toLogString())
+          end
+          local oldEffect = action:purgeEffect(effect)
+          if oldEffect then
+            l.timeActionMap[oldEffect.startTime] = nil
+          end
         end
       end
     end
@@ -880,6 +888,33 @@ l.onCombatEvent = function(
       l.removeAction(action)
     end
   end
+end
+
+-- Combat-event-driven stack consumption: proc damage abilityId -> stack buff abilityId.
+-- Crystal Weapon family — "Encase your weapon in dark crystals for 6 seconds, causing your
+-- next 3 Light or Heavy Attacks to deal additional damage and reduce the target's Armor by
+-- 1000 for 5 seconds.":
+--   46331  the 6s crystal buff holding 3 stacks (granted via EFFECT_GAINED with hitValue=count)
+--   143804 proc damage of the empowered attack (first hit)
+--   181056 proc damage of the empowered attack (subsequent hits)
+--   143808 5s armor reduction debuff applied to the target per hit (see Models' TAIL_EFFECT_ABILITY_IDS)
+l.stackConsumptionMap = {
+  [143804] = 46331,
+  [181056] = 46331,
+}
+
+-- reverse lookup: stack buff abilityIds whose stacks are consumed one by one
+l.stackConsumptionBuffIds = {}
+for _, buffId in pairs(l.stackConsumptionMap) do
+  l.stackConsumptionBuffIds[buffId] = true
+end
+
+--- Whether the stack effect was granted via combat event within the last second: the fade
+--- of an old buff instance (arrives right after a re-grant when re-casting) must not
+--- purge the freshly granted stack
+---@type fun(stackEffect: adr.models.Effect?, now: number): boolean
+l.isRecentCombatGrant = function(stackEffect, now)
+  return stackEffect ~= nil and stackEffect.combatGrantTime ~= nil and now - stackEffect.combatGrantTime < 1000
 end
 
 ---@type fun(eventCode: number, result: number, isError: boolean, abilityName: string, abilityGraphic: number, abilityActionSlotType: number, sourceName: string, sourceType: number, targetName: string, targetType: number, hitValue: number, powerType: number, damageType: number, log: boolean, sourceUnitId: number, targetUnitId: number, abilityId: number, overflow: number)
@@ -938,6 +973,43 @@ l.onCombatEventFromPlayer = function(
         end
       end
     end
+    -- unified stackEffect consumption: keyed by ability identity via l.stackConsumptionMap,
+    -- not by stack count (count is dynamic and unreliable for classification)
+    local stackAbilityId = l.stackConsumptionMap[abilityId]
+    if stackAbilityId then
+      for key, action in pairs(l.idActionMap) do
+        local stackEffect = action.stackEffect
+        if
+          stackEffect
+          and stackEffect.combatEventId == stackAbilityId
+          and stackEffect.stackCount
+          and stackEffect.stackCount > 0
+        then
+          stackEffect.stackCount = stackEffect.stackCount - 1
+          action.stackCountMatch = stackEffect.stackCount >= 3 and action.descriptionNums[stackEffect.stackCount]
+          if addon.debugEnabled(DSS_COMBAT_STACK, action.ability.name) then
+            addon.debug("[CS-]consumed %s:%d", action.ability.name, stackEffect.stackCount)
+          end
+          if stackEffect.stackCount == 0 then
+            -- all stacks consumed: drop the stack effect and clear the slot with nothing left
+            action.stackEffect = nil
+            action:recalcEffectLevels()
+            local hasLiveEffect = false
+            for _, e in ipairs(action.effectList) do
+              if not e.ignored and e.endTime > now then
+                hasLiveEffect = true
+                break
+              end
+            end
+            if hasLiveEffect then
+              action.endTime = now
+            else
+              l.removeAction(action)
+            end
+          end
+        end
+      end
+    end
   end
 
   -- pick effect with tick rate
@@ -985,6 +1057,12 @@ l.onCombatEventFromPlayer = function(
           and duration > l.getSavedVars().coreMinimumDurationSeconds * 1000
           and ((action.flags.forArea and now - action.startTime < 2000) or action.flags.forGround)
         then
+          -- keep the original placement time before resetting startTime: the '@' activated
+          -- marker measures the trigger delay from placement, not from the reset moment
+          -- (e.g. Barbed Trap arms in 1.5s and triggers inside the forArea reset window)
+          if not action.placementTime then
+            action.placementTime = action.startTime
+          end
           action.startTime = now
           action.endTime = now + duration
           if action.flags.forGround then
@@ -1003,7 +1081,15 @@ l.onCombatEventFromPlayer = function(
         then
           local effect = models.newEffect(abilityOnBar, "player", sourceUnitId, now, now, hitValue, 0)
           effect.combatEventId = abilityId
-          action:updateStackInfo(hitValue, effect)
+          if action:updateStackInfo(hitValue, effect) then
+            -- stamp the grant time so the following fade of the OLD buff instance
+            -- (re-cast replacement) can be distinguished from a real expiry fade in [C-s]
+            effect.combatGrantTime = now
+          end
+          -- consumable stacks only count down: suppress the description-match caret (^)
+          if l.stackConsumptionBuffIds[abilityId] then
+            action.stackCountMatch = false
+          end
           l.saveAction(action)
         end
       end
@@ -1044,6 +1130,11 @@ l.onCombatEventFromPlayer = function(
           local _ = nil
           -- 对于有些地面和aoe技能没有普通effect事件所以还没存
           if (action.flags.forArea and now - action.startTime < 2000) or action.flags.forGround then
+            -- keep the original placement time before resetting startTime (see the other
+            -- reset site above for the reason)
+            if not action.placementTime then
+              action.placementTime = action.startTime
+            end
             action.startTime = now
             action.endTime = now + duration
             if action.flags.forGround then
@@ -1054,6 +1145,28 @@ l.onCombatEventFromPlayer = function(
             if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
               addon.debug("[CDg] %s ground duration %d for %s", ability:toLogString(), duration, action:toLogString())
             end
+          end
+          -- combat-event驱动的叠层用GAINED_DURATION的hitValue补/续期限（只延长不缩短）：
+          -- 不用上面协商出的duration，因为action.duration可能属于别的效果，
+          -- 例如Crystal Weapon的3s Weaver窗口会截短6s的叠层buff
+          local stackEffect = action.stackEffect
+          if
+            stackEffect
+            and stackEffect.combatEventId == abilityId
+            and stackEffect.stackCount
+            and stackEffect.stackCount > 0
+            and stackEffect.endTime < now + hitValue
+          then
+            stackEffect.duration = hitValue
+            stackEffect.endTime = now + hitValue
+            stackEffect.startTime = now
+            if l.getSavedVars().addonLogTrackedEffectsInChat then
+              df(" |t24:24:%s|t%s (id: %d) %ds", GetAbilityIcon(abilityId), abilityName, abilityId, hitValue / 1000)
+            end
+            if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
+              addon.debug("[CDs] %s stack duration %d for %s", ability:toLogString(), hitValue, action:toLogString())
+            end
+            return
           end
           -- 有些action还只有stackEffect2层数，而不知道层数的期限，例如龙骑的power lash
           local stackEffect2 = action:getStackEffect2()
@@ -1265,6 +1378,15 @@ l.onEffectChanged = function(
         l.ignoredCache:mark(key)
         return
       end
+      local currentStack = action.stackEffect
+      if l.isRecentCombatGrant(currentStack, now) then
+        -- fade of the old buff instance right after a combat-event re-grant (re-cast
+        -- replacement, e.g. Crystal Weapon): keep the freshly granted stack
+        if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
+          addon.debug("[AKf]ignored fade right after re-grant %s", action:toLogString())
+        end
+        return
+      end
       local stackInfoUpdated = action:updateStackInfo(0, effect)
       local oldEffect = action:purgeEffect(effect)
       l.timeActionMap[oldEffect.startTime] = nil
@@ -1313,15 +1435,6 @@ l.onEffectChanged = function(
         effect.endTime = action.endTime
       end
       local stackInfoUpdated = action:updateStackInfo(stackCount, effect)
-      if l.getSavedVars().addonLogTrackedEffectsInChat and effect.duration > 0 then
-        df(
-          " |t24:24:%s|t%s (id: %d) %ds",
-          effect.ability.icon,
-          effect.ability.name,
-          effect.ability.id,
-          effect.duration / 1000
-        )
-      end
       action:saveEffect(effect)
       if stackInfoUpdated then
         if addon.debugEnabled(DSS_ACTION_STACK, action.ability.name) then
@@ -1390,15 +1503,6 @@ l.onEffectChanged = function(
         addon.debug("[FRD]ignore longer debuff %s for %s", effect:toLogString(), action:toLogString())
       end
       return
-    end
-    if l.getSavedVars().addonLogTrackedEffectsInChat and effect.duration > 0 then
-      df(
-        " |t24:24:%s|t%s (id: %d) %ds",
-        effect.ability.icon,
-        effect.ability.name,
-        effect.ability.id,
-        effect.duration / 1000
-      )
     end
     action:saveEffect(effect)
     -- patches
@@ -1493,6 +1597,19 @@ l.onEffectChanged = function(
   if changeType == EFFECT_RESULT_FADED then
     local action = l.findActionByOldEffect(effect)
     if action then
+      local currentStack = action.stackEffect
+      if
+        l.isRecentCombatGrant(currentStack, now)
+        and currentStack.ability.id == effect.ability.id
+        and (currentStack.unitId == effect.unitId or effect.unitId == 0)
+      then
+        -- fade of the old buff instance right after a combat-event re-grant (re-cast
+        -- replacement, e.g. Crystal Weapon): keep the freshly granted stack
+        if addon.debugEnabled(DSS_EFFECT_FADE, effect.ability.name) then
+          addon.debug("[EFf]ignored fade right after re-grant %s", action:toLogString())
+        end
+        return
+      end
       local oldEffect = action:purgeEffect(effect)
       if oldEffect then
         local clearTimeRecord = true

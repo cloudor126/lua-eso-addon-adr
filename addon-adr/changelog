@@ -1,3 +1,16 @@
+3.162
+
+### New Features
+- Unified stack effect management: stack effects, whether gradually accumulated (e.g. Grim Focus) or granted at once, now share a single stack slot; the second stack slot is reserved for future special-case logic.
+- Crystal Weapon support: stacks granted 3 at once and consumed one by one by empowered attacks now display 3 → 2 → 1 with the 6s buff timer, and the slot clears when the stacks are exhausted or expire.
+- "Log tracked effects in chat" now covers all paths an effect can enter an action (effect events, combat events, buff polling), letting players discover ability ids for the core blacklist.
+
+### Bug Fixes
+- Fixed Crystal Weapon losing its stack count when re-casting while buffed: the replacement fade of the old buff instance (via combat event or effect events) no longer purges the freshly granted stack, and its expiry is carried over and refreshed by the follow-up duration event.
+- Fixed Barbed Trap's '@' activation marker no longer showing after the official arm-time reduction from 2.5s to 1.5s: the activation delay is now measured from the original trap placement time rather than the reset action start.
+- Crystal Weapon's 5s armor reduction debuff on targets is now classified as a tail effect displayed in low-priority brackets instead of role-preferred, and the now-redundant '>' marker was removed.
+- The '@' activation marker now requires the activated effect's duration to strictly match the action's duration.
+
 3.161
 
 ### Bug Fixes

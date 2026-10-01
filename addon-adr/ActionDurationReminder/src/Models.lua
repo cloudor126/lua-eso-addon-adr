@@ -3,6 +3,8 @@
 --========================================
 ---@type adr.addon.M
 local addon = ActionDurationReminder
+---@type adr.settings.M
+local settings = addon.load("Settings#M")
 local l = {}
 ---@type adr.models.M
 local m = { l = l }
@@ -29,6 +31,7 @@ local mEffect = {}
 ---@field channeled? boolean
 ---@field castTime? number
 ---@field startTime? number
+---@field placementTime? number 布放时间：forArea/forGround重置startTime前记录的原始值，供'@'激活判定测延迟
 ---@field duration? number
 ---@field configDuration? number
 ---@field inheritDuration? number
@@ -102,6 +105,7 @@ local mEffect = {}
 ---@field toLogString_Short? fun(self: adr.models.Action): string
 ---@field toLogString_SingleLine? fun(self: adr.models.Action): string
 ---@field updateStackInfo? fun(self: adr.models.Action, stackCount: number, effect: adr.models.Effect): boolean
+---@field isSpecialStackEffect? fun(self: adr.models.Action, effect: adr.models.Effect): boolean
 
 ---技能静态信息对象，构造于m.newAbility，setmetatable({},{__index=mAbility})
 ---@class adr.models.Ability
@@ -131,6 +135,7 @@ local mEffect = {}
 ---@field stackCount? number
 ---@field tickRate? number
 ---@field combatEventId? number 可追踪的特定战斗事件
+---@field combatGrantTime? number combat事件授层时间戳，用于[C-s]区分换实例消退与真到期消退
 ---@field level? number
 ---@field levelIsLow? boolean
 ---@field stageInfo? string
@@ -889,26 +894,29 @@ mAction.getStageInfo = function(self)
       end
     end
   end
-  -- activated stage e.g. Beast Trap and Scalding Rune
+  -- activated stage e.g. Beast Trap and Scalding Rune: '@' marks the timer as coming from
+  -- the activated state (trap triggered) rather than the initial placement/cast;
+  -- strict condition: the activated effect's duration must match the action's duration
   if optEffect.activated then
     return "@"
   end
   if
     self.duration
     and self.duration > 0 -- action with duration prop
+    and optEffect.duration == self.duration -- strict: activated timer must match action duration
     and (
       (
-                -- triggered after a delay for non-ground
-not self.flags.forGround and optEffect.startTime - self.startTime > 1500
+                -- triggered after a delay for non-ground, measured from the original placement
+        -- (forArea actions may have startTime reset when the trap triggers inside the window)
+not self.flags.forGround and optEffect.startTime - (self.placementTime or self.startTime) > 1500
       )
       or (
                 -- triggered after first ground effect and delay
 self.flags.forGround
         and optEffect.ability.id ~= self.groundFirstEffectId
-        and optEffect.startTime - self.startTime > 900
+        and optEffect.startTime - (self.placementTime or self.startTime) > 900
       )
     )
-    and optEffect.duration % 1000 == 0 -- with whole seconds duration
   then
     optEffect.activated = true
     return "@"
@@ -916,14 +924,8 @@ self.flags.forGround
   if self.targetOut then
     return "#"
   end
-  -- tail effect
-  local duration = self.duration or 0
-  if duration == 0 then
-    duration = self.descriptionDuration or 0
-  end
-  if duration > 0 and self:getEndTime() > self.startTime + duration + 1000 then
-    return ">"
-  end
+  -- note: the former tail-effect marker '>' was removed: tail-driven timers are now
+  -- consistently displayed in the low-priority style (brackets via levelIsLow)
   return nil
 end
 
@@ -1276,6 +1278,18 @@ end
 --        Effect Priority Level Methods
 --========================================
 
+-- Data-driven tail demotion: known proc side-effects are secondary and must not outrank
+-- main effects via the role-preferred shortcut. Same skill family as Core.lua's
+-- l.stackConsumptionMap.
+-- Skill description: "Encase your weapon in dark crystals for 6 seconds, causing your next
+-- 3 Light or Heavy Attacks to deal additional damage and reduce the target's Armor by 1000
+-- for 5 seconds."
+local TAIL_EFFECT_ABILITY_IDS = {
+  -- Crystal Weapon: the 5s "reduce the target's Armor by 1000" debuff applied to the
+  -- target by each empowered Light/Heavy Attack; refreshed per hit, may outlast the buff
+  [143808] = true,
+}
+
 ---@type fun(self: adr.models.Action, effect: adr.models.Effect): number
 mAction.calclevel = function(self, effect)
   local duration = self.duration > 0 and self.duration or self.inheritDuration
@@ -1309,6 +1323,11 @@ mAction.calclevel = function(self, effect)
   -- Level 3: stackEffect2
   if self.stackEffect2 and effect.ability.id == self.stackEffect2.ability.id then
     return LEVEL_STACK_EFFECT_2
+  end
+
+  -- Data-driven tail demotion before the role-preferred shortcut
+  if TAIL_EFFECT_ABILITY_IDS[effect.ability.id] then
+    return LEVEL_TAIL_EFFECT
   end
 
   -- Level 4: role preferred
@@ -1678,6 +1697,17 @@ mAction.saveEffect = function(self, effect)
         self.stackEffect.duration = effect.duration
         self.stackEffect.endTime = effect.endTime
         self.stackEffect.startTime = effect.startTime
+        -- tracked-effect chat log: the effect is absorbed into stackEffect here, so this
+        -- is the only place it can be surfaced for blacklist id discovery
+        if settings.getSavedVars().addonLogTrackedEffectsInChat then
+          df(
+            " |t24:24:%s|t%s (id: %d) %ds",
+            effect.ability.icon,
+            effect.ability.name,
+            effect.ability.id,
+            effect.duration / 1000
+          )
+        end
       end
       return
     end
@@ -1755,6 +1785,18 @@ mAction.saveEffect = function(self, effect)
     return
   end
 
+  -- unified tracked-effect chat log: single chokepoint covering every path an effect
+  -- enters the effectList (effect events, combat events, buff polling), so players can
+  -- discover ability ids for the core blacklist
+  if settings.getSavedVars().addonLogTrackedEffectsInChat and effect.duration > 0 then
+    df(
+      " |t24:24:%s|t%s (id: %d) %ds",
+      effect.ability.icon,
+      effect.ability.name,
+      effect.ability.id,
+      effect.duration / 1000
+    )
+  end
   self.lastEffectTime = effect.startTime
   -- Reset mainEffectPurged when a main effect (icon-matching) is saved
   if self.mainEffectPurged then
@@ -1875,32 +1917,36 @@ mAction.toLogString_SingleLine = function(self)
   )
 end
 
+---Placeholder for future special-case stack routing (e.g. triggered bonus stacks that are
+---consumed one by one, like Stone Giant or Flame Lash). Returning false routes every stack
+---effect to the unified stackEffect slot.
+---Note: stackCount is deliberately NOT a parameter — it is dynamic and unreliable for
+---classification; future special logic should key on ability/effect identity instead.
+---@type fun(self: adr.models.Action, effect: adr.models.Effect): boolean
+mAction.isSpecialStackEffect = function(self, effect)
+  return false
+end
+
 ---@type fun(self: adr.models.Action, stackCount: number, effect: adr.models.Effect): boolean
 mAction.updateStackInfo = function(self, stackCount, effect)
   if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
     addon.debug("[MS~]updating stackCount to %d from %s in %s", stackCount, effect:toLogString(), self:toLogString())
   end
-  -- stackEffect/stackCount: actively accumulated stacks (gradually build up via attacks, e.g. Grim Focus, Bound Armaments)
-  -- stackEffect2/stackCount2: triggered bonus stacks (suddenly granted by conditions, then consumed one by one)
-  -- e.g. Stone Giant gets stacks when triggered by other skills, Flame Lash gets 5 bonus stacks under certain conditions
+  -- stackEffect/stackCount: unified slot for all stack effects, whether accumulated
+  -- gradually (e.g. Grim Focus, Bound Armaments) or granted at once
+  -- stackEffect2/stackCount2: reserved for special cases flagged by isSpecialStackEffect
+  -- (currently a placeholder), e.g. triggered bonus stacks consumed one by one
   local addType = 0
-  if not self.stackEffect then
-    addType = 1
-    -- detect triggered bonus stack pattern: sudden stack at action beginning
-    if
-      stackCount >= 3 -- sudden stack like Stone Giant, Flame Lash
-      and GetGameTimeMilliseconds() - self.startTime < 1000 -- in the beginning (1000ms to account for latency and cast time)
-      and not self.fake -- not for fake actions
-      and self.descriptionNums[stackCount] -- must match a number in skill description
-    then
+  if self:isSpecialStackEffect(effect) then
+    if not self.stackEffect2 or self.stackEffect2.ability.id == effect.ability.id then
       addType = 2
-      if self.stackEffect2 and self.stackEffect2.ability.id ~= effect.ability.id then
-        addType = 0
-        if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
-          addon.debug("[MSx]ingored because old stackEffect2 existed: %s ", self.stackEffect2:toLogString())
-        end
+    else
+      if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
+        addon.debug("[MSx]ignored because old stackEffect2 existed: %s ", self.stackEffect2:toLogString())
       end
     end
+  elseif not self.stackEffect then
+    addType = 1
   elseif self.stackEffect.ability.id == effect.ability.id then
     -- multi-target stacking DoT (e.g. Carve bleed on boss + adds): keep the
     -- higher-stack instance, don't let a fresh low-stack add overwrite the boss.
@@ -1921,10 +1967,33 @@ mAction.updateStackInfo = function(self, stackCount, effect)
         )
       end
     end
-  elseif not self.stackEffect2 or self.stackEffect2.ability.id == effect.ability.id then
-    addType = 2
+  else
+    -- non-special stack effect from a different ability while the unified slot is
+    -- occupied: ignored for now, candidate for future isSpecialStackEffect logic
+    if addon.debugEnabled(DSS_MODEL_STACK, effect.ability.name) then
+      addon.debug(
+        "[MSi]ignored %s because stackEffect occupied by %s",
+        effect:toLogString(),
+        self.stackEffect:toLogString()
+      )
+    end
   end
   if addType == 1 then
+    -- carry over a live expiry when a fresh combat-granted stack effect (duration 0)
+    -- replaces the current one, e.g. re-casting while the buff is still active: the
+    -- GAINED re-grant does not repeat GAINED_DURATION, so the expiry would be lost
+    -- and getStackEffect would treat the stack as stale (count display disappears)
+    if
+      effect.duration == 0
+      and effect.combatEventId ~= nil
+      and self.stackEffect
+      and self.stackEffect.duration > 0
+      and self.stackEffect.endTime > GetGameTimeMilliseconds()
+    then
+      effect.duration = self.stackEffect.duration
+      effect.endTime = self.stackEffect.endTime
+      effect.startTime = self.stackEffect.startTime
+    end
     self.stackEffect = effect
     self.stackCountMatch = false
     self.stackCountMatch = stackCount >= 3 and self.descriptionNums[stackCount]

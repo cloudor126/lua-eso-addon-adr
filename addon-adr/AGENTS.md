@@ -1,10 +1,13 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents when working with code in this repository.
+This file provides guidance to AI coding agents when working with code in this
+repository.
 
 ## Project Overview
 
-Action Duration Reminder is an Elder Scrolls Online (ESO) addon that tracks ability cooldowns, buff durations, and DoT timers. It displays countdown timers on the action bar and can show popup alerts when effects expire.
+Action Duration Reminder is an Elder Scrolls Online (ESO) addon that tracks
+ability cooldowns, buff durations, and DoT timers. It displays countdown timers
+on the action bar and can show popup alerts when effects expire.
 
 ## Build Commands
 
@@ -23,6 +26,7 @@ Action Duration Reminder is an Elder Scrolls Online (ESO) addon that tracks abil
 ```
 
 The `gradle.properties` file must define:
+
 - `ESO_LIVE_ADDONS_DIR` - path to ESO live addons folder
 - `ESO_PTS_ADDONS_DIR` - path to ESO PTS addons folder
 - `com.esoui.apiToken` - API token for esoui.com uploads
@@ -33,7 +37,8 @@ Version numbers are extracted from the first line of `changelog`.
 
 ### Module System
 
-The addon uses a consistent module pattern. Each module file follows this structure:
+The addon uses a consistent module pattern. Each module file follows this
+structure:
 
 ```lua
 local addon = ActionDurationReminder
@@ -82,29 +87,37 @@ addon.callExtension(m.EXTKEY_UPDATE)
 ### Data Models
 
 - **Ability** - Skill info (id, name, icon, description)
-- **Action** - A performed skill with timing (startTime, duration, endTime, effectList, stackCount)
-- **Effect** - A buff/debuff instance (ability, unitTag, startTime, endTime, stackCount)
+- **Action** - A performed skill with timing (startTime, duration, endTime,
+  effectList, stackCount)
+- **Effect** - A buff/debuff instance (ability, unitTag, startTime, endTime,
+  stackCount)
 
 ### Saved Variables
 
-Stored in `ADRSV` with account-wide option. Each module adds its defaults via the extension system.
+Stored in `ADRSV` with account-wide option. Each module adds its defaults via
+the extension system.
 
 ## Debugging
 
 Debug logging is controlled via the Settings menu under Debug section:
+
 - Enable "Debug Logging" master switch
 - Use "Ability Name Filter" to filter by ability name (Lua pattern)
 - Enable/disable individual debug sub-switches
 
 Debug switches and sub-switches are defined in Core.lua and Models.lua:
-- `DS_ACTION` - Action debug (find, new, match, unref, stack, remove, delete, save, clear)
-- `DS_EFFECT` - Effect debug (gain, fade, update, refresh, transfer, miss, match)
+
+- `DS_ACTION` - Action debug (find, new, match, unref, stack, remove, delete,
+  save, clear)
+- `DS_EFFECT` - Effect debug (gain, fade, update, refresh, transfer, miss,
+  match)
 - `DS_COMBAT` - Combat debug (event, fade, stack, tick, duration, channel)
 - `DS_FILTER` - Filter debug (accept, reject)
 - `DS_TARGET` - Target debug (track)
 - `DS_MODEL` - Model debug (stack, purge)
 
-Log format: `[XX*]` where XX is the debug marker (e.g., `[AFA]` = Action Find Action found)
+Log format: `[XX*]` where XX is the debug marker (e.g., `[AFA]` = Action Find
+Action found)
 
 ## Key Files
 
@@ -115,4 +128,6 @@ Log format: `[XX*]` where XX is the debug marker (e.g., `[AFA]` = Action Find Ac
 
 ## Localization
 
-Language files in `i18n/` use `put(key, translation)` pattern. Files are named by language code (en, zh, de, fr, es, ja, pt, ru). The manifest loads `$(language).lua` dynamically based on client language.
+Language files in `i18n/` use `put(key, translation)` pattern. Files are named
+by language code (en, zh, de, fr, es, ja, pt, ru). The manifest loads
+`$(language).lua` dynamically based on client language.
