@@ -5,6 +5,11 @@ local l = {
     return settings.getSavedVars()
   end,
 }
+---Debug模块公开表(addon.register("Debug#M"))
+---@class adr.debug.M
+---@field getLogs? fun(): string[]
+---@field getLogVersion? fun(): number
+---@field clearLogs? fun()
 local m = { l = l }
 
 --========================================
@@ -88,6 +93,16 @@ end
 --========================================
 
 -- Debug module defaults
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field debugLoggingEnabled? boolean
+---@field debugFilterPattern? string
+---@field debugLogTrackedEffectsInChat? boolean
+---@field debugChatOutput? boolean
+---@field debugBufferCap? number
+---@field addonLogTrackedEffectsInChat? boolean
+
+---@type adr.settings.SavedVars
 local debugSavedVarsDefaults = {
   debugLogTrackedEffectsInChat = false,
   debugFilterPattern = "",
@@ -153,7 +168,9 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     {
       type = "checkbox",
       name = addon.text("Also Print To Chat"),
-      tooltip = addon.text("Debug logs also go to the ring buffer used by the Debug Console; enable this to additionally print them to the chat frame"),
+      tooltip = addon.text(
+        "Debug logs also go to the ring buffer used by the Debug Console; enable this to additionally print them to the chat frame"
+      ),
       getFunc = function()
         return l.getSavedVars().debugChatOutput
       end,
@@ -190,59 +207,59 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
     {
       type = "editbox",
       name = addon.text("Ability Name Filter"),
-          tooltip = addon.text(
-            'Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'
-          ),
-          getFunc = function()
-            return l.getSavedVars().debugFilterPattern
-          end,
-          setFunc = function(text)
-            l.getSavedVars().debugFilterPattern = text
-          end,
-          isMultiline = false,
-          width = "full",
-          disabled = function()
-            return not l.getSavedVars().debugLoggingEnabled
-          end,
-        },
-        {
-          type = "button",
-          name = addon.text("Enable All"),
-          tooltip = addon.text("Enable all debug sub-switches"),
-          func = function()
-            local sv = l.getSavedVars()
-            for _, settings in pairs(addon.getDebugSettingMap()) do
-              for _, info in pairs(settings) do
-                sv[info[1]] = true
-              end
-            end
-          end,
-          width = "half",
-        },
-        {
-          type = "button",
-          name = addon.text("Disable All"),
-          tooltip = addon.text("Disable all debug sub-switches"),
-          func = function()
-            local sv = l.getSavedVars()
-            for _, settings in pairs(addon.getDebugSettingMap()) do
-              for _, info in pairs(settings) do
-                sv[info[1]] = false
-              end
-            end
-          end,
-          width = "half",
-        },
-  }
-
-  table.insert(controls, {
-      type = "submenu",
-      name = addon.text("Detailed Debug Options"),
+      tooltip = addon.text(
+        'Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'
+      ),
+      getFunc = function()
+        return l.getSavedVars().debugFilterPattern
+      end,
+      setFunc = function(text)
+        l.getSavedVars().debugFilterPattern = text
+      end,
+      isMultiline = false,
+      width = "full",
       disabled = function()
         return not l.getSavedVars().debugLoggingEnabled
       end,
-      controls = detailedControls,
-    })
+    },
+    {
+      type = "button",
+      name = addon.text("Enable All"),
+      tooltip = addon.text("Enable all debug sub-switches"),
+      func = function()
+        local sv = l.getSavedVars()
+        for _, settings in pairs(addon.getDebugSettingMap()) do
+          for _, info in pairs(settings) do
+            sv[info[1]] = true
+          end
+        end
+      end,
+      width = "half",
+    },
+    {
+      type = "button",
+      name = addon.text("Disable All"),
+      tooltip = addon.text("Disable all debug sub-switches"),
+      func = function()
+        local sv = l.getSavedVars()
+        for _, settings in pairs(addon.getDebugSettingMap()) do
+          for _, info in pairs(settings) do
+            sv[info[1]] = false
+          end
+        end
+      end,
+      width = "half",
+    },
+  }
+
+  table.insert(controls, {
+    type = "submenu",
+    name = addon.text("Detailed Debug Options"),
+    disabled = function()
+      return not l.getSavedVars().debugLoggingEnabled
+    end,
+    controls = detailedControls,
+  })
 
   -- Build debug option controls from registered switches/subswitches
   for switch, displayName in pairs(addon.getDebugSwitchMap()) do

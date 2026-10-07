@@ -52,6 +52,24 @@ local zhFlags = {
   jf = true,
 }
 
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field alertEnabled? boolean
+---@field alertIconOnly? boolean
+---@field alertPlaySound? boolean
+---@field alertSoundName? string
+---@field alertAheadSeconds? number
+---@field alertKeepSeconds? number
+---@field alertKeyWords? string
+---@field alertBlackKeyWords? string
+---@field alertOffsetX? number
+---@field alertOffsetY? number
+---@field alertFontName? string
+---@field alertCustomFontName? string
+---@field alertFontSize? number
+---@field alertFontStyle? string
+---@field alertIconSize? number
+---@field alertIconOpacity? number
 ---@type adr.settings.SavedVars
 local alertSavedVarsDefaults = {
   alertEnabled = true,

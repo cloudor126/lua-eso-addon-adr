@@ -85,6 +85,16 @@ local DSS_EFFECT_MATCH = { DS_EFFECT, "match" }
 -- Target
 local DSS_TARGET_TRACK = { DS_TARGET, "track" }
 
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field coreMultipleTargetTracking? boolean
+---@field coreMultipleTargetTrackingWithoutClearing? boolean
+---@field coreSecondsBeforeFade? number
+---@field coreMinimumDurationSeconds? number
+---@field coreIgnoreLongDebuff? boolean
+---@field coreKeyWords? string
+---@field coreBlackKeyWords? string
+---@field coreClearAreaActionsOnCombatEnd? boolean
 ---@type adr.settings.SavedVars
 local coreSavedVarsDefaults = {
   coreMultipleTargetTracking = true,

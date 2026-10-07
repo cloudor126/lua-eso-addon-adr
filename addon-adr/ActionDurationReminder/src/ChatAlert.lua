@@ -44,6 +44,28 @@ local DSS_CHATALERT_HIDE = { DS_CHATALERT, "hide" } -- chat alert hidden [KH]
 local DSS_CHATALERT_SKIP = { DS_CHATALERT, "skip" } -- chat alert skipped [K^]
 
 ---
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field chatAlertEnabled? boolean
+---@field chatAlertChannelParty? boolean
+---@field chatAlertChannelGuild? boolean
+---@field chatAlertChannelSay? boolean
+---@field chatAlertChannelWhisper? boolean
+---@field chatAlertDurationSeconds? number
+---@field chatAlertFontName? string
+---@field chatAlertFontSize? number
+---@field chatAlertFontStyle? string
+---@field chatAlertAlignment? string|number
+---@field chatAlertGuildPrefixFormat? string
+---@field chatAlertMaxAlerts? number
+---@field chatAlertMaxMessageLength? number
+---@field chatAlertOffsetX? number
+---@field chatAlertOffsetY? number
+---@field chatAlertOnlyInCombat? boolean
+---@field chatAlertPlaySound? boolean
+---@field chatAlertPromptShown? boolean
+---@field chatAlertShowUserId? boolean
+---@field chatAlertSoundName? string
 ---@type adr.settings.SavedVars
 local chatAlertSavedVarsDefaults = {
   chatAlertEnabled = false,

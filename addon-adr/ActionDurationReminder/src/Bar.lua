@@ -21,6 +21,43 @@ local m = { l = l }
 ---Bar模块公开表(addon.register("Bar#M"))，当前无导出成员
 ---@class adr.bar.M
 
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field barEnabled? boolean
+---@field barShowShift? boolean
+---@field barShowShiftFully? boolean
+---@field barShowShiftScalePercent? number
+---@field barShowInQuickslot? boolean
+---@field barShiftOffsetX? number
+---@field barShiftOffsetY? number
+---@field barCooldownVisible? boolean
+---@field barCooldownColor? number[]
+---@field barCooldownEndingColor? number[]
+---@field barCooldownEndingSeconds? number
+---@field barCooldownOpacity? number
+---@field barCooldownThickness? number
+---@field barLabelEnabled? boolean
+---@field barLabelColor? number[]
+---@field barLabelEndingColor? number[]
+---@field barLabelFontName? string
+---@field barLabelFontSize? number
+---@field barLabelFontStyle? string
+---@field barLabelYOffset? number
+---@field barLabelYOffsetInShift? number
+---@field barLabelIgnoreDecimal? boolean
+---@field barLabelIgnoreDeciamlThreshold? number
+---@field barLowPriorityLabelColor? number[]
+---@field barStackLabelEnabled? boolean
+---@field barStackLabelColor? number[]
+---@field barStackLabelFontName? string
+---@field barStackLabelFontSize? number
+---@field barStackLabelFontStyle? string
+---@field barStackLabelYOffset? number
+---@field barStackLabelYOffsetInShift? number
+---@field barProgressVisible? boolean
+---@field barProgressColor? number[]
+---@field barProgressOpacity? number
+---@field barProgressDirection? string
 ---@type adr.settings.SavedVars
 local barSavedVarsDefaults = {
   barEnabled = true,

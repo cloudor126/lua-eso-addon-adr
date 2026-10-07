@@ -15,6 +15,9 @@ local m = { l = l }
 --========================================
 --        types
 --========================================
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field patchMoveBarsEnabled? boolean
 ---@type adr.settings.SavedVars
 local patchSavedVarsDefaults = {
   patchMoveBarsEnabled = true,

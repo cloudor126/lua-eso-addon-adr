@@ -20,6 +20,10 @@ local m = { l = l }
 ---@field close? fun()
 ---@field toggle? fun()
 
+---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
+---@class adr.settings.SavedVars
+---@field debugWindowOffsetX? number
+---@field debugWindowOffsetY? number
 ---@type adr.settings.SavedVars
 local debugWindowSavedVarsDefaults = {
   debugWindowOffsetX = 0,
