@@ -1,3 +1,8 @@
+3.165
+
+### New Features
+- Debug Console: debug logs now go into a ring buffer (default 1000 lines, configurable 100-5000) viewable in a dedicated window (settings button or /adrlog) with substring filter, pause, clear and Copy All; chat output is now off by default and can be re-enabled with "Also Print To Chat".
+
 3.164
 
 ### Bug Fixes

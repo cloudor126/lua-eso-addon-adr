@@ -8,6 +8,54 @@ local l = {
 local m = { l = l }
 
 --========================================
+--        l
+--========================================
+
+-- Ring buffer of recent debug log lines, consumed by the Debug Console window
+l.logs = {}
+-- Bumped on every push so viewers can cheaply detect new content
+l.logVersion = 0
+
+---@type fun(line: string)
+l.pushLog = function(line)
+  local cap = l.getSavedVars().debugBufferCap or 1000
+  if #l.logs >= cap then
+    table.remove(l.logs, 1)
+  end
+  l.logs[#l.logs + 1] = string.format("[%8.2f] %s", GetGameTimeMilliseconds() / 1000, line)
+  l.logVersion = l.logVersion + 1
+end
+
+-- Wrap the Addon.lua stub so every debug line also lands in the ring buffer;
+-- chat output becomes optional (default off) to keep the chat frame clean
+local stubDebug = addon.debug
+addon.debug = function(format, ...)
+  local raw = string.format(format, ...)
+  l.pushLog(raw)
+  if l.getSavedVars().debugChatOutput then
+    stubDebug("%s", raw)
+  end
+end
+
+---@type fun(): string[]
+m.getLogs = function()
+  return l.logs
+end
+
+---@type fun(): number
+m.getLogVersion = function()
+  return l.logVersion
+end
+
+---@type fun()
+m.clearLogs = function()
+  for i = #l.logs, 1, -1 do
+    l.logs[i] = nil
+  end
+  l.logVersion = l.logVersion + 1
+end
+
+--========================================
 --        m
 --========================================
 
@@ -44,6 +92,8 @@ local debugSavedVarsDefaults = {
   debugLogTrackedEffectsInChat = false,
   debugFilterPattern = "",
   debugLoggingEnabled = false,
+  debugChatOutput = false,
+  debugBufferCap = 1000,
 }
 
 --========================================
@@ -88,18 +138,58 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       setFunc = function(value)
         l.getSavedVars().debugLoggingEnabled = value
       end,
-      width = "full",
+      width = "half",
     },
     {
-      type = "submenu",
-      name = addon.text("Detailed Debug Options"),
-      disabled = function()
-        return not l.getSavedVars().debugLoggingEnabled
+      type = "button",
+      name = addon.text("Open Debug Console"),
+      tooltip = addon.text("Open a window to browse, filter and copy recent debug logs"),
+      func = function()
+        SCENE_MANAGER:Hide("gameMenuInGame")
+        addon.load("DebugWindow#M").open()
       end,
-      controls = {
-        {
-          type = "editbox",
-          name = addon.text("Ability Name Filter"),
+      width = "half",
+    },
+    {
+      type = "checkbox",
+      name = addon.text("Also Print To Chat"),
+      tooltip = addon.text("Debug logs also go to the ring buffer used by the Debug Console; enable this to additionally print them to the chat frame"),
+      getFunc = function()
+        return l.getSavedVars().debugChatOutput
+      end,
+      setFunc = function(value)
+        l.getSavedVars().debugChatOutput = value
+      end,
+      width = "half",
+    },
+    {
+      type = "slider",
+      name = addon.text("Debug Buffer Cap"),
+      tooltip = addon.text("Maximum number of debug log lines kept in the Debug Console ring buffer"),
+      min = 100,
+      max = 5000,
+      step = 50,
+      getFunc = function()
+        return l.getSavedVars().debugBufferCap
+      end,
+      setFunc = function(value)
+        l.getSavedVars().debugBufferCap = value
+        -- trim immediately when lowered
+        local logs = l.logs
+        while #logs > value do
+          table.remove(logs, 1)
+        end
+        l.logVersion = l.logVersion + 1
+      end,
+      width = "half",
+      default = debugSavedVarsDefaults.debugBufferCap,
+    },
+  }
+
+  local detailedControls = {
+    {
+      type = "editbox",
+      name = addon.text("Ability Name Filter"),
           tooltip = addon.text(
             'Lua pattern to filter debug logs by ability name (e.g., " Lash$" matches names ending with " Lash". Leave empty to disable)'
           ),
@@ -143,19 +233,26 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           end,
           width = "half",
         },
-      },
-    },
   }
+
+  table.insert(controls, {
+      type = "submenu",
+      name = addon.text("Detailed Debug Options"),
+      disabled = function()
+        return not l.getSavedVars().debugLoggingEnabled
+      end,
+      controls = detailedControls,
+    })
 
   -- Build debug option controls from registered switches/subswitches
   for switch, displayName in pairs(addon.getDebugSwitchMap()) do
-    table.insert(controls[3].controls, { type = "header", name = addon.text(displayName) })
+    table.insert(detailedControls, { type = "header", name = addon.text(displayName) })
     local subs = addon.getDebugSettingMap()[switch] or {}
     for subSwitch, info in pairs(subs) do
       local settingKey = info[1]
       local subDisplayName = info[2]
       local tooltip = info[3]
-      table.insert(controls[3].controls, {
+      table.insert(detailedControls, {
         type = "checkbox",
         name = addon.text(subDisplayName),
         tooltip = addon.text(tooltip),

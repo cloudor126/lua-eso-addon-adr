@@ -23,5 +23,6 @@ src/Alert.lua
 src/ChatAlert.lua
 src/Patch.lua
 src/Debug.lua
+src/DebugWindow.lua
 
 
