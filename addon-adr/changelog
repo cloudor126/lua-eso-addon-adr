@@ -1,7 +1,12 @@
+3.166
+
+### Bug Fixes
+- Fixed recasting Channeled Focus / Restoring Focus not refreshing the slot timer: two causes fixed — (1) the re-cast's GAINED_DURATION combat event only carries the player buff's ability id, which no longer matches the ground rune stack effect's stamped combatEventId, so the inherited stack effect kept the old endTime; the ground/area re-cast branch now also pulls a stale same-family stack effect forward to the new duration. (2) combat-event queue loops iterate every matching action in the action queue, including the superseded old one, whose re-save stole idActionMap back from the fresh action; saveAction now refuses to re-register superseded actions.
+
 3.165
 
 ### New Features
-- Debug Console: debug logs now go into a ring buffer (default 1000 lines, configurable 100-5000) viewable in a dedicated window (settings button or /adrlog) with substring filter, pause, clear and Copy All; chat output is now off by default and can be re-enabled with "Also Print To Chat".
+- Debug logs now go to an in-game console (/adrlog) instead of the chat frame; use it to filter and copy logs when reporting issues. Chat output can be re-enabled in settings if preferred.
 
 3.164
 

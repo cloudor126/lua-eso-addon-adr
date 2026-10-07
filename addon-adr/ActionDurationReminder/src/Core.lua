@@ -942,6 +942,30 @@ l.isRecentCombatGrant = function(stackEffect, now)
   return stackEffect ~= nil and stackEffect.combatGrantTime ~= nil and now - stackEffect.combatGrantTime < 1000
 end
 
+--- A family re-cast resets the action clock; move the inherited stack effect's clock with
+--- it. Keyed by ability family (same id or display name), NOT by stackEffect.combatEventId:
+--- that id identifies the stack's granting event (e.g. Channeled Focus's ground rune 37009)
+--- which never fires again on re-cast, while the re-cast duration event carries a sibling
+--- id (the player buff 33524). Only ever extends, never shortens. Unlike the combatEventId-
+--- keyed [CDs] extension below, this is safe with the negotiated family duration because it
+--- only touches stacks of the SAME skill family (Crystal Weapon's shorter cross-effect
+--- Weaver window has a different family id/name and is left alone).
+---@type fun(action: adr.models.Action, abilityId: number, abilityName: string, now: number, duration: number)
+l.extendFamilyStackEffect = function(action, abilityId, abilityName, now, duration)
+  local stackEffect = action.stackEffect
+  if
+    stackEffect
+    and stackEffect.stackCount
+    and stackEffect.stackCount > 0
+    and stackEffect.endTime < now + duration
+    and (stackEffect.ability.id == abilityId or stackEffect.ability.name == abilityName)
+  then
+    stackEffect.duration = duration
+    stackEffect.endTime = now + duration
+    stackEffect.startTime = now
+  end
+end
+
 ---@type fun(eventCode: number, result: number, isError: boolean, abilityName: string, abilityGraphic: number, abilityActionSlotType: number, sourceName: string, sourceType: number, targetName: string, targetType: number, hitValue: number, powerType: number, damageType: number, log: boolean, sourceUnitId: number, targetUnitId: number, abilityId: number, overflow: number)
 l.onCombatEventFromPlayer = function(
   eventCode,
@@ -1090,6 +1114,7 @@ l.onCombatEventFromPlayer = function(
           end
           action.startTime = now
           action.endTime = now + duration
+          l.extendFamilyStackEffect(action, abilityId, abilityName, now, duration)
           if action.flags.forGround then
             -- record this to mark next effect as activated one
             action.groundFirstEffectId = -1
@@ -1166,6 +1191,7 @@ l.onCombatEventFromPlayer = function(
               -- record this to mark next effect as activated one
               action.groundFirstEffectId = -1
             end
+            l.extendFamilyStackEffect(action, abilityId, abilityName, now, duration)
             l.saveAction(action)
             if addon.debugEnabled(DSS_COMBAT_DURATION, abilityName) then
               addon.debug("[CDg] %s ground duration %d for %s", ability:toLogString(), duration, action:toLogString())
@@ -2159,6 +2185,18 @@ end
 
 ---@type fun(action: adr.models.Action)
 l.saveAction = function(action)
+  -- an action superseded by a re-cast (sameNameAction.newAction chain) must never
+  -- re-enter the registries: combat-event queue loops iterate every matching
+  -- action in actionQueue, including dead ones (removeAction only evicts fake
+  -- actions from the queue), and re-saving the stale action would steal
+  -- idActionMap back from the fresh one, freezing the displayed timer
+  -- (e.g. Channeled Focus re-cast)
+  if action.newAction then
+    if addon.debugEnabled(DSS_ACTION_SAVE, action.ability.name) then
+      addon.debug("[AS!]refused to save superseded action %s", action:toLogString_SingleLine())
+    end
+    return
+  end
   l.lastEffectAction = action
 
   -- clear same name action that can have a different id
