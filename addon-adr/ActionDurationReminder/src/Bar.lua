@@ -253,9 +253,15 @@ l.openShiftBarFrame = function()
     l.shiftBarFrame:SetHandler("OnMoveStop", function()
       local left = l.shiftBarFrame:GetLeft()
       local bottom = l.shiftBarFrame:GetBottom()
-      l.getSavedVars().barShiftOffsetX = left - slot3:GetLeft()
-      l.getSavedVars().barShiftOffsetY = bottom - slot3:GetTop()
-      l.updateWidgets(views.updateWidgetShiftOffset)
+      local slotLeft = slot3:GetLeft()
+      local slotTop = slot3:GetTop()
+      -- only save when slot3 reports a valid (laid out) position, e.g. skip while
+      -- the action bar fragment is hidden, otherwise absolute garbage gets saved
+      if slotLeft and slotTop and slotLeft > 0 and slotTop > 0 then
+        l.getSavedVars().barShiftOffsetX = left - slotLeft
+        l.getSavedVars().barShiftOffsetY = bottom - slotTop
+        l.updateWidgets(views.updateWidgetShiftOffset)
+      end
       zo_callLater(function()
         SetGameCameraUIMode(true)
       end, 10)
@@ -313,13 +319,32 @@ l.openShiftBarFrame = function()
   end
   l.shiftBarFrame:SetHidden(false)
   l.shiftBarFrame:ClearAnchors()
-  l.shiftBarFrame:SetAnchor(
-    BOTTOMLEFT,
-    l.shiftBarSlot3,
-    TOPLEFT,
-    l.getSavedVars().barShiftOffsetX,
-    l.getSavedVars().barShiftOffsetY + 1
-  )
+  -- U51 engine regression: dragging a movable control whose anchor targets a
+  -- non-GuiRoot control (like slot3) computes new anchor offsets in absolute
+  -- screen space, teleporting the frame off screen on the first grab
+  -- (position becomes roughly slot3 + slot3). Anchor to GuiRoot (origin 0,0,
+  -- the same space the drag math uses) with absolute offsets converted from
+  -- slot3's live position instead.
+  local baseX = l.shiftBarSlot3:GetLeft()
+  local baseY = l.shiftBarSlot3:GetTop()
+  if baseX and baseY and baseX > 0 and baseY > 0 then
+    l.shiftBarFrame:SetAnchor(
+      BOTTOMLEFT,
+      GuiRoot,
+      TOPLEFT,
+      baseX + l.getSavedVars().barShiftOffsetX,
+      baseY + l.getSavedVars().barShiftOffsetY
+    )
+  else
+    -- slot3 not laid out yet (action bar hidden): fall back to relative anchor
+    l.shiftBarFrame:SetAnchor(
+      BOTTOMLEFT,
+      l.shiftBarSlot3,
+      TOPLEFT,
+      l.getSavedVars().barShiftOffsetX,
+      l.getSavedVars().barShiftOffsetY
+    )
+  end
   -- Position close button relative to frame
   l.shiftBarCloseBtn:ClearAnchors()
   l.shiftBarCloseBtn:SetAnchor(TOPRIGHT, l.shiftBarFrame, TOPRIGHT, 4, -4)
@@ -418,7 +443,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         type = "description",
         text = "",
         title = text("Shift Bar Position"),
-        width = "half",
+        width = "full",
         disabled = function()
           return not l.getSavedVars().barEnabled
         end,
@@ -426,12 +451,31 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       {
         type = "button",
         name = text("Move Shift Bar"),
+        tooltip = text("Show a draggable frame to position the shift bar"),
         func = function()
           SCENE_MANAGER:Hide("gameMenuInGame")
           l.openShiftBarFrame()
           zo_callLater(function()
             SetGameCameraUIMode(true)
           end, 10)
+        end,
+        width = "half",
+        disabled = function()
+          return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift
+        end,
+      },
+      {
+        type = "button",
+        name = text("Reset Shift Bar"),
+        tooltip = text("Reset the shift bar position back to the default"),
+        func = function()
+          l.getSavedVars().barShiftOffsetX = barSavedVarsDefaults.barShiftOffsetX
+          l.getSavedVars().barShiftOffsetY = barSavedVarsDefaults.barShiftOffsetY
+          l.updateWidgets(views.updateWidgetShiftOffset)
+          -- re-anchor the positioning frame if it is currently open
+          if l.shiftBarFrame and not l.shiftBarFrame:IsControlHidden() then
+            l.openShiftBarFrame()
+          end
         end,
         width = "half",
         disabled = function()

@@ -1,3 +1,8 @@
+3.164
+
+### Bug Fixes
+- Fixed the "Move Shift Bar" frame teleporting off screen after being dragged (U51 regression): the engine now computes drag offsets in absolute screen space for controls anchored to non-GuiRoot controls, so the positioning frame is anchored to GuiRoot with offsets converted from slot3's live position; offsets are also no longer saved while slot3 reports an invalid position.
+
 3.163
 
 ### New Features
