@@ -97,21 +97,27 @@ task upload {
     description = "upload addon zip file to esoui.com"
     dependsOn distZip
     doLast{
-        def changelog = file('changelog').getText('utf8').replaceAll('"',/\\"/)
+        // NOTE: never inline the changelog into -F "changelog=...": curl treats ';' in a
+        // -F value as an option separator (type=/filename=...), silently truncating the
+        // text at the first semicolon. "<file" reads the value verbatim from the file.
+        def changelogFile = file('changelog')
         def cmd = ['curl',
             // '--proxy', 'http://localhost:7897',  // 代理 (已禁用)
-            '-H', "\"x-api-token: ${esoApiToken}\"",
+            '-H', "x-api-token: ${esoApiToken}",
             '-F', "id=${addonId}",
             '-F', "version=$addonVersion",
             '-F', "compatible=$addonCompatible",
-            '-F', "\"changelog=$changelog\"",
-            '-F', "\"updatefile=@${distZip.archiveFile.get().asFile.absolutePath}\"",
+            '-F', "changelog=<${changelogFile.absolutePath}",
+            '-F', "updatefile=@${distZip.archiveFile.get().asFile.absolutePath}",
             //'--resolve', 'api.esoui.com:443:104.25.180.72',
             'https://api.esoui.com/addons/update']
         // print cmd.join(' ')
         def proc = cmd.execute()
         proc.consumeProcessOutput(System.out, System.err)
         proc.waitFor()
+        if (proc.exitValue() != 0) {
+            throw new GradleException("curl exited with code ${proc.exitValue()}")
+        }
     }
 }
 
