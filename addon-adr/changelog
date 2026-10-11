@@ -1,3 +1,8 @@
+3.167
+
+### Bug Fixes
+- Shift bar layering vs the native ability bar frame now matches keyboard mode in gamepad mode: the gamepad slot frame is a plain "Backdrop" child control that the shift bar texture (created later at the same draw layer/level) used to cover; in gamepad mode the shift bar is re-parented under the slot's Button control (the first slot child, which renders no state texture in gamepad mode) so it draws below the native frame. Re-applied automatically when switching between keyboard and gamepad UI.
+
 3.166
 
 ### Bug Fixes

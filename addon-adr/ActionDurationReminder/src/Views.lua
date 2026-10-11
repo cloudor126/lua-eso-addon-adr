@@ -52,6 +52,7 @@ local mCooldown = {}
 ---@field shifted? boolean
 ---@field appendIndex? number
 ---@field visible? boolean
+---@field slot? Control
 ---@field slotIcon? Control
 ---@field backdrop? TextureControl
 ---@field background? TextureControl
@@ -82,6 +83,7 @@ local mCooldown = {}
 ---@field updateWidgetLabelYOffset? fun(widget: adr.views.Widget)
 ---@field updateWidgetShiftOffset? fun(widget: adr.views.Widget)
 ---@field updateWidgetShiftScalePercent? fun(widget: adr.views.Widget)
+---@field updateWidgetShiftLayering? fun(widget: adr.views.Widget)
 ---@field updateWidgetStackLabelYOffset? fun(widget: adr.views.Widget)
 
 --========================================
@@ -171,6 +173,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   --
   inst.visible = true
   local slot = ZO_ActionBar_GetButton(slotNum, slotNum > 8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
+  inst.slot = slot
   local slotIcon = slot:GetNamedChild("Icon")
   --  local flipCard = slot:GetNamedChild("FlipCard")
   inst.slotIcon = slotIcon
@@ -200,6 +203,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
     local offset = dui and 4.2 or 2
     background:SetAnchor(TOPLEFT, backdrop, TOPLEFT, offset, offset)
     background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset)
+    m.updateWidgetShiftLayering(inst)
   end
   local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL) --LabelControl#LabelControl
   inst.label = label
@@ -331,7 +335,7 @@ m.updateWidgetShiftOffset = function(widget)
   local offsetY = l.getSavedVars().barShiftOffsetY
   local baseSize = l.getSlotBaseSize()
   if widget.backdrop then
-    local slot = widget.backdrop:GetParent()
+    local slot = widget.slot or widget.backdrop:GetParent()
     widget.backdrop:ClearAnchors()
     if widget.appendIndex then
       widget.backdrop:SetAnchor(BOTTOM, slot, TOP, offsetX + (widget.appendIndex - 1) * (baseSize + 5), offsetY)
@@ -348,6 +352,45 @@ m.updateWidgetShiftScalePercent = function(widget)
   end
   if widget.backdrop then
     widget.backdrop:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  end
+end
+
+---The native slot frame is drawn differently per mode: keyboard mode draws it
+---as the Button's state texture (renders above plain background-layer textures),
+---gamepad mode draws it as the slot's plain "Backdrop" child control at
+---DL_BACKGROUND level 0. Siblings with equal (layer, level) render in control
+---tree order, and our shift bar texture is appended after every template
+---child, so in gamepad mode it covers the native frame. Negative draw levels
+---do not sort below level 0 (verified in-game), so instead the texture is
+---re-parented under the slot's Button control in gamepad mode: the Button is
+---the first slot child and renders no state texture in gamepad mode, so the
+---whole shift bar subtree draws before every other slot child, matching the
+---keyboard mode "behind the ability bar frame" layering.
+---@type fun(widget: adr.views.Widget)
+m.updateWidgetShiftLayering = function(widget)
+  if not widget.shifted then
+    return
+  end
+  local backdrop = widget.backdrop
+  local slot = widget.slot
+  if not backdrop or not slot then
+    return
+  end
+  if IsInGamepadPreferredMode() then
+    local button = slot:GetNamedChild("Button")
+    if button and backdrop:GetParent() ~= button then
+      backdrop:SetParent(button)
+      backdrop:SetDrawLevel(0)
+      if widget.background then
+        widget.background:SetDrawLevel(0)
+      end
+    end
+  elseif backdrop:GetParent() ~= slot then
+    backdrop:SetParent(slot)
+    backdrop:SetDrawLevel(0)
+    if widget.background then
+      widget.background:SetDrawLevel(0)
+    end
   end
 end
 

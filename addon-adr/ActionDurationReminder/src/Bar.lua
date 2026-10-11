@@ -418,6 +418,18 @@ end)
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 
+-- Shift bar vs native slot frame layering differs per mode (keyboard frame =
+-- Button state texture; gamepad frame = slot "Backdrop" child control at
+-- DL_BACKGROUND/0), and shift widgets are cached across mode switches, so the
+-- shift bar layering must be re-applied when the UI mode changes.
+-- ZO_PlatformStyle applies the callback immediately on creation and again on
+-- EVENT_GAMEPAD_PREFERRED_MODE_CHANGED.
+if ZO_PlatformStyle then
+  ZO_PlatformStyle:New(function()
+    l.updateWidgets(views.updateWidgetShiftLayering)
+  end)
+end
+
 addon.extend(settings.EXTKEY_ADD_MENUS, function()
   local text = addon.text
   settings.addMenuOptions({
