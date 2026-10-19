@@ -65,6 +65,12 @@ if _G.ADR_EMBED_SKIP then return end
    The call is safe in every scenario: if standalone ADR (or another host's
    embedded copy) is already running, `activate` is a no-op.
 
+   Call `activate` at file load time (top level of your file), NOT inside
+   an `ADD_ON_LOADED` handler: the core starts by listening for your
+   addon's `ADD_ON_LOADED`, and a listener registered while that same event
+   is still being dispatched may never fire, leaving the core permanently
+   unstarted.
+
 4. Use the API exactly as documented in `API.md`:
 
    ```lua

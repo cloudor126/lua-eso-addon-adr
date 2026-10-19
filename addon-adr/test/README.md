@@ -19,7 +19,7 @@ Commands: `/adrtest` (state dump), `/adrtesttick` (per-tick most-urgent report).
 2. Login, no `ADRHostTest` yet (or skip it): no Lua errors, bars work.
 3. `/script d(ActionDurationReminder.apiVersion)` -> `3`.
    `d(ActionDurationReminder.embedded)` -> `nil`.
-4. New in 3.165: Settings -> Alert -> "Text Color" picker: pick a color,
+4. New in 3.168: Settings -> Alert -> "Text Color" picker: pick a color,
    trigger an alert (let a tracked buff expire) -> alert text uses the
    chosen color; `/reloadui` -> setting persists.
 
@@ -28,8 +28,8 @@ Commands: `/adrtest` (state dump), `/adrtesttick` (per-tick most-urgent report).
 1. Rename `AddOns/ActionDurationReminder` to `ActionDurationReminder.off`.
 2. Login with `ADRHostTest` present. No Lua errors on load.
 3. `/adrtest`:
-   - `ADR_EMBED: v3.165 apiVersion=3 sv=ADRHostTestADRSV`
-   - `ADR: version=3.165 apiVersion=3 embedded=true`
+   - `ADR_EMBED: v3.168 apiVersion=3 sv=ADRHostTestADRSV`
+   - `ADR: version=3.168 apiVersion=3 embedded=true`
    - `tracked actions:` grows after casting slotted skills with durations.
    - `effects=` counts > 0 for self-buffs.
 4. `/adrtesttick` -> cast skills, "urgent:" lines appear every ~100ms.

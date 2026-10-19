@@ -205,8 +205,11 @@ _G[NAME] = m
 --========================================
 -- Call ADR_EMBED.activate("<YourAddonName>", "<YourAddonName>ADRSV") from any
 -- of your files that loads after EmbedAdr.lua (typically your addon's main
--- file). The 2nd argument is the saved-variables table name your manifest
--- declares for the embedded copy (## SavedVariables: <YourAddonName>ADRSV);
+-- file), at file load time (top level), NOT inside an ADD_ON_LOADED handler
+-- (the core hooks your ADD_ON_LOADED to start; registering during that same
+-- event dispatch may never fire). The 2nd argument is the saved-variables
+-- table name your manifest declares for the embedded copy
+-- (## SavedVariables: <YourAddonName>ADRSV);
 -- the embedded core stores its settings there instead of sharing "ADRSV"
 -- with the standalone addon. Startup is deferred until YOUR addon's
 -- ADD_ON_LOADED fires, so the declared saved variables are ready.
