@@ -84,6 +84,7 @@ local alertSavedVarsDefaults = {
   alertFontStyle = "thick-outline",
   alertCustomFontName = "",
   alertFontSize = 32,
+  alertTextColor = { 1, 1, 1 },
   alertOffsetX = 0,
   alertOffsetY = 0,
   alertKeyWords = "",
@@ -191,6 +192,7 @@ l.showAlert = function(alert)
     .. "|"
     .. savedVars.alertFontStyle
   control.label:SetFont(fontstr)
+  control.label:SetColor(unpack(savedVars.alertTextColor))
 
   control.label:SetText(savedVars.alertIconOnly and "" or zo_strformat("<<C:1>>", ability.showName))
   control.icon:SetTexture(ability.icon)
@@ -656,7 +658,7 @@ l.openAlertFrame = function()
     backdrop:SetDrawLevel(0)
     local label = WINDOW_MANAGER:CreateControl(nil, l.frame, CT_LABEL) --LabelControl#LabelControl
     label:SetFont("$(MEDIUM_FONT)|$(KB_18)|soft-shadow-thin")
-    label:SetColor(1, 1, 1)
+    label:SetColor(unpack(savedVars.alertTextColor))
     label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     label:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     label:SetAnchor(CENTER)
@@ -972,6 +974,25 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
         width = "full",
         default = alertSavedVarsDefaults.alertFontStyle,
+      },
+      {
+        type = "colorpicker",
+        name = text("Text Color"),
+        getFunc = function()
+          return unpack(l.getSavedVars().alertTextColor)
+        end,
+        setFunc = function(r, g, b)
+          l.getSavedVars().alertTextColor = { r, g, b }
+        end,
+        disabled = function()
+          return not l.getSavedVars().alertEnabled or l.getSavedVars().alertIconOnly
+        end,
+        width = "full",
+        default = {
+          r = alertSavedVarsDefaults.alertTextColor[1],
+          g = alertSavedVarsDefaults.alertTextColor[2],
+          b = alertSavedVarsDefaults.alertTextColor[3],
+        },
       },
       {
         type = "slider",

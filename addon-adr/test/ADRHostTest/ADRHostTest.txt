@@ -1,0 +1,16 @@
+## Title: ADRHostTest
+## Description: Smoke-test host for the ADR embedded core (dev tool, not for release)
+## APIVersion: 101051 101052
+## AddOnVersion: 1
+## OptionalDependsOn: ActionDurationReminder
+## SavedVariables: ADRHostTestADRSV
+
+libs/ADR/EmbedAdr.lua
+libs/ADR/Utils.lua
+libs/ADR/i18n/en.lua
+libs/ADR/Settings.lua
+libs/ADR/Models.lua
+libs/ADR/Core.lua
+libs/ADR/Debug.lua
+
+ADRHostTest.lua

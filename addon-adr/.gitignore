@@ -2,4 +2,7 @@
 /build/
 /.claude/
 luac.out
-/docs/
+/docs/*
+!/docs/API.md
+/HANDOFF.md
+/test/ADRHostTest/libs/

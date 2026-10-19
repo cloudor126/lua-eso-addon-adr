@@ -1,3 +1,11 @@
+3.168
+
+### New Features
+- [API] Public API for other addons: the tracking core is now consumable at runtime via `ActionDurationReminder.load("Core")` — query actions by ability id/name/hotbar slot, access the live action maps, and hook the ~100ms update tick via the `Core:update` extension key; `ActionDurationReminder.apiVersion` (major version, currently 3) gates compatibility — documented APIs stay stable within one apiVersion. Full reference: `docs/API.md` on GitHub and `API.md` inside the release zip.
+- [API] Embedded core distribution: the release zip now ships an `embedded/` folder with guarded, UI-less core sources plus `EMBED.md`, so other addons can embed the ADR core behind `## OptionalDependsOn: ActionDurationReminder` — when standalone ADR is installed it always takes precedence; otherwise the embedded copy activates and exposes the identical API. The embedded copy stores its settings under a host-specific saved-variables name (e.g. `YourAddonADRSV`, passed as the 2nd argument of `ADR_EMBED.activate`), so it never shares `ADRSV` with the standalone addon.
+- Added an Alert "Text Color" setting: the popup alert's text color is now customizable via a color picker (Settings -> Alert), matching the existing bar color options.
+- [API] Added `action:getEffectList()` as the supported accessor for the effects currently matched to an action.
+
 3.167
 
 ### Bug Fixes

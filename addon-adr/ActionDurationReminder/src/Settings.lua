@@ -60,8 +60,13 @@ l.onStart = function()
   end
   -- then let modules add their own defaults
   addon.callExtension(m.EXTKEY_ADD_DEFAULTS)
-  l.accountSavedVars = ZO_SavedVars:NewAccountWide(SV_NAME, SV_VER, nil, savedVarsDefaults)
-  l.characterSavedVars = ZO_SavedVars:New(SV_NAME, SV_VER, nil, savedVarsDefaults)
+  -- Embedded copies store their settings under a host-specific SV name
+  -- (set via ADR_EMBED.activate's 2nd argument) so the embedded copy never
+  -- shares "ADRSV" with the standalone addon (declaring the same SV name in
+  -- two addons makes both SavedVariables files fight over the same global).
+  local svName = _G.ADR_EMBED_SV_NAME or SV_NAME
+  l.accountSavedVars = ZO_SavedVars:NewAccountWide(svName, SV_VER, nil, savedVarsDefaults)
+  l.characterSavedVars = ZO_SavedVars:New(svName, SV_VER, nil, savedVarsDefaults)
   -- register addon panel
   local LAM2 = LibAddonMenu2
   if LAM2 == nil then

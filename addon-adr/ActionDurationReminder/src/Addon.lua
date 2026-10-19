@@ -5,6 +5,7 @@ local l = {} -- private table for local use
 local m = { l = l } -- public table for module use
 local NAME = "ActionDurationReminder"
 local VERSION = "@@ADDON_VERSION@@"
+local API_VERSION = tonumber("@@API_VERSION@@") or 0
 local TITLE = "Action Duration Reminder"
 local LINK_TYPE = "ADR_LINK"
 
@@ -14,6 +15,7 @@ local LINK_TYPE = "ADR_LINK"
 ---@class adr.addon.M
 ---@field name? string
 ---@field version? string
+---@field apiVersion? number 同一大版本内，已文档化的公开接口保持兼容
 ---@field title? string
 ---@field addAction? fun(key: string, action: fun(...: any))
 ---@field callExtension? fun(key: string, ...: any)
@@ -81,6 +83,8 @@ end
 m.name = NAME
 ---@type string
 m.version = VERSION
+---@type number
+m.apiVersion = API_VERSION
 ---@type string
 m.title = TITLE
 

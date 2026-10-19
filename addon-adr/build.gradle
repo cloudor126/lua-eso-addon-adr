@@ -15,6 +15,7 @@ file('changelog').withReader('utf8'){reader->
     if(m){
         def ver = m[0][0]
         ext.addonVersion = ver
+        ext.apiVersion = m[0][1].toInteger() // major version: documented APIs stay stable within one apiVersion
         ver = ver.replaceAll('a','.1').replaceAll('b','.2').replaceAll('c','.3')
         def verNo = m[0][1].padLeft(2,'0')
         def mm = ver=~ /\.(\w+)/
@@ -24,6 +25,7 @@ file('changelog').withReader('utf8'){reader->
     }else{
         ext.addonVersion = 'SNAPSHOT'
         ext.addonVersionNumber = '000000'
+        ext.apiVersion = 0
     }
 }
 
@@ -32,12 +34,65 @@ CopySpec mainContents = copySpec {
     from (addonName){
         exclude '**/*.dds'
          filter{
-            it.replaceAll('@@ADDON_VERSION@@',addonVersion).replaceAll('@@ADDON_VERSION_NO@@',addonVersionNumber)
+            it.replaceAll('@@ADDON_VERSION@@',addonVersion).replaceAll('@@ADDON_VERSION_NO@@',addonVersionNumber).replaceAll('@@API_VERSION@@',String.valueOf(apiVersion))
         }
     }
     from (addonName){
         include '**/*.dds'
     }
+}
+
+// ===== embedded/ : guarded core sources for other addons to copy in =====
+def embedModuleFiles = ['Utils.lua', 'Settings.lua', 'Models.lua', 'Core.lua', 'Debug.lua']
+def embedGuardLine = 'if _G.ADR_EMBED_SKIP then return end'
+def embedOutputDir = new File(buildDir, 'embedded')
+def embedI18nFiles = fileTree(dir: "${addonName}/i18n", include: '*.lua')
+def embedStagingFiles = files(
+    file("embed/EmbedAdr.lua"),
+    file("embed/EMBED.md"),
+    file('docs/API.md')
+)
+
+task buildEmbedded {
+    group = 'distribution'
+    description = 'Assemble embedded/ - guarded ADR core sources for other addons to embed'
+    inputs.files embedModuleFiles.collect { "${addonName}/src/${it}" }
+    inputs.files embedI18nFiles
+    inputs.files embedStagingFiles
+    inputs.property 'addonVersion', addonVersion
+    inputs.property 'addonVersionNumber', addonVersionNumber
+    inputs.property 'apiVersion', apiVersion
+    outputs.dir embedOutputDir
+    doLast {
+        def replaceTokens = { String text ->
+            text
+                .replaceAll('@@ADDON_VERSION@@', addonVersion)
+                .replaceAll('@@ADDON_VERSION_NO@@', addonVersionNumber)
+                .replaceAll('@@API_VERSION@@', String.valueOf(apiVersion))
+        }
+        // iso8859-1 keeps non-ASCII bytes untouched, same as mainContents
+        def writeFile = { File dst, String text ->
+            dst.parentFile.mkdirs()
+            dst.withWriter('iso8859-1') { it.write(text) }
+        }
+        embedOutputDir.mkdirs()
+        embedModuleFiles.each { name ->
+            def src = new File(projectDir, "${addonName}/src/${name}")
+            writeFile(new File(embedOutputDir, name), embedGuardLine + '\n' + replaceTokens(src.getText('iso8859-1')))
+        }
+        embedI18nFiles.each { f ->
+            writeFile(new File(embedOutputDir, "i18n/${f.name}"), embedGuardLine + '\n' + replaceTokens(f.getText('iso8859-1')))
+        }
+        // bootstrap + docs: token replacement only, no guard line
+        writeFile(new File(embedOutputDir, 'EmbedAdr.lua'), replaceTokens(new File(projectDir, "embed/EmbedAdr.lua").getText('iso8859-1')))
+        writeFile(new File(embedOutputDir, 'EMBED.md'), replaceTokens(new File(projectDir, "embed/EMBED.md").getText('iso8859-1')))
+        writeFile(new File(embedOutputDir, 'API.md'), file('docs/API.md').getText('iso8859-1'))
+    }
+}
+
+CopySpec embedContents = copySpec {
+    from embedOutputDir
+    into "embedded"
 }
 
 distTar.enabled = false
@@ -46,13 +101,16 @@ distributions {
         distributionBaseName  = addonName
         contents {
         	with mainContents
+        	with embedContents
         }
     }
 }
 
 distZip{
     archiveFile.set(file("${buildDir}/distributions/${addonName}-${addonVersion}.zip"))
+    dependsOn buildEmbedded
 }
+installDist.dependsOn buildEmbedded
 
 if (hasProperty('ESO_PTS_ADDONS_DIR')){
     def installDir =  new File(esoPtsDir, addonName)
@@ -60,6 +118,8 @@ if (hasProperty('ESO_PTS_ADDONS_DIR')){
     	group='distribution'
     	description='Installs the project into PTS dir'
     	with mainContents
+    	with embedContents
+        dependsOn buildEmbedded
         into installDir
     }
 }
@@ -70,6 +130,8 @@ if (hasProperty('ESO_LIVE_ADDONS_DIR')){
     	group='distribution'
     	description='Installs the project into LIVE dir'
     	with mainContents
+    	with embedContents
+        dependsOn buildEmbedded
         into installDir
     }
 }
@@ -133,3 +195,5 @@ task addonInfo{
         proc.waitFor()
     }
 }
+
+

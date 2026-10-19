@@ -79,6 +79,7 @@ local mEffect = {}
 ---@field getStackEffect? fun(self: adr.models.Action): adr.models.Effect?
 ---@field getStackEffect2? fun(self: adr.models.Action): adr.models.Effect?
 ---@field needEndingAlert? fun(self: adr.models.Action): boolean
+---@field getEffectList? fun(self: adr.models.Action): adr.models.Effect[]
 ---@field hasEffect? fun(self: adr.models.Action): boolean
 ---@field isOnPlayer? fun(self: adr.models.Action): boolean
 ---@field isOnPlayerpet? fun(self: adr.models.Action): boolean
@@ -1094,6 +1095,11 @@ end
 mAction.needEndingAlert = function(self)
   -- tick/channel skills don't benefit from ending alerts (automatic or requring crux, not re-cast)
   return not self.tickEffect and not (self.channelStartTime and self.channelStartTime > 0)
+end
+
+---@type fun(self: adr.models.Action): adr.models.Effect[]
+mAction.getEffectList = function(self)
+  return self.effectList
 end
 
 ---@type fun(self: adr.models.Action): boolean
