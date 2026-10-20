@@ -1,3 +1,8 @@
+3.169
+
+### New Features
+- [API] Documented `Effect.unitId` (numeric target id; `0` = unknown) - effects on different targets are separate Effect entries distinguished by `unitId`. Also corrected the `Effect.unitTag` docs: it is always `"player"`, `"playerpet"`, or `"others"`.
+
 3.168
 
 ### New Features

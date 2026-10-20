@@ -114,7 +114,8 @@ Register inside `hookStart` or after ADR started. Keep handlers cheap.
 | Member | Type | Description |
 | --- | --- | --- |
 | `ability` | `Ability` | The effect's ability. |
-| `unitTag` | `string` | Where it runs: `"player"`, `"playerpet"`, or a target tag. |
+| `unitTag` | `string` | Where it runs: `"player"`, `"playerpet"`, or `"others"` (any other unit). |
+| `unitId` | `number` | Numeric id of the unit the effect is on (`0` = unknown); distinct targets get distinct Effect entries. |
 | `startTime` / `endTime` / `duration` | `number` | Timing on the same millisecond clock. |
 | `stackCount` | `number` | Current stacks. |
 | `tickRate` | `number` | Tick interval in ms for ticking effects, `0` otherwise. |
