@@ -11,25 +11,40 @@ on the action bar and can show popup alerts when effects expire.
 
 ## Build Commands
 
+There is no Gradle wrapper in the repo; use the system `gradle` command.
+
 ```bash
 # Build distribution zip
-./gradlew distZip
+gradle distZip
+
+# Build the embedded/ distribution (guarded, UI-less core sources)
+gradle buildEmbedded
 
 # Install to ESO Live directory (requires gradle.properties)
-./gradlew installToLive
+gradle installToLive
 
 # Install to ESO PTS directory (requires gradle.properties)
-./gradlew installToPTS
+gradle installToPTS
 
 # Upload to esoui.com (requires API token in gradle.properties)
-./gradlew upload
+gradle upload
 ```
 
-The `gradle.properties` file must define:
+The `gradle.properties` file must define (may live at user level,
+`~/.gradle/gradle.properties`, as on this machine):
 
 - `ESO_LIVE_ADDONS_DIR` - path to ESO live addons folder
 - `ESO_PTS_ADDONS_DIR` - path to ESO PTS addons folder
 - `com.esoui.apiToken` - API token for esoui.com uploads
+
+Build tool notes:
+
+- Cold daemon start on Windows takes 30-60s legitimately (JVM + antivirus
+  scan); `gradle --status` shows an idle daemon.
+- Client disconnect does not stop the daemon - after an abort, a re-run
+  reporting `UP-TO-DATE` proves the previous run completed.
+- `test/ADRHostTest/libs/` is gitignored; refresh it with
+  `cp -r build/embedded test/ADRHostTest/libs/ADR` after `buildEmbedded`.
 
 Version numbers are extracted from the first line of `changelog`.
 
