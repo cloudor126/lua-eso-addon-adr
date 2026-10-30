@@ -24,6 +24,6 @@
     "C:/Users/Cloudor/git/eso-addons/luals-defs/esoapi",
     "C:/Users/Cloudor/git/eso-addons/esoui/esoui"
   ],
-  "workspace.ignore": ["build", "docs", ".gradle", ".claude", ".settings", "ActionDurationReminder/i18n"],
+  "workspace.ignore": ["build", "docs", ".gradle", ".claude", ".settings", "ActionDurationReminder/i18n", "test/ADRHostTest/libs"],
   "workspace.checkThirdParty": false
 }
