@@ -16,7 +16,7 @@
 --    is already loaded: skip the whole embedded set. ADR_EMBED_SKIP is the
 --    guard line automatically prepended to every module file. Also expose a
 --    no-op fallback so hosts may call ADR_EMBED.activate() unconditionally.
-if _G.ActionDurationReminder then
+if ActionDurationReminder then
   _G.ADR_EMBED_SKIP = true
   if not _G.ADR_EMBED then
     _G.ADR_EMBED = {
@@ -47,7 +47,7 @@ l.actionMap = {}
 ---@type table<string, string>
 l.dict = {}
 ---store extensions for types
----@type table<string, fun(...: any)[]
+---@type table<string, fun(...: any)[]>
 l.extensionMap = {}
 ---@type table<string, any>
 l.registry = {}

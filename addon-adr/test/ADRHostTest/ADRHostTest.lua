@@ -17,7 +17,7 @@ if ADR_EMBED then
 end
 
 local function dump()
-  local ADR = _G.ActionDurationReminder
+  local ADR = ActionDurationReminder
   d("=== ADRHostTest ===")
   if ADR_EMBED then
     d(string.format("ADR_EMBED: v%s apiVersion=%s sv=%s", tostring(ADR_EMBED.version), tostring(ADR_EMBED.apiVersion), tostring(_G.ADR_EMBED_SV_NAME)))
@@ -60,7 +60,7 @@ local tickOn = false
 local tickRegistered = false
 SLASH_COMMANDS["/adrtest"] = dump
 SLASH_COMMANDS["/adrtesttick"] = function()
-  local ADR = _G.ActionDurationReminder
+  local ADR = ActionDurationReminder
   local core = ADR and ADR.load("Core")
   if not core then
     d("ADRHostTest: no Core module")
