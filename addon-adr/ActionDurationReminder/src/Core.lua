@@ -1743,7 +1743,11 @@ l.onPlayerActivated = function(eventCode, initial)
   local numBuffs = GetNumBuffs("player")
   for i = 1, numBuffs do
     local _, _, _, _, stackCount, _, _, _, _, _, abilityId = GetUnitBuffInfo("player", i)
-    if abilityId == models.NOTHING_WASTED_ABILITY_ID and stackCount > 0 then
+    if
+      abilityId == models.NOTHING_WASTED_ABILITY_ID
+      and stackCount > 0
+      and l.checkAbilityIdAndNameOk(models.NOTHING_WASTED_ABILITY_ID, GetAbilityName(models.NOTHING_WASTED_ABILITY_ID))
+    then
       models.nothingWasted.update(stackCount, GetGameTimeMilliseconds() + models.NOTHING_WASTED_WINDOW_MS)
       l.ensureNothingWastedActions()
       break
@@ -1866,7 +1870,12 @@ l.onStart = function()
     local abilityId = select(16, ...)
     if abilityId == models.NOTHING_WASTED_ABILITY_ID then
       local changeType = select(2, ...)
-      if changeType == EFFECT_RESULT_FADED then
+      -- the hidden buff bypasses the source-filtered registrations, and so would the
+      -- keyword filter: without this check the blacklist is silently ignored on the
+      -- Nothing Wasted window (clear on the next event when blacklisted mid-window)
+      if changeType == EFFECT_RESULT_FADED
+        or not l.checkAbilityIdAndNameOk(models.NOTHING_WASTED_ABILITY_ID, GetAbilityName(models.NOTHING_WASTED_ABILITY_ID))
+      then
         models.nothingWasted.clear()
       else
         local unitTag = select(5, ...)

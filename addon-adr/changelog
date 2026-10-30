@@ -1,5 +1,8 @@
 3.169
 
+### Bug Fixes
+- Fixed the ability blacklist not hiding the Nothing Wasted window (Necromancer's hidden stack buff, id 263461): its dedicated event path bypassed the keyword filter, so blacklisted ids kept showing the low-priority 12s timer on siphon slots. Blacklisting 263461 now removes the window immediately; add the skill name (e.g. "Detonating Siphon") to the blacklist as well to remove every timer from a slot.
+
 ### New Features
 - [API] Documented `Effect.unitId` (numeric target id; `0` = unknown) - effects on different targets are separate Effect entries distinguished by `unitId`. Also corrected the `Effect.unitTag` docs: it is always `"player"`, `"playerpet"`, or `"others"`.
 
