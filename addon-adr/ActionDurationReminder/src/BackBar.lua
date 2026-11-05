@@ -22,6 +22,7 @@ local m = { l = l }
 ---(图标、不可用发暗、toggle 高亮、冷却均为原生渲染)。
 ---@class adr.backbar.M
 ---@field isActive? fun(): boolean
+---@field getEffectivePreset? fun(): string
 ---@field getSlotControl? fun(slotNum: number): Control|nil
 
 --========================================
@@ -31,14 +32,52 @@ local CLONE_SLOT_OFFSET = 40
 local EVENT_NAME = "ADRBackBar"
 local ROW_GAP_Y = 4
 
+---@type boolean 静态预设下原生条是否被拍升(退出/切回动态时需还原)
+l.nativeLifted = false
+
 ---@type table<number, table> slotNum(3..8) -> ActionButton克隆
 l.buttons = {}
 ---@type Control|nil
 l.container = nil
 ---@type boolean 行已激活(事件已注册)
 l.active = false
+---@type boolean 克隆行创建失败闭锁(本会话不再重试)
+l.createFailed = false
 ---@type number|nil 当前克隆行对应的非激活武器条
 l.currentHotbar = nil
+
+---冲突检测(会话级)：FAB 自带完整双bar，存在时②③全部回退①；
+---BUI/Azurah 会搬动原生条，仅静态预设③回退②；每次会话提示一次
+---@type fun(): string
+l.effectivePreset = function()
+  local preset = l.getSavedVars().barPreset
+  if preset == "classic" then
+    return "classic"
+  end
+  if _G.FancyActionBar then
+    l.notifyConflict("fancy")
+    return "classic"
+  end
+  if preset == "static" and (_G.BanditsUserInterface or _G.BUI or _G.Azurah) then
+    l.notifyConflict("mover")
+    return "dynamic"
+  end
+  return preset
+end
+
+---@type string|nil
+l.conflictNotified = nil
+
+---@type fun(kind: string)
+l.notifyConflict = function(kind)
+  if l.conflictNotified == kind then
+    return
+  end
+  l.conflictNotified = kind
+  local key = kind == "fancy" and "ADR double bar disabled: FancyActionBar+ detected"
+    or "ADR static bar disabled: a bar-mover addon detected"
+  d(string.format("[ADR] %s", addon.text(key)))
+end
 
 ---@type fun(): adr.settings.SavedVars
 l.getSavedVars = function()
@@ -97,9 +136,9 @@ l.hideUltimateDecorations = function(button)
   end
 end
 
----布局：克隆行锚在原生条正上方，X 与原生条对齐(3号槽对齐，其余链式排布)
+---布局：动态预设——克隆行锚在原生条正上方，X 与原生条对齐(3号槽对齐，其余链式排布)
 ---@type fun()
-l.layoutRow = function()
+l.layoutDynamic = function()
   local first = l.buttons[3]
   if not first or not l.container then
     return
@@ -116,6 +155,73 @@ l.layoutRow = function()
   local ult = l.buttons[8]
   ult.slot:ClearAnchors()
   ult:ApplyAnchor(l.buttons[7].slot, ultGap)
+end
+
+---恢复原生3号槽默认锚(仅静态预设拍升过才需要)
+---@type fun()
+l.restoreNativeAnchor = function()
+  if not l.nativeLifted then
+    return
+  end
+  l.nativeLifted = false
+  local nativeButton3 = ZO_ActionBar_GetButton(3)
+  local abilityGap = l.platformOffsets()
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  nativeButton3.slot:ClearAnchors()
+  if weaponSwap then
+    nativeButton3:ApplyAnchor(weaponSwap, abilityGap)
+  end
+end
+
+---静态预设：主手条固定在上，副手条固定在下。
+---原生条渲染当前激活条：主手激活时原生条抬到上行，克隆行(副手)占原生条原位；
+---副手激活时原生条留在原位，克隆行(主手)在上。均以武器切换按钮为锚基准(同FAB)。
+---@type fun()
+l.layoutStatic = function()
+  local first = l.buttons[3]
+  if not first or not l.container then
+    return
+  end
+  local abilityGap, ultGap, gapY = l.platformOffsets()
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if not weaponSwap then
+    l.layoutDynamic()
+    return
+  end
+  local nativeButton3 = ZO_ActionBar_GetButton(3)
+  local liftY = nativeButton3.slot:GetHeight() + gapY
+  local active = GetActiveHotbarCategory()
+  local nativeOnTop = active == HOTBAR_CATEGORY_PRIMARY
+  -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上
+  local cloneY = nativeOnTop and 0 or -liftY
+  first.slot:ClearAnchors()
+  first.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, cloneY)
+  for slotNum = 4, 7 do
+    local button = l.buttons[slotNum]
+    button.slot:ClearAnchors()
+    button:ApplyAnchor(l.buttons[slotNum - 1].slot, abilityGap)
+  end
+  local ult = l.buttons[8]
+  ult.slot:ClearAnchors()
+  ult:ApplyAnchor(l.buttons[7].slot, ultGap)
+  -- 原生条：主手激活时抬到上行，副手激活时回原位
+  nativeButton3.slot:ClearAnchors()
+  nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, nativeOnTop and -liftY or 0)
+  l.nativeLifted = nativeOnTop
+end
+
+---按预设分发布局；切回动态/关闭时还原原生锚
+---@type fun()
+l.layoutRow = function()
+  if not l.buttons[3] or not l.container then
+    return
+  end
+  if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
+    l.layoutStatic()
+  else
+    l.restoreNativeAnchor()
+    l.layoutDynamic()
+  end
 end
 
 ---同步单个克隆槽位(原生刷新链：图标/actionId/状态/不可用发暗)
@@ -143,6 +249,7 @@ l.syncAll = function()
     return
   end
   l.container:SetHidden(false)
+  l.layoutRow()
   for slotNum = 3, 8 do
     l.syncSlot(slotNum, hotbar)
   end
@@ -244,15 +351,36 @@ l.unregisterEvents = function()
   end
 end
 
----激活克隆行(双bar预设)
+---系统 back row(原生迷你副条)与克隆行会重复显示，激活时关闭该系统设置(不恢复，同FAB做法)
+---@type fun()
+l.suppressSystemBackRow = function()
+  if GetSetting_Bool(SETTING_TYPE_UI, UI_SETTING_SHOW_ACTION_BAR_BACK_ROW) then
+    SetSetting(SETTING_TYPE_UI, UI_SETTING_SHOW_ACTION_BAR_BACK_ROW, "false")
+  end
+end
+
+---激活克隆行(双bar预设)。创建失败时清理残缺状态并闭锁本次会话不再重试，
+---由 Bar.lua 的贴图满行回退兜底
 ---@type fun()
 l.activate = function()
+  if l.createFailed then
+    return
+  end
   local ok, err = pcall(l.createRow)
   if not ok then
     addon.debug("[BB]create row failed: %s", tostring(err))
+    l.createFailed = true
+    l.buttons = {}
+    if l.container then
+      pcall(function()
+        l.container:SetHidden(true)
+      end)
+      l.container = nil
+    end
     return
   end
   l.active = true
+  l.suppressSystemBackRow()
   l.registerEvents()
 end
 
@@ -261,6 +389,7 @@ end
 l.deactivate = function()
   l.unregisterEvents()
   l.active = false
+  l.restoreNativeAnchor()
   if l.container then
     l.container:SetHidden(true)
   end
@@ -269,7 +398,7 @@ end
 ---@type fun()
 l.onCoreUpdate = function()
   local sv = l.getSavedVars()
-  local want = sv.barEnabled and sv.barPreset ~= "classic"
+  local want = sv.barEnabled and l.effectivePreset() ~= "classic"
   if want and not l.active then
     l.activate()
   elseif not want and l.active then
@@ -280,6 +409,7 @@ l.onCoreUpdate = function()
     if l.hasOakensoul() or l.inactiveHotbar() == nil then
       l.container:SetHidden(true)
       l.currentHotbar = nil
+      l.restoreNativeAnchor()
     elseif l.container:IsControlHidden() then
       l.syncAll()
     end
@@ -291,7 +421,12 @@ end
 --========================================
 ---@type fun(): boolean
 m.isActive = function()
-  return l.active
+  return l.active and l.buttons[3] ~= nil
+end
+
+---@type fun(): string
+m.getEffectivePreset = function()
+  return l.effectivePreset()
 end
 
 ---@type fun(slotNum: number): Control|nil

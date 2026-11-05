@@ -9,6 +9,8 @@ put("Choose the overall look of your bars", "Klassisch: kompakte Symbolreihe nur
 put("Classic - Timer Icons", "Klassisch – Timer-Symbole")
 put("Dynamic Double Bar", "Dynamische Doppel-Leiste")
 put("Static Double Bar", "Statische Doppel-Leiste")
+put("ADR double bar disabled: FancyActionBar+ detected", "ADR-Doppel-Leiste deaktiviert: FancyActionBar+ erkannt. Deaktiviere FAB, wenn du den Doppel-Leisten-Look von ADR möchtest.")
+put("ADR static bar disabled: a bar-mover addon detected", "ADR-Statische Doppel-Leiste deaktiviert: Ein Leisten-Verschiebe-AddOn (Bandits/Azurah) wurde erkannt. Es wird auf die dynamische Doppel-Leiste zurückgegriffen.")
 put("Shift Bar Scale", "Skalierung der Schaltleiste")
 put("Scale of the shift bar", "Skalierung der Schaltleiste")
 put("Shift Bar Position", "Position der Schaltleiste")

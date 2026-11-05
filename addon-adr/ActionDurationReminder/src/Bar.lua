@@ -281,7 +281,7 @@ l.onCoreUpdate = function()
     end
   end
   -- 4.2 show fully (texture fallback when the native clone row failed to activate)
-  if not nativeActive and l.getSavedVars().barPreset ~= "classic" then
+  if not nativeActive and backBar.getEffectivePreset() ~= "classic" then
     local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find("oakensoul")
       or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find("oakensoul")
     if not withOakensoul then

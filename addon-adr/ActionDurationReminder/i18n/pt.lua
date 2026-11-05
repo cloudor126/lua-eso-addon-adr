@@ -9,6 +9,8 @@ put("Choose the overall look of your bars", "Clássico: linha compacta de ícone
 put("Classic - Timer Icons", "Clássico – Ícones de temporizador")
 put("Dynamic Double Bar", "Barra dupla dinâmica")
 put("Static Double Bar", "Barra dupla estática")
+put("ADR double bar disabled: FancyActionBar+ detected", "Barra dupla do ADR desativada: FancyActionBar+ detectado. Desative o FAB se quiser o visual de barra dupla do ADR.")
+put("ADR static bar disabled: a bar-mover addon detected", "Barra dupla estática do ADR desativada: um addon que move a barra (Bandits/Azurah) foi detectado. Retornando à barra dupla dinâmica.")
 put("Shift Bar Scale", "Escala da Barra de Deslocamento")
 put("Scale of the shift bar", "Escala da barra de deslocamento")
 put("Shift Bar Position", "Posição da Barra de Deslocamento")

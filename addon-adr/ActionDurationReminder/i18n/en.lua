@@ -9,6 +9,8 @@ put("Choose the overall look of your bars", "Classic: compact icon row with time
 put("Classic - Timer Icons", "Classic - Timer Icons")
 put("Dynamic Double Bar", "Dynamic Double Bar")
 put("Static Double Bar", "Static Double Bar")
+put("ADR double bar disabled: FancyActionBar+ detected", "ADR double bar disabled: FancyActionBar+ detected. Disable FAB if you want ADR's double bar look.")
+put("ADR static bar disabled: a bar-mover addon detected", "ADR static double bar disabled: a bar-mover addon (Bandits/Azurah) was detected. Falling back to the dynamic double bar.")
 put("Shift Bar Scale", "Shift Bar Scale")
 put("Scale of the shift bar", "Scale of the shift bar")
 put("Shift Bar Position", "Shift Bar Position")

@@ -9,6 +9,8 @@ put("Choose the overall look of your bars", "经典：仅显示带计时技能�
 put("Classic - Timer Icons", "经典 - 计时图标")
 put("Dynamic Double Bar", "动态双条")
 put("Static Double Bar", "静态双条")
+put("ADR double bar disabled: FancyActionBar+ detected", "已检测到 FancyActionBar+，ADR 双条外观已回退经典模式（如需使用请禁用 FAB）")
+put("ADR static bar disabled: a bar-mover addon detected", "已检测到移动技能栏的插件（Bandits/Azurah），ADR 静态双条已回退动态双条")
 put("Shift Bar Scale", "浮动条缩放")
 put("Scale of the shift bar", "浮动条的缩放比例")
 put("Shift Bar Position", "浮动条位置")
