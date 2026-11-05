@@ -51,6 +51,7 @@ local mCooldown = {}
 ---@field slotNum? number
 ---@field shifted? boolean
 ---@field appendIndex? number
+---@field nativeMode? boolean
 ---@field visible? boolean
 ---@field slot? Control
 ---@field slotIcon? Control
@@ -76,7 +77,7 @@ local mCooldown = {}
 ---@class adr.views.M
 ---@field getSlotBaseSize? fun(): number
 ---@field newCooldown? fun(background: Control, drawTier: number): adr.views.Cooldown
----@field newWidget? fun(slotNum: number, shifted: boolean, appendIndex?: number): adr.views.Widget
+---@field newWidget? fun(slotNum: number, shifted: boolean, appendIndex?: number, nativeSlotControl?: Control): adr.views.Widget
 ---@field updateWidgetCooldown? fun(widget: adr.views.Widget)
 ---@field updateWidgetProgress? fun(widget: adr.views.Widget)
 ---@field updateWidgetFont? fun(widget: adr.views.Widget)
@@ -163,16 +164,19 @@ m.newCooldown = function(background, drawTier)
 end
 
 ---@type fun(slotNum: number, shifted: boolean, appendIndex?: number): adr.views.Widget
-m.newWidget = function(slotNum, shifted, appendIndex)
+m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
   local savedVars = l.getSavedVars()
   ---@type adr.views.Widget
   local inst = {}
   inst.slotNum = slotNum
   inst.shifted = shifted
   inst.appendIndex = appendIndex
+  -- native模式：标签直接挂在 BackBar 克隆按钮上，不建贴图背景
+  inst.nativeMode = nativeSlotControl ~= nil
   --
   inst.visible = true
-  local slot = ZO_ActionBar_GetButton(slotNum, slotNum > 8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
+  local slot = nativeSlotControl
+    or ZO_ActionBar_GetButton(slotNum, slotNum > 8 and HOTBAR_CATEGORY_QUICKSLOT_WHEEL or nil).slot --Control#Control
   inst.slot = slot
   local slotIcon = slot:GetNamedChild("Icon")
   --  local flipCard = slot:GetNamedChild("FlipCard")
@@ -181,7 +185,7 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   --========================================
   local backdrop = nil
   local background = nil
-  if shifted then
+  if shifted and not inst.nativeMode then
     local offsetX = savedVars.barShiftOffsetX
     local offsetY = savedVars.barShiftOffsetY
     local baseSize = l.getSlotBaseSize()
@@ -205,7 +209,10 @@ m.newWidget = function(slotNum, shifted, appendIndex)
     background:SetAnchor(BOTTOMRIGHT, backdrop, BOTTOMRIGHT, -offset, -offset)
     m.updateWidgetShiftLayering(inst)
   end
-  local label = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL) --LabelControl#LabelControl
+  -- 标签父控件：贴图模式挂 backdrop/slotIcon，native模式挂克隆按钮槽位
+  local labelParent = backdrop or nativeSlotControl or slotIcon
+  local textureShifted = shifted and not inst.nativeMode
+  local label = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL) --LabelControl#LabelControl
   inst.label = label
   label:SetFont(l.getLabelFont())
   label:SetColor(1, 1, 1)
@@ -218,13 +225,13 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   else
     label:SetAnchor(
       BOTTOM,
-      backdrop or slotIcon,
+      labelParent,
       BOTTOM,
       0,
-      shifted and (-savedVars.barLabelYOffsetInShift + 1) or (-savedVars.barLabelYOffset + 3)
+      textureShifted and (-savedVars.barLabelYOffsetInShift + 1) or (-savedVars.barLabelYOffset + 3)
     )
   end
-  local stackLabel = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
+  local stackLabel = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL)
   inst.stackLabel = stackLabel
   stackLabel:SetFont(l.getStackLabelFont())
   stackLabel:SetColor(1, 1, 1)
@@ -233,12 +240,12 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   stackLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel:SetAnchor(
     TOPRIGHT,
-    backdrop or slotIcon,
+    labelParent,
     TOPRIGHT,
     -5,
-    shifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+    textureShifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
   )
-  local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, backdrop or slotIcon, CT_LABEL)
+  local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL)
   inst.stackLabel2 = stackLabel2
   stackLabel2:SetFont(l.getStackLabelFont())
   stackLabel2:SetColor(1, 1, 1)
@@ -247,10 +254,10 @@ m.newWidget = function(slotNum, shifted, appendIndex)
   stackLabel2:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
   stackLabel2:SetAnchor(
     TOPLEFT,
-    backdrop or slotIcon,
+    labelParent,
     TOPLEFT,
     5,
-    shifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+    textureShifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
   )
 
   ---@type adr.views.Cooldown
@@ -315,13 +322,14 @@ end
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetLabelYOffset = function(widget)
   if widget.label then
+    local textureShifted = widget.shifted and not widget.nativeMode
     widget.label:ClearAnchors()
     widget.label:SetAnchor(
       BOTTOM,
       widget.label:GetParent(),
       BOTTOM,
       0,
-      widget.shifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3)
+      textureShifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3)
     )
   end
 end
@@ -396,6 +404,7 @@ end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetStackLabelYOffset = function(widget)
+  local textureShifted = widget.shifted and not widget.nativeMode
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()
     widget.stackLabel:SetAnchor(
@@ -403,7 +412,7 @@ m.updateWidgetStackLabelYOffset = function(widget)
       widget.stackLabel:GetParent(),
       TOPRIGHT,
       0,
-      widget.shifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
+      textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
         or (-l.getSavedVars().barStackLabelYOffset - 5)
     )
   end
@@ -414,7 +423,7 @@ m.updateWidgetStackLabelYOffset = function(widget)
       widget.stackLabel2:GetParent(),
       TOPLEFT,
       2,
-      widget.shifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
+      textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
         or (-l.getSavedVars().barStackLabelYOffset - 5)
     )
   end

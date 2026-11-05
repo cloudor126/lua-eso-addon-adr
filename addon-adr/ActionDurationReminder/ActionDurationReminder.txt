@@ -18,6 +18,7 @@ src/Settings.lua
 src/Models.lua
 src/Core.lua
 src/Views.lua
+src/BackBar.lua
 src/Bar.lua
 src/Alert.lua
 src/ChatAlert.lua

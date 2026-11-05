@@ -11,6 +11,8 @@ local core = addon.load("Core#M")
 local views = addon.load("Views#M")
 ---@type adr.models.M
 local models = addon.load("Models#M")
+---@type adr.backbar.M
+local backBar = addon.load("BackBar#M")
 local l = {}
 ---@type adr.bar.M
 local m = { l = l }
@@ -24,8 +26,7 @@ local m = { l = l }
 ---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
 ---@class adr.settings.SavedVars
 ---@field barEnabled? boolean
----@field barShowShift? boolean
----@field barShowShiftFully? boolean
+---@field barPreset? string
 ---@field barShowShiftScalePercent? number
 ---@field barShowInQuickslot? boolean
 ---@field barShiftOffsetX? number
@@ -61,8 +62,7 @@ local m = { l = l }
 ---@type adr.settings.SavedVars
 local barSavedVarsDefaults = {
   barEnabled = true,
-  barShowShift = true,
-  barShowShiftFully = false,
+  barPreset = "dynamic",
   barShowShiftScalePercent = 100,
   barShowInQuickslot = false,
   barShiftOffsetX = 0,
@@ -117,6 +117,26 @@ l.appendedBarWidgetMap = {}
 l.getSavedVars = function()
   return settings.getSavedVars()
 end
+
+---经典预设（贴图渲染的第二行，仅显示带计时的技能）
+---@type fun(): boolean
+l.isClassicPreset = function()
+  return l.getSavedVars().barPreset == "classic"
+end
+
+---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
+addon.hookStart(function()
+  local sv = l.getSavedVars()
+  if sv.barShowShift ~= nil or sv.barShowShiftFully ~= nil then
+    if sv.barShowShift ~= false and sv.barShowShiftFully then
+      sv.barPreset = "dynamic"
+    else
+      sv.barPreset = "classic"
+    end
+    sv.barShowShift = nil
+    sv.barShowShiftFully = nil
+  end
+end)
 
 ---@type fun()
 l.hideWidgets = function()
@@ -200,8 +220,13 @@ l.onCoreUpdate = function()
     end
   end
   -- 4. prepare to show shift and extend
-  if not l.getSavedVars().barShowShift then
-    return
+  -- native双bar激活时，丢弃旧类型的shift控件（切预设后让标签重建到克隆按钮/贴图行上）
+  local nativeActive = backBar.isActive()
+  for slotNum, widget in pairs(l.shiftedBarWidgetMap) do
+    if (widget.backdrop ~= nil) == nativeActive then
+      widget:hide()
+      l.shiftedBarWidgetMap[slotNum] = nil
+    end
   end
   ---@type table<number, adr.models.Action>
   local toShowActionMap = {}
@@ -246,15 +271,17 @@ l.onCoreUpdate = function()
           l.appendedBarWidgetMap[appendIndex] = widget
         end
       elseif not widget then
-        widget = views.newWidget(slotNum, true)
+        widget = views.newWidget(slotNum, true, nil, nativeActive and backBar.getSlotControl(slotNum) or nil)
         l.shiftedBarWidgetMap[slotNum] = widget
       end
       widget:updateWithAction(action, now)
-      widget.backdrop:SetDimensions(views.getSlotBaseSize(), views.getSlotBaseSize())
+      if widget.backdrop then
+        widget.backdrop:SetDimensions(views.getSlotBaseSize(), views.getSlotBaseSize())
+      end
     end
   end
-  -- 4.2 show fully
-  if l.getSavedVars().barShowShiftFully then
+  -- 4.2 show fully (texture fallback when the native clone row failed to activate)
+  if not nativeActive and l.getSavedVars().barPreset ~= "classic" then
     local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find("oakensoul")
       or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find("oakensoul")
     if not withOakensoul then
@@ -453,17 +480,23 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         default = barSavedVarsDefaults.barEnabled,
       },
       {
-        type = "checkbox",
-        name = text("Show Shift Bar"),
-        tooltip = text("Display a secondary bar above your action bar showing timers for your other weapon set"),
+        type = "dropdown",
+        name = text("Bar Style Preset"),
+        tooltip = text("Choose the overall look of your bars"),
+        choices = {
+          text("Classic - Timer Icons"),
+          text("Dynamic Double Bar"),
+          text("Static Double Bar"),
+        },
+        values = { "classic", "dynamic", "static" },
         getFunc = function()
-          return l.getSavedVars().barShowShift
+          return l.getSavedVars().barPreset
         end,
         setFunc = function(value)
-          l.getSavedVars().barShowShift = value
+          l.getSavedVars().barPreset = value
         end,
         width = "full",
-        default = barSavedVarsDefaults.barShowShift,
+        default = barSavedVarsDefaults.barPreset,
         disabled = function()
           return not l.getSavedVars().barEnabled
         end,
@@ -485,7 +518,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         width = "full",
         default = barSavedVarsDefaults.barShowShiftScalePercent,
         disabled = function()
-          return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift
+          return not l.getSavedVars().barEnabled or not l.isClassicPreset()
         end,
       },
       {
@@ -494,7 +527,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         title = text("Shift Bar Position"),
         width = "full",
         disabled = function()
-          return not l.getSavedVars().barEnabled
+          return not l.getSavedVars().barEnabled or not l.isClassicPreset()
         end,
       },
       {
@@ -510,7 +543,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
         width = "half",
         disabled = function()
-          return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift
+          return not l.getSavedVars().barEnabled or not l.isClassicPreset()
         end,
       },
       {
@@ -528,23 +561,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
         width = "half",
         disabled = function()
-          return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift
-        end,
-      },
-      {
-        type = "checkbox",
-        name = text("Show Empty Slots"),
-        tooltip = text("Display all 6 slots even when empty"),
-        getFunc = function()
-          return l.getSavedVars().barShowShiftFully
-        end,
-        setFunc = function(value)
-          l.getSavedVars().barShowShiftFully = value
-        end,
-        width = "full",
-        default = barSavedVarsDefaults.barShowShiftFully,
-        disabled = function()
-          return not l.getSavedVars().barEnabled or not l.getSavedVars().barShowShift
+          return not l.getSavedVars().barEnabled or not l.isClassicPreset()
         end,
       },
       {
@@ -678,7 +695,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         width = "full",
         disabled = function()
           return not l.getSavedVars().barEnabled
-            or not l.getSavedVars().barShowShift
             or not l.getSavedVars().barLabelEnabled
         end,
         default = barSavedVarsDefaults.barLabelYOffsetInShift,
@@ -772,7 +788,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         width = "full",
         disabled = function()
           return not l.getSavedVars().barEnabled
-            or not l.getSavedVars().barShowShift
             or not l.getSavedVars().barStackLabelEnabled
         end,
         default = barSavedVarsDefaults.barStackLabelYOffsetInShift,
