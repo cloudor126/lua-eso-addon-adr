@@ -291,6 +291,8 @@ l.createRow = function()
     button.slot.hotbarCategory = hotbar
     button.button.hotbarCategory = hotbar
     button:SetShowBindingText(false)
+    -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation，不初始化会 nil 崩溃(FAB 克隆时同样显式调用)
+    button:SetupBounceAnimation()
     if slotNum == 8 then
       l.hideUltimateDecorations(button)
     end
@@ -381,6 +383,7 @@ l.activate = function()
   end
   local ok, err = pcall(l.createRow)
   if not ok then
+    d(string.format("[ADR] BackBar clone row creation failed: %s (texture fallback active)", tostring(err)))
     addon.debug("[BB]create row failed: %s", tostring(err))
     l.createFailed = true
     l.buttons = {}
