@@ -267,6 +267,51 @@ l.syncAll = function()
   end
 end
 
+---克隆按钮拖放处理器：原生 ZO_AbilitySlot_* 的放置路径不带 hotbarCategory，
+---会把拖入的技能放到当前激活条；拾取路径虽带参数但一并用安全调用重写保持一致。
+---右键仍走原生 OnSlotClicked(清除菜单已正确读取克隆行的 hotbarCategory)
+---@type fun(button: table)
+l.setupDragDropHandlers = function(button)
+  local buttonControl = button.button
+  if not buttonControl then
+    return
+  end
+
+  buttonControl:SetHandler("OnReceiveDrag", function()
+    if GetCursorContentType() == MOUSE_CONTENT_EMPTY then
+      return
+    end
+    local hotbar = l.inactiveHotbar()
+    if hotbar then
+      CallSecureProtected("PlaceInActionBar", button.slot.slotNum, hotbar)
+    end
+  end)
+
+  buttonControl:SetHandler("OnDragStart", function()
+    if GetCursorContentType() ~= MOUSE_CONTENT_EMPTY or ZO_ActionBar_AreActionBarsLocked() then
+      return false
+    end
+    local hotbar = l.inactiveHotbar()
+    if not hotbar or not IsSlotUsed(button.slot.slotNum, hotbar) then
+      return false
+    end
+    CallSecureProtected("PickupAction", button.slot.slotNum, hotbar)
+    return true
+  end)
+
+  buttonControl:SetHandler("OnClicked", function(_, mouseButton)
+    if mouseButton == MOUSE_BUTTON_INDEX_LEFT and GetCursorContentType() ~= MOUSE_CONTENT_EMPTY then
+      local hotbar = l.inactiveHotbar()
+      if hotbar then
+        CallSecureProtected("PlaceInActionBar", button.slot.slotNum, hotbar)
+      end
+    else
+      -- 右键菜单等交还原生路径
+      ZO_AbilitySlot_OnSlotClicked(buttonControl, mouseButton)
+    end
+  end)
+end
+
 ---创建克隆行(幂等)
 ---@type fun()
 l.createRow = function()
@@ -293,6 +338,7 @@ l.createRow = function()
     button:SetShowBindingText(false)
     -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation，不初始化会 nil 崩溃(FAB 克隆时同样显式调用)
     button:SetupBounceAnimation()
+    l.setupDragDropHandlers(button)
     if slotNum == 8 then
       l.hideUltimateDecorations(button)
     end
