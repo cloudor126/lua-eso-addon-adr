@@ -1,4 +1,11 @@
-3.169
+3.170
+
+### New Features
+- Bar Style Presets: one dropdown now defines the whole second-bar look, replacing the old "Show Shift Bar" / "Show Empty Slots" toggles (existing settings migrate automatically on first login).
+  - Classic: the compact icon row with timers only, same as the old default look (drag/scale positioning still available here).
+  - Dynamic Double Bar (new default): the inactive weapon bar renders above the native bar as full native action buttons - real icon frames, native darkening for unusable skills, native cooldown and tooltips, including the back-bar ultimate slot.
+  - Static Double Bar (FAB-style): main-hand bar always on top, off-hand bar always at the bottom - rows stay fixed when you weapon swap (requires no other bar-mover addon).
+- The double-bar presets automatically turn off the game's mini "Back Row" setting while active (not restored on switch-back), hide the second row with Oakensoul or non-weapon hotbars, and fall back safely with a chat notice when FancyActionBar+ (falls back to Classic) or Bandits/Azurah (Static falls back to Dynamic) is detected.
 
 ### Bug Fixes
 - Fixed the ability blacklist not hiding the Nothing Wasted window (Necromancer's hidden stack buff, id 263461): its dedicated event path bypassed the keyword filter, so blacklisted ids kept showing the low-priority 12s timer on siphon slots. Blacklisting 263461 now removes the window immediately; add the skill name (e.g. "Detonating Siphon") to the blacklist as well to remove every timer from a slot.
