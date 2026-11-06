@@ -34,6 +34,16 @@ local CLONE_SLOT_OFFSET = 40
 local EVENT_NAME = "ADRBackBar"
 local ROW_GAP_Y = 4
 
+---扩展 adr.settings.SavedVars:本模块持久化字段
+---@class adr.settings.SavedVars
+---@field backBarDimAlpha? number
+---@field backBarDesaturation? number
+---@type adr.settings.SavedVars
+local backBarSavedVarsDefaults = {
+  backBarDimAlpha = 40,
+  backBarDesaturation = 50,
+}
+
 ---@type boolean 静态预设下原生条是否被拍升(退出/切回动态时需还原)
 l.nativeLifted = false
 
@@ -236,6 +246,17 @@ l.layoutRow = function()
   end
 end
 
+---非激活行图标暗化(同FAB)：只改 icon 纹理，不影响标签/冷却线；
+---必须在原生 UpdateUsable 重刷颜色之后调用
+---@type fun(button: table)
+l.applyInactiveStyle = function(button)
+  local sv = l.getSavedVars()
+  if button.icon then
+    button.icon:SetAlpha((sv.backBarDimAlpha or 40) / 100)
+    button.icon:SetDesaturation((sv.backBarDesaturation or 50) / 100)
+  end
+end
+
 ---同步单个克隆槽位(原生刷新链：图标/actionId/状态/不可用发暗)
 ---@type fun(slotNum: number, hotbar: number)
 l.syncSlot = function(slotNum, hotbar)
@@ -246,6 +267,7 @@ l.syncSlot = function(slotNum, hotbar)
   button.slot.hotbarCategory = hotbar
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
+  l.applyInactiveStyle(button)
 end
 
 ---同步整行(换武器/全量刷新)
@@ -379,6 +401,7 @@ l.registerEvents = function()
     local button = l.buttons[slotNum]
     if button and hotbarCategory == l.currentHotbar then
       button:UpdateState()
+      l.applyInactiveStyle(button)
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function()
@@ -522,6 +545,17 @@ m.getSlotControl = function(slotNum)
   return button and button.slot or nil
 end
 
+---菜单滑条直接调用：立即重新应用非激活暗化
+---@type fun()
+m.updateStyle = function()
+  for slotNum = 3, 8 do
+    local button = l.buttons[slotNum]
+    if button then
+      l.applyInactiveStyle(button)
+    end
+  end
+end
+
 --========================================
 --        register
 --========================================
@@ -530,6 +564,54 @@ addon.register("BackBar#M", m)
 addon.register("BackBar", m)
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
+
+addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
+  settings.addDefaults(backBarSavedVarsDefaults)
+end)
+
+addon.extend(settings.EXTKEY_ADD_MENUS, function()
+  local text = addon.text
+  settings.addMenuOptions({
+    type = "submenu",
+    name = text("Double Bar"),
+    controls = {
+      {
+        type = "slider",
+        name = text("Second Bar Icon Opacity"),
+        tooltip = text("Opacity of the inactive weapon bar icons; 100 keeps them fully bright"),
+        min = 10,
+        max = 100,
+        step = 5,
+        getFunc = function()
+          return l.getSavedVars().backBarDimAlpha
+        end,
+        setFunc = function(value)
+          l.getSavedVars().backBarDimAlpha = value
+          m.updateStyle()
+        end,
+        width = "full",
+        default = backBarSavedVarsDefaults.backBarDimAlpha,
+      },
+      {
+        type = "slider",
+        name = text("Second Bar Icon Desaturation"),
+        tooltip = text("Desaturation of the inactive weapon bar icons; 0 keeps full color"),
+        min = 0,
+        max = 100,
+        step = 5,
+        getFunc = function()
+          return l.getSavedVars().backBarDesaturation
+        end,
+        setFunc = function(value)
+          l.getSavedVars().backBarDesaturation = value
+          m.updateStyle()
+        end,
+        width = "full",
+        default = backBarSavedVarsDefaults.backBarDesaturation,
+      },
+    },
+  })
+end)
 
 --诊断命令：/adrbackbar 输出第二行引擎的实时状态并强制重布局
 SLASH_COMMANDS["/adrbackbar"] = function()
