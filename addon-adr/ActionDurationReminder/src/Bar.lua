@@ -498,6 +498,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
         setFunc = function(value)
           l.getSavedVars().barPreset = value
+          backBar.updateLayout()
         end,
         width = "full",
         default = barSavedVarsDefaults.barPreset,

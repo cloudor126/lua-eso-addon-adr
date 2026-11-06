@@ -24,6 +24,8 @@ local m = { l = l }
 ---@field isActive? fun(): boolean
 ---@field getEffectivePreset? fun(): string
 ---@field getSlotControl? fun(slotNum: number): Control|nil
+---@field updateScale? fun()
+---@field updateLayout? fun()
 
 --========================================
 --        l
@@ -45,6 +47,8 @@ l.active = false
 l.createFailed = false
 ---@type number|nil 当前克隆行对应的非激活武器条
 l.currentHotbar = nil
+---@type string|nil 上次已应用布局的预设(切换预设时触发重布局)
+l.lastAppliedPreset = nil
 
 ---冲突检测(会话级)：FAB 自带完整双bar，存在时②③全部回退①；
 ---BUI/Azurah 会搬动原生条，仅静态预设③回退②；每次会话提示一次
@@ -382,6 +386,7 @@ l.activate = function()
     return
   end
   l.active = true
+  l.lastAppliedPreset = l.effectivePreset()
   l.suppressSystemBackRow()
   l.registerEvents()
 end
@@ -391,6 +396,7 @@ end
 l.deactivate = function()
   l.unregisterEvents()
   l.active = false
+  l.lastAppliedPreset = nil
   l.restoreNativeAnchor()
   if l.container then
     l.container:SetHidden(true)
@@ -407,6 +413,12 @@ l.onCoreUpdate = function()
     l.deactivate()
   end
   if l.active and l.container then
+    -- 预设切换(动态↔静态)时重新布局：activate/deactivate 分支覆盖不到已激活状态下的切换
+    local effective = l.effectivePreset()
+    if effective ~= l.lastAppliedPreset then
+      l.lastAppliedPreset = effective
+      l.syncAll()
+    end
     -- Oakensoul 或非武器热栏(攻城等)时隐藏第二行；恢复时全量重同步
     if l.hasOakensoul() or l.inactiveHotbar() == nil then
       l.container:SetHidden(true)
@@ -436,6 +448,15 @@ end
 m.updateScale = function()
   if l.container then
     l.container:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  end
+end
+
+---菜单下拉框直接调用：预设切换后立即重布局
+---@type fun()
+m.updateLayout = function()
+  if l.active and l.container then
+    l.lastAppliedPreset = l.effectivePreset()
+    l.syncAll()
   end
 end
 
