@@ -188,8 +188,9 @@ l.layoutStatic = function()
     return
   end
   local abilityGap, ultGap, gapY = l.platformOffsets()
-  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if not weaponSwap then
+    d("[ADR] layoutStatic: WeaponSwap not found, falling back to dynamic layout")
     l.layoutDynamic()
     return
   end
@@ -480,6 +481,36 @@ addon.register("BackBar#M", m)
 addon.register("BackBar", m)
 
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
+
+--诊断命令：/adrbackbar 输出第二行引擎的实时状态并强制重布局
+SLASH_COMMANDS["/adrbackbar"] = function()
+  local sv = l.getSavedVars()
+  local buttonCount = 0
+  for _ in pairs(l.buttons) do
+    buttonCount = buttonCount + 1
+  end
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap") or nil
+  d(string.format(
+    "[ADR] v%s preset=%s effective=%s active=%s container=%s buttons=%d lastApplied=%s hotbar=%s lifted=%s weaponSwap=%s nativeOnTop=%s",
+    tostring(addon.version),
+    tostring(sv.barPreset),
+    tostring(l.effectivePreset()),
+    tostring(l.active),
+    tostring(l.container ~= nil),
+    buttonCount,
+    tostring(l.lastAppliedPreset),
+    tostring(l.currentHotbar),
+    tostring(l.nativeLifted),
+    tostring(weaponSwap ~= nil),
+    tostring(GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY)
+  ))
+  if l.active and l.container then
+    l.syncAll()
+    d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
+  else
+    d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
+  end
+end
 
 if ZO_PlatformStyle then
   ZO_PlatformStyle:New(function()
