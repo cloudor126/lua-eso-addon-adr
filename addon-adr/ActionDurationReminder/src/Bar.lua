@@ -62,7 +62,7 @@ local m = { l = l }
 ---@type adr.settings.SavedVars
 local barSavedVarsDefaults = {
   barEnabled = true,
-  barPreset = "dynamic",
+  barPreset = "classic",
   barShowShiftScalePercent = 100,
   barShowInQuickslot = false,
   barShiftOffsetX = 0,
