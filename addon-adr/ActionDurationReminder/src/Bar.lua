@@ -518,11 +518,12 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         setFunc = function(value)
           l.getSavedVars().barShowShiftScalePercent = value
           l.updateWidgets(views.updateWidgetShiftScalePercent)
+          backBar.updateScale()
         end,
         width = "full",
         default = barSavedVarsDefaults.barShowShiftScalePercent,
         disabled = function()
-          return not l.getSavedVars().barEnabled or not l.isClassicPreset()
+          return not l.getSavedVars().barEnabled
         end,
       },
       {

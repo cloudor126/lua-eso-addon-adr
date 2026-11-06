@@ -262,8 +262,9 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
 
   ---@type adr.views.Cooldown
   inst.cooldown = m.newCooldown(backdrop or slot, backdrop and 0 or DT_HIGH)
-  -- 贴图缩放补偿仅适用于贴图行(SetScale)；native克隆按钮无缩放
-  inst.cooldown.shifted = textureShifted
+  -- 贴图行(backdrop SetScale)与克隆行(容器 SetScale)均携带 barShowShiftScalePercent 缩放，
+  -- drawRemain 的 *100/percent 补偿两种模式都需要(默认100%时为无操作)
+  inst.cooldown.shifted = shifted
   inst.cdMark = 0
 
   -- Progress bar (horizontal bar that shrinks from right to left)

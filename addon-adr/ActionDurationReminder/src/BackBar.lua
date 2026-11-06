@@ -210,12 +210,13 @@ l.layoutStatic = function()
   l.nativeLifted = nativeOnTop
 end
 
----按预设分发布局；切回动态/关闭时还原原生锚
+---按预设分发布局；切回动态/关闭时还原原生锚；同步第二行缩放(所有预设生效)
 ---@type fun()
 l.layoutRow = function()
   if not l.buttons[3] or not l.container then
     return
   end
+  l.container:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
     l.layoutStatic()
   else
@@ -428,6 +429,14 @@ end
 ---@type fun(): string
 m.getEffectivePreset = function()
   return l.effectivePreset()
+end
+
+---菜单滑条直接调用：立即应用第二行缩放
+---@type fun()
+m.updateScale = function()
+  if l.container then
+    l.container:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  end
 end
 
 ---@type fun(slotNum: number): Control|nil
