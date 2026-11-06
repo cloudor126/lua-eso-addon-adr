@@ -136,6 +136,10 @@ addon.hookStart(function()
     sv.barShowShift = nil
     sv.barShowShiftFully = nil
   end
+  -- 非法值重置为默认(如下拉框写入过本地化文本)
+  if sv.barPreset ~= "classic" and sv.barPreset ~= "dynamic" and sv.barPreset ~= "static" then
+    sv.barPreset = barSavedVarsDefaults.barPreset
+  end
 end)
 
 ---@type fun()
@@ -488,7 +492,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           text("Dynamic Double Bar"),
           text("Static Double Bar"),
         },
-        values = { "classic", "dynamic", "static" },
+        choicesValues = { "classic", "dynamic", "static" },
         getFunc = function()
           return l.getSavedVars().barPreset
         end,

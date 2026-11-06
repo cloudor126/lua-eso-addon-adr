@@ -284,8 +284,9 @@ l.createRow = function()
     end
     l.buttons[slotNum] = button
   end
-  l.layoutRow()
-  l.syncAll()
+  -- 注入平台模板(键盘 50x50/手柄 64x64、FlipCard 尺寸等)：
+  -- ZO_ActionButton 虚拟模板本身不带尺寸，缺失会导致 FlipCard 0x0、图标不可见
+  l.applyPlatformStyle()
 end
 
 ---重应用平台模板(键盘/手柄切换)
