@@ -49,9 +49,11 @@ l.createFailed = false
 l.currentHotbar = nil
 ---@type string|nil 上次已应用布局的预设(切换预设时触发重布局)
 l.lastAppliedPreset = nil
+---@type boolean 静态布局首次应用提示(每会话一次)
+l.staticAppliedNotified = false
 
----冲突检测(会话级)：FAB 自带完整双bar，存在时②③全部回退①；
----BUI/Azurah 会搬动原生条，仅静态预设③回退②；每次会话提示一次
+---冲突检测(会话级)：FAB 自带完整双bar，存在时硬回退①；
+---BUI/Azurah 只会整体移动/换肤动作条，本模块锚点为相对锚可跟随，仅警告不降级；每次会话提示一次
 ---@type fun(): string
 l.effectivePreset = function()
   local preset = l.getSavedVars().barPreset
@@ -64,7 +66,6 @@ l.effectivePreset = function()
   end
   if preset == "static" and (_G.BanditsUserInterface or _G.BUI or _G.Azurah) then
     l.notifyConflict("mover")
-    return "dynamic"
   end
   return preset
 end
@@ -79,7 +80,7 @@ l.notifyConflict = function(kind)
   end
   l.conflictNotified = kind
   local key = kind == "fancy" and "ADR double bar disabled: FancyActionBar+ detected"
-    or "ADR static bar disabled: a bar-mover addon detected"
+    or "ADR static bar warning: a bar-mover addon was detected"
   d(string.format("[ADR] %s", addon.text(key)))
 end
 
@@ -196,6 +197,11 @@ l.layoutStatic = function()
   local liftY = nativeButton3.slot:GetHeight() + gapY
   local active = GetActiveHotbarCategory()
   local nativeOnTop = active == HOTBAR_CATEGORY_PRIMARY
+  -- 首次应用时确认提示(便于验证静态布局确实生效)
+  if not l.staticAppliedNotified then
+    l.staticAppliedNotified = true
+    d(string.format("[ADR] %s", addon.text("ADR static double bar applied")))
+  end
   -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上
   local cloneY = nativeOnTop and 0 or -liftY
   first.slot:ClearAnchors()
