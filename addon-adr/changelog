@@ -2,8 +2,8 @@
 
 ### New Features
 - Bar Style Presets: one dropdown now defines the whole second-bar look, replacing the old "Show Shift Bar" / "Show Empty Slots" toggles (existing settings migrate automatically on first login).
-  - Classic (default): the compact icon row with timers only, same as the old default look (drag/scale positioning still available here).
-  - Dynamic Double Bar: the inactive weapon bar renders above the native bar as full native action buttons - real icon frames, native darkening for unusable skills, native cooldown and tooltips, including the back-bar ultimate slot.
+  - Classic: the compact icon row with timers only, same as the old default look (drag/scale positioning still available here).
+  - Dynamic Double Bar (default for new installs; existing users stay on their migrated look): the inactive weapon bar renders above the native bar as full native action buttons - real icon frames, native darkening for unusable skills, native cooldown and tooltips, including the back-bar ultimate slot.
   - Static Double Bar (FAB-style): main-hand bar always on top, off-hand bar always at the bottom - rows stay fixed when you weapon swap (requires no other bar-mover addon).
 - The double-bar presets automatically turn off the game's mini "Back Row" setting while active (not restored on switch-back), hide the second row with Oakensoul or non-weapon hotbars, and fall back safely with a chat notice when FancyActionBar+ (falls back to Classic) or Bandits/Azurah (Static falls back to Dynamic) is detected.
 
