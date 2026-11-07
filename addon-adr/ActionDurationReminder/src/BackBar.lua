@@ -998,14 +998,12 @@ l.nativeUltResized = false
 
 ---@type fun()
 l.resizeNativeUlt = function()
-  if l.nativeUltResized then
-    return
-  end
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
-    -- 包装成 setCloneSize 兼容的对象接口
+    -- 缩尺寸 + 隐藏 ult 特有装饰(边框/发光/光效等，同克隆的 hideUltimateDecorations)
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
+    l.hideUltimateDecorations(nb)
     l.nativeUltResized = true
   end
 end
@@ -1027,6 +1025,16 @@ l.restoreNativeUlt = function()
     local btn = nb.slot:GetNamedChild("Button")
     if btn then
       btn:SetDimensions(70, 70)
+    end
+    -- 还原装饰可见性：Frame 在手柄键盘模式均为装饰边框，原生动态下应恢复
+    local frame = nb.slot:GetNamedChild("Frame")
+    if frame then
+      frame:SetHidden(true) -- 原生手柄模板里 Frame 本身 hidden=true，不强制
+    end
+    -- Decoration 是 ult 专属装饰，恢复显示
+    local deco = nb.slot:GetNamedChild("Decoration")
+    if deco then
+      deco:SetHidden(false)
     end
     -- Backdrop/Frame 锚不显式恢复(原生 ApplyStyle 会在下次平台切换时重设)
   end
@@ -1226,6 +1234,8 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
+    -- 原生翻转动画的 ApplyStyle 会重置 slot8 尺寸到 70/67，切手后重新缩小
+    zo_callLater(l.resizeNativeUlt, 450)
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
       l.animateStaticSwap()
