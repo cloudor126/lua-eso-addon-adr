@@ -286,8 +286,10 @@ l.layoutDynamic = function()
   -- 手柄下解除切手按钮的永久隐藏并锚回平台默认位(动态/经典下切手不随行移动，
   -- 药剂的原生锚链不受拖动；键盘下重新断言默认锚为无害操作)
   -- 键位提示偏移：手柄原生-6内嵌会压住图标底部像素，调为边外+2；停用时还原
+  -- Q 标签同样需要断言(动态模式下未被 adjustKeybindOffsets 覆盖)
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   l.adjustKeybindOffsets()
+  l.reassertQAnchor()
   if weaponSwap then
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -526,13 +528,8 @@ l.layoutStatic = function()
       if qs and qs.slot then
         qs.slot:ClearAnchors()
         qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
-        -- Q 键提示与其他键位提示同基线(槽底边+textOff)，避免偏高遮挡药水按钮
-        local qsText = qs.slot:GetNamedChild("ButtonText")
-        if qsText then
-          local qsOff = IsInGamepadPreferredMode() and 2 or 1
-          qsText:ClearAnchors()
-          qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, qsOff)
-        end
+        -- Q 键提示与其他键位提示同基线
+        l.reassertQAnchor()
         l.quickslotPinned = true
       end
     end
@@ -921,17 +918,8 @@ l.animateStaticSwap = function()
   if not l.staticEngaged then
     return
   end
-  -- 切手后原生 keybind 系统可能重锚 Q 标签，重新断言我们的锚
-  if not (DoesUnitExist("companion") and HasActiveCompanion()) then
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    if qs and qs.slot then
-      local qsText = qs.slot:GetNamedChild("ButtonText")
-      if qsText then
-        qsText:ClearAnchors()
-        qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, IsInGamepadPreferredMode() and 2 or 1)
-      end
-    end
-  end
+  -- 切手后重新断言 Q 键锚
+  l.reassertQAnchor()
   local _, _, gapY, swapX, swapY = l.platformOffsets()
   local nativeButton3 = ZO_ActionBar_GetButton(3)
   local liftY = l.rowSeparation()
@@ -998,8 +986,30 @@ end
 
 ---翻转结束回调
 ---@type fun(_, button: table)
+---重断言 Q 标签锚(静态/动态通用)：原生 keybind refresh 或 ApplyStyle
+---可能在任何时刻覆盖我们的自定义锚，每次布局/切手后重新断言
+---@type fun()
+l.reassertQAnchor = function()
+  if DoesUnitExist("companion") and HasActiveCompanion() then
+    return
+  end
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if qs and qs.slot then
+    local qsText = qs.slot:GetNamedChild("ButtonText")
+    if qsText then
+      qsText:ClearAnchors()
+      qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, IsInGamepadPreferredMode() and 2 or 1)
+    end
+  end
+end
+
 local function onSwapAnimationDone(_, button)
   button.noUpdates = false
+  -- 翻转动画后原生 ApplyStyle 可能重置了 Backdrop/Frame 锚和尺寸，补上
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
+  -- Q 标签同理(keybind refresh 覆盖)
+  l.reassertQAnchor()
 end
 
 ---@type fun(button: table, getCategory?: fun(): number|nil)
