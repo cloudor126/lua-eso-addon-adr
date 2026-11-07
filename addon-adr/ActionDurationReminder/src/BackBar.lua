@@ -249,6 +249,7 @@ l.restoreNativeAnchor = function()
     end
   end
   l.unpinKeybinds()
+  l.restoreNativeFlip()
 end
 
 ---按键提示(ButtonText)固定/还原：静态抬升原生条时，1-5/T 键提示钉在原始屏幕位置，
@@ -275,7 +276,8 @@ l.pinKeybinds = function()
       local isUlt = slotNum == 8
       local w = isUlt and dims.ult or dims.ability
       local x = swapX + swapW + abilityGap
-        + (isUlt and 5 * (dims.ability + abilityGap) + ultGap or (slotNum - 3) * (dims.ability + abilityGap))
+        + (isUlt and (4 * (dims.ability + abilityGap) + dims.ability + ultGap)
+            or ((slotNum - 3) * (dims.ability + abilityGap)))
         + w / 2
       local y = swapY + swapH / 2 + w / 2 + textOff
       text:ClearAnchors()
@@ -298,6 +300,36 @@ l.unpinKeybinds = function()
     if text then
       text:ClearAnchors()
       text:SetAnchor(TOP, nb.slot, BOTTOM, 0, textOff)
+    end
+  end
+end
+
+---静态下用淡入淡出时间线替换原生按钮的翻转时间线：原生代码在换武器时无条件
+---PlayFromStart hotbarSwapAnimation，替换后原生条同步获得交叉淡化而非翻转；
+---还原时放回原时间线
+l.staticSwapSaved = {}
+
+---@type fun()
+l.suppressNativeFlip = function()
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    if nb and nb.hotbarSwapAnimation and not l.staticSwapSaved[slotNum] then
+      l.staticSwapSaved[slotNum] = nb.hotbarSwapAnimation
+      if not nb.adrSwapFade then
+        nb.adrSwapFade = ANIMATION_MANAGER:CreateTimelineFromVirtual("TimerSwapAnimation", nb.slot)
+      end
+      nb.hotbarSwapAnimation = nb.adrSwapFade
+    end
+  end
+end
+
+---@type fun()
+l.restoreNativeFlip = function()
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    if nb and l.staticSwapSaved[slotNum] then
+      nb.hotbarSwapAnimation = l.staticSwapSaved[slotNum]
+      l.staticSwapSaved[slotNum] = nil
     end
   end
 end
@@ -338,6 +370,7 @@ l.layoutStatic = function()
   nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, 0)
   l.nativeLifted = nativeOnTop
   l.compensateQuickslot(nativeOnTop, liftY)
+  l.suppressNativeFlip()
   -- 垂直基准：weaponSwap RIGHT 点 = 当前原生行中心线。
   -- BOTTOM 锚把克隆槽底边中点对到该线 + offsetY(offset 为本地单位，渲染×scale)：
   --   克隆在底行(原生拍升)：克隆底边 = 当前行中心线下方半槽高+整行高 → local liftY/s + h/2
@@ -359,7 +392,7 @@ l.layoutStatic = function()
     BOTTOM,
     weaponSwap,
     RIGHT,
-    abilityGap + 5 * (dims.ability + abilityGap) + ultGap + dims.ult / 2,
+    abilityGap + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2,
     cloneYUlt
   )
   l.applyScale()
@@ -598,6 +631,14 @@ l.playSwapAnimation = function()
           button.button.hotbarCategory = hb
           button:HandleSlotChanged(hb)
           l.applyInactiveStyle(button)
+        end
+        -- 原生条内容同样在淡出窗口内换入(原生翻转时间线已被替换为淡化)，
+        -- 并补齐原生翻转结束回调的职责(noUpdates 复位/冷却态清理)
+        local nb = ZO_ActionBar_GetButton(slotNum)
+        if nb then
+          nb:SetShowCooldown(false)
+          nb:HandleSlotChanged(GetActiveHotbarCategory())
+          nb.noUpdates = false
         end
       end
     end, 200)
