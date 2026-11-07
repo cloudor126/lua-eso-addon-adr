@@ -309,6 +309,8 @@ l.layoutDynamic = function()
     -- 键盘下基模板50恰好撞对，手柄下原生变64而克隆仍50就会偏小
     l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
   end
+  -- 手柄下同时缩原生 slot8(动态模式可见，与克隆行保持一致)
+  l.resizeNativeUlt()
   l.applyScale()
 end
 
@@ -560,6 +562,8 @@ l.layoutStatic = function()
   end
   l.staticEngaged = true
   l.setRolesInstant()
+  -- 手柄下缩原生 slot8(即使隐藏也保持一致，切回动态时无缝)
+  l.resizeNativeUlt()
 end
 
 ---退出静态：恢复原生槽显示、还原键位数字、隐藏两静态行
@@ -986,6 +990,48 @@ end
 
 ---翻转结束回调
 ---@type fun(_, button: table)
+---缩/还原原生 slot8(手柄)：克隆行激活期间把原生大招从 70 缩到与技能同高(64)，
+---否则动态模式下可见的原生 70px 大招与 64px 克隆行不一致。
+---用 setCloneSize 处理(子控件名称相同：FlipCard/Button/Backdrop/Frame)；
+---还原时用原生前值(手柄 70/67，键盘 50/47)
+l.nativeUltResized = false
+
+---@type fun()
+l.resizeNativeUlt = function()
+  if l.nativeUltResized then
+    return
+  end
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  local nb = ZO_ActionBar_GetButton(8)
+  if nb and nb.slot then
+    -- 包装成 setCloneSize 兼容的对象接口
+    l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
+    l.nativeUltResized = true
+  end
+end
+
+---@type fun()
+l.restoreNativeUlt = function()
+  if not l.nativeUltResized then
+    return
+  end
+  l.nativeUltResized = false
+  -- 手柄原生前值：slot 70, FlipCard 67
+  local nb = ZO_ActionBar_GetButton(8)
+  if nb and nb.slot then
+    nb.slot:SetDimensions(70, 70)
+    local fc = nb.slot:GetNamedChild("FlipCard")
+    if fc then
+      fc:SetDimensions(ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE, ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE)
+    end
+    local btn = nb.slot:GetNamedChild("Button")
+    if btn then
+      btn:SetDimensions(70, 70)
+    end
+    -- Backdrop/Frame 锚不显式恢复(原生 ApplyStyle 会在下次平台切换时重设)
+  end
+end
+
 ---重断言 Q 标签锚(静态/动态通用)：原生 keybind refresh 或 ApplyStyle
 ---可能在任何时刻覆盖我们的自定义锚，每次布局/切手后重新断言
 ---@type fun()
@@ -1266,6 +1312,8 @@ l.deactivate = function()
   l.lastAppliedPreset = nil
   l.exitStatic()
   l.restoreKeybindOffsets()
+  -- 还原原生 slot8 尺寸(手柄 70/67)
+  l.restoreNativeUlt()
   -- 手柄下恢复切手按钮的原生行为(永久隐藏)并回默认锚
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if weaponSwap then
