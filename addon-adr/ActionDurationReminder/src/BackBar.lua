@@ -203,7 +203,28 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
----恢复原生3号槽与切手按钮默认锚(静态预设动过才需要)
+---静态预设：切手按钮垂直移动会带动锚在其左侧的药剂快捷栏(含Q键提示)。
+---仅无激活伴侣时快捷栏才锚在切手上(原生常量 offset -5)；此情形下垂直补偿回原位。
+---有伴侣时快捷栏锚伴侣大招槽，不受切手移动影响，无需补偿
+---@type fun(nativeOnTop: boolean, liftY: number)
+l.compensateQuickslot = function(nativeOnTop, liftY)
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if not weaponSwap then
+    return
+  end
+  l.quickslotCompensated = false
+  if DoesUnitExist("companion") and HasActiveCompanion() then
+    return
+  end
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if qs and qs.slot then
+    qs.slot:ClearAnchors()
+    qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, nativeOnTop and liftY or 0)
+    l.quickslotCompensated = true
+  end
+end
+
+---恢复原生3号槽与切手按钮默认锚(静态预设动过才需要)，并还原快捷栏补偿
 ---@type fun()
 l.restoreNativeAnchor = function()
   if not l.nativeLifted then
@@ -218,6 +239,14 @@ l.restoreNativeAnchor = function()
     nativeButton3:ApplyAnchor(weaponSwap, abilityGap)
     weaponSwap:ClearAnchors()
     weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
+  end
+  if l.quickslotCompensated then
+    l.quickslotCompensated = false
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    if qs and qs.slot and weaponSwap then
+      qs.slot:ClearAnchors()
+      qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, 0)
+    end
   end
 end
 
@@ -256,6 +285,7 @@ l.layoutStatic = function()
   nativeButton3.slot:ClearAnchors()
   nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, 0)
   l.nativeLifted = nativeOnTop
+  l.compensateQuickslot(nativeOnTop, liftY)
   -- 垂直基准：weaponSwap RIGHT 点 = 当前原生行中心线。
   -- BOTTOM 锚把克隆槽底边中点对到该线 + offsetY(offset 为本地单位，渲染×scale)：
   --   克隆在底行(原生拍升)：克隆底边 = 当前行中心线下方半槽高+整行高 → local liftY/s + h/2
