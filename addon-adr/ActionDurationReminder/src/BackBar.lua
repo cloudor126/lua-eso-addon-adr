@@ -49,14 +49,8 @@ l.nativeLifted = false
 
 ---@type table<number, table> slotNum(3..8) -> ActionButton克隆
 l.buttons = {}
----@type Control|nil
+---@type Control|nil 纯显隐用分组容器(不参与定位/缩放，锚点语义零风险)
 l.container = nil
----@type Control|nil 内层容器(承载克隆技能按钮，缩放支点=底边中心，保证缩小后居中)
-l.inner = nil
----@type Control|nil 大招独立外层(锚定原生大招位)
-l.ultContainer = nil
----@type Control|nil 大招独立内层(自中心缩放)
-l.ultInner = nil
 ---@type boolean 行已激活(事件已注册)
 l.active = false
 ---@type boolean 克隆行创建失败闭锁(本会话不再重试)
@@ -177,51 +171,35 @@ l.measureRowDims = function()
   return width, dims.ability
 end
 
----测量克隆大招槽原始尺寸
----@type fun(): number, number
-l.measureUltDims = function()
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  return dims.ult, dims.ult
-end
-
----内层技能按钮链式布局(3-7 锚在技能组内层；大招锚在独立内层)
+---应用克隆槽缩放(叶子控件自身缩放，同FAB的 backUlt.slot:SetScale 模式；
+---中间容器永不缩放——scaled容器锚点语义不可靠，是右贴偏移的根源)
 ---@type fun()
-l.layoutButtons = function()
-  local abilityGap = l.platformOffsets()
-  local first = l.buttons[3]
-  first.slot:ClearAnchors()
-  first.slot:SetAnchor(BOTTOMLEFT, l.inner, BOTTOMLEFT, 0, 0)
-  for slotNum = 4, 7 do
+l.applyScale = function()
+  local s = l.getSavedVars().barShowShiftScalePercent / 100
+  for slotNum = 3, 8 do
     local button = l.buttons[slotNum]
-    button.slot:ClearAnchors()
-    button:ApplyAnchor(l.buttons[slotNum - 1].slot, abilityGap)
+    if button then
+      button.slot:SetScale(s)
+    end
   end
-  local ult = l.buttons[8]
-  ult.slot:ClearAnchors()
-  ult.slot:SetAnchor(BOTTOMLEFT, l.ultInner, BOTTOMLEFT, 0, 0)
 end
 
----布局：动态预设——外层双锚横跨原生条(slot3→ult)上方，内层底边贴外层底边，
----缩放围绕底边中心对称收缩，缩小后仍与原生条居中对齐
+---布局：动态预设——每个克隆槽独立 BOTTOM 锚到对应原生槽 TOP(offset 0,0)。
+---水平 offset 为 0，乘不乘 scale 都精确：每个槽居中于对应原生槽正上方，
+---第三对第三、第五对第五、大招对大招逐槽成立
 ---@type fun()
 l.layoutDynamic = function()
-  if not l.inner or not l.container or not l.buttons[3] then
+  if not l.container or not l.buttons[3] then
     return
   end
   local _, _, gapY = l.platformOffsets()
-  local nativeSlot5 = ZO_ActionBar_GetButton(5).slot
-  local nativeUlt = ZO_ActionBar_GetButton(8).slot
-  local width, height = l.measureRowDims()
-  l.inner:SetDimensions(width, height)
-  l.container:ClearAnchors()
-  -- 技能组底边中心直接锚在原生中槽(slot5)顶中：中槽中线在任何缩放下精确对齐
-  l.container:SetAnchor(BOTTOM, nativeSlot5, TOP, 0, -gapY)
-  -- 大招单独对齐：外层底边中心锚在原生大招顶中，自中心缩放
-  local ultWidth, ultHeight = l.measureUltDims()
-  l.ultInner:SetDimensions(ultWidth, ultHeight)
-  l.ultContainer:ClearAnchors()
-  l.ultContainer:SetAnchor(BOTTOM, nativeUlt, TOP, 0, -gapY)
-  l.layoutButtons()
+  for slotNum = 3, 8 do
+    local nativeButton = ZO_ActionBar_GetButton(slotNum)
+    local button = l.buttons[slotNum]
+    button.slot:ClearAnchors()
+    button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP, 0, -gapY)
+  end
+  l.applyScale()
 end
 
 ---恢复原生3号槽默认锚(仅静态预设拍升过才需要)
@@ -243,9 +221,10 @@ end
 ---静态预设：主手条固定在上，副手条固定在下。
 ---原生条渲染当前激活条：主手激活时原生条抬到上行，克隆行(副手)占原生条原位；
 ---副手激活时原生条留在原位，克隆行(主手)在上。均以武器切换按钮为锚基准(同FAB)。
+---克隆槽用未缩放本地间距的锚点 offset(引擎×scale后即均匀缩放组)，槽各自 SetScale
 ---@type fun()
 l.layoutStatic = function()
-  if not l.inner or not l.container or not l.buttons[3] then
+  if not l.container or not l.buttons[3] then
     return
   end
   local abilityGap, ultGap, gapY = l.platformOffsets()
@@ -264,27 +243,28 @@ l.layoutStatic = function()
     l.staticAppliedNotified = true
     d(string.format("[ADR] %s", addon.text("ADR static double bar applied")))
   end
-  -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上
-  local cloneY = nativeOnTop and 0 or -liftY
-  local width, height = l.measureRowDims()
-  l.inner:SetDimensions(width, height)
-  l.container:SetDimensions(width, height)
-  l.container:ClearAnchors()
-  -- 外层底边中心锚到武器切换按钮右侧的行位(底边中心=内层缩放支点，缩小后居中)
-  l.container:SetAnchor(BOTTOM, weaponSwap, RIGHT, abilityGap + width / 2, cloneY + height / 2)
-  -- 大招单独对齐：按原生布局参数(技能段+间距)锚到武器切换基准
-  local ultWidth, ultHeight = l.measureUltDims()
-  l.ultInner:SetDimensions(ultWidth, ultHeight)
-  l.ultContainer:SetDimensions(ultWidth, ultHeight)
-  l.ultContainer:ClearAnchors()
-  l.ultContainer:SetAnchor(
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  local scale = l.getSavedVars().barShowShiftScalePercent / 100
+  -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上。
+  -- cloneY 为屏幕偏移，锚点 offset 是本地单位(×scale生效)，故除以 scale
+  local cloneY = (nativeOnTop and 0 or -liftY) / scale
+  for slotNum = 3, 7 do
+    local button = l.buttons[slotNum]
+    -- 本地未缩放间距：渲染后为均匀缩放组
+    local offsetX = abilityGap + (slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2
+    button.slot:ClearAnchors()
+    button.slot:SetAnchor(BOTTOM, weaponSwap, RIGHT, offsetX, cloneY)
+  end
+  local ult = l.buttons[8]
+  ult.slot:ClearAnchors()
+  ult.slot:SetAnchor(
     BOTTOM,
     weaponSwap,
     RIGHT,
-    abilityGap + width + ultGap + ultWidth / 2,
-    cloneY + ultHeight / 2
+    abilityGap + 5 * (dims.ability + abilityGap) + ultGap + dims.ult / 2,
+    cloneY
   )
-  l.layoutButtons()
+  l.applyScale()
   -- 原生条：主手激活时抬到上行，副手激活时回原位
   nativeButton3.slot:ClearAnchors()
   nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, nativeOnTop and -liftY or 0)
@@ -297,8 +277,6 @@ l.layoutRow = function()
   if not l.buttons[3] or not l.container then
     return
   end
-  l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
-  l.ultInner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
     l.layoutStatic()
   else
@@ -346,11 +324,9 @@ l.syncAll = function(relayout)
   l.currentHotbar = hotbar
   if not hotbar then
     l.container:SetHidden(true)
-    l.ultContainer:SetHidden(true)
     return
   end
   l.container:SetHidden(false)
-  l.ultContainer:SetHidden(false)
   if relayout ~= false then
     l.layoutRow()
   end
@@ -412,18 +388,13 @@ l.createRow = function()
   end
   local parent = ZO_ActionBar_GetButton(3).slot:GetParent()
   l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", parent, CT_CONTROL)
-  l.inner = WINDOW_MANAGER:CreateControl("ADRBackBarRowInner", l.container, CT_CONTROL)
-  l.inner:SetAnchor(BOTTOM, l.container, BOTTOM, 0, 0)
-  l.ultContainer = WINDOW_MANAGER:CreateControl("ADRBackBarUlt", parent, CT_CONTROL)
-  l.ultInner = WINDOW_MANAGER:CreateControl("ADRBackBarUltInner", l.ultContainer, CT_CONTROL)
-  l.ultInner:SetAnchor(BOTTOM, l.ultContainer, BOTTOM, 0, 0)
   local hotbar = l.inactiveHotbar() or HOTBAR_CATEGORY_BACKUP
   for slotNum = 3, 8 do
     local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
     local button = ActionButton:New(
       slotNum + CLONE_SLOT_OFFSET,
       ACTION_BUTTON_TYPE_VISIBLE,
-      slotNum == 8 and l.ultInner or l.inner,
+      l.container,
       template,
       hotbar
     )
@@ -538,14 +509,6 @@ l.activate = function()
       end)
       l.container = nil
     end
-    if l.ultContainer then
-      pcall(function()
-        l.ultContainer:SetHidden(true)
-      end)
-      l.ultContainer = nil
-    end
-    l.inner = nil
-    l.ultInner = nil
     return
   end
   l.active = true
@@ -565,9 +528,6 @@ l.deactivate = function()
   l.restoreNativeAnchor()
   if l.container then
     l.container:SetHidden(true)
-  end
-  if l.ultContainer then
-    l.ultContainer:SetHidden(true)
   end
 end
 
@@ -593,7 +553,6 @@ l.onCoreUpdate = function()
     -- Oakensoul 或非武器热栏(攻城等)时隐藏第二行；恢复时全量重同步
     if l.hasOakensoul() or l.inactiveHotbar() == nil then
       l.container:SetHidden(true)
-      l.ultContainer:SetHidden(true)
       l.currentHotbar = nil
       l.restoreNativeAnchor()
     elseif l.container:IsControlHidden() then
@@ -615,15 +574,10 @@ m.getEffectivePreset = function()
   return l.effectivePreset()
 end
 
----菜单滑条直接调用：立即应用第二行缩放(技能组与大招各自居中)
+---菜单滑条直接调用：立即应用第二行缩放(锚点均与scale无关，仅更新叶子scale)
 ---@type fun()
 m.updateScale = function()
-  if l.inner then
-    l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
-  end
-  if l.ultInner then
-    l.ultInner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
-  end
+  l.applyScale()
 end
 
 ---菜单下拉框直接调用：预设切换后立即重布局
