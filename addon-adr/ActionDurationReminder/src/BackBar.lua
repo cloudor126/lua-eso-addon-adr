@@ -183,15 +183,29 @@ end
 
 ---激活行样式：全亮(静态双克隆中逻辑上对应原生条的那一行不吃比例/暗化)
 ---@type fun(button: table)
+---在激活 ult 上显示终极能量数字(仅 slot 8：原生 RefreshUltimateNumberVisibility 不判断槽位，
+---须由调用方把关)；数字重锚到按钮右侧，避免与底部计时数字重叠
+---@type fun(button: table)
+l.showUltNumber = function(button)
+  if button.slot.slotNum ~= 8 then
+    return
+  end
+  if button.countText then
+    button.countText:ClearAnchors()
+    button.countText:SetAnchor(LEFT, button.slot, RIGHT, 2, 0)
+  end
+  if button.RefreshUltimateNumberVisibility then
+    button:RefreshUltimateNumberVisibility()
+  end
+end
+
 l.applyActiveStyle = function(button)
   if button.icon then
     button.icon:SetAlpha(1)
     button.icon:SetDesaturation(0)
   end
   -- 终极能量数字只在激活 ult 上显示(原生语义；尊重游戏设置)
-  if button.RefreshUltimateNumberVisibility then
-    button:RefreshUltimateNumberVisibility()
-  end
+  l.showUltNumber(button)
 end
 
 ---应用克隆槽缩放：动态/经典=统一比例；静态=激活行100%、非激活行用比例
@@ -691,9 +705,7 @@ l.animateStaticRoles = function()
         button.icon:SetDesaturation(isActive and 0 or desat)
       end
       if isActive then
-        if button.RefreshUltimateNumberVisibility then
-          button:RefreshUltimateNumberVisibility()
-        end
+        l.showUltNumber(button)
       elseif button.countText then
         button.countText:SetHidden(true)
       end
