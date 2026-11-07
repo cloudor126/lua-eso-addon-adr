@@ -205,11 +205,18 @@ l.onCoreUpdate = function()
   local showedActionMap = {}
   local hotbarCategory = GetActiveHotbarCategory()
   -- 1. show in action bar widgets
-  -- 静态双克隆行接管时，主条(激活条)计时标签重定向到激活克隆行(原生槽已隐藏)
+  -- 静态双克隆行接管时，主条(激活条)计时标签重定向到激活克隆行(原生槽已隐藏)；
+  -- 换武器后激活集互换，旧控件挂在旧集上一并清洗重建(标签+冷却线随之落位新集)
   local staticEngaged = backBar.isStaticNativeHidden()
   for slotNum = 3, 8 do
     local widget = l.mainBarWidgetMap[slotNum]
-    if widget and widget.nativeMode ~= staticEngaged then
+    if
+      widget
+      and (
+        widget.nativeMode ~= staticEngaged
+        or (staticEngaged and widget.slot ~= backBar.getActiveSlotControl(slotNum))
+      )
+    then
       widget:hide()
       widget = nil
       l.mainBarWidgetMap[slotNum] = nil
@@ -327,7 +334,13 @@ l.onCoreUpdate = function()
       local inAppend = false
       local wantNative = nativeUsable
       local widget = l.shiftedBarWidgetMap[slotNum]
-      if widget and (widget.backdrop ~= nil) ~= wantNative then
+      if
+        widget
+        and (
+          (widget.backdrop ~= nil) ~= wantNative
+          or (wantNative and widget.slot ~= backBar.getSlotControl(slotNum))
+        )
+      then
         widget:hide()
         l.stashShiftedWidget(slotNum, widget)
         l.shiftedBarWidgetMap[slotNum] = nil
