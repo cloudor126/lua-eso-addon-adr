@@ -1064,8 +1064,26 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         if b and b.slot then
           local s = b.slot
           local icon = b.icon
+          -- getter 存在性逐个检查：GetTexture/GetDesaturation 并非所有纹理控件都有
+          local iconTex, iconAlpha, iconDesat, iconW = "nil", -1, -1, -1
+          local iconHidden = "?"
+          if icon then
+            iconHidden = tostring(icon:IsControlHidden())
+            iconAlpha = icon:GetAlpha() or -1
+            iconW = icon:GetWidth() or -1
+            if icon.GetTexture then
+              iconTex = icon:GetTexture() or ""
+            elseif icon.GetTextureFileName then
+              iconTex = icon:GetTextureFileName() or ""
+            else
+              iconTex = "no-getter"
+            end
+            if icon.GetDesaturation then
+              iconDesat = icon:GetDesaturation() or -1
+            end
+          end
           d(string.format(
-            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%q a=%.2f desat=%.2f hidden=%s w=%.0f",
+            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%s a=%.2f desat=%.2f hidden=%s w=%.0f",
             label,
             slotNum,
             s:GetParent() and s:GetParent():GetName() or "?",
@@ -1076,11 +1094,11 @@ SLASH_COMMANDS["/adrbackbar"] = function()
             s:GetHeight() or -1,
             s:GetScale() or -1,
             tostring(s:IsControlHidden()),
-            icon and (icon:GetTexture() or "?") or "nil",
-            icon and (icon:GetAlpha() or -1) or -1,
-            icon and (icon:GetDesaturation() or -1) or -1,
-            icon and tostring(icon:IsControlHidden()) or "?",
-            icon and (icon:GetWidth() or -1) or -1
+            iconTex,
+            iconAlpha,
+            iconDesat,
+            iconHidden,
+            iconW
           ))
         end
       end
