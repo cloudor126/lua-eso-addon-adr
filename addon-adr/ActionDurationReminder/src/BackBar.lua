@@ -178,7 +178,7 @@ l.measureUltDims = function()
   return ult:GetWidth(), ult:GetHeight()
 end
 
----内层技能按钮链式布局(3-7，锚在技能组内层；大招独立布局不参与链)
+---内层技能按钮链式布局(3-7 锚在技能组内层；大招锚在独立内层)
 ---@type fun()
 l.layoutButtons = function()
   local abilityGap = l.platformOffsets()
@@ -190,6 +190,9 @@ l.layoutButtons = function()
     button.slot:ClearAnchors()
     button:ApplyAnchor(l.buttons[slotNum - 1].slot, abilityGap)
   end
+  local ult = l.buttons[8]
+  ult.slot:ClearAnchors()
+  ult.slot:SetAnchor(BOTTOMLEFT, l.ultInner, BOTTOMLEFT, 0, 0)
 end
 
 ---布局：动态预设——外层双锚横跨原生条(slot3→ult)上方，内层底边贴外层底边，
@@ -327,9 +330,10 @@ l.syncSlot = function(slotNum, hotbar)
   end
 end
 
----同步整行(换武器/全量刷新)
----@type fun()
-l.syncAll = function()
+---同步整行(换武器/全量刷新)。relayout=false 时仅刷数据不重排锚点
+---(换装等高频事件避免锚点风暴: too many anchors processed)
+---@type fun(relayout?: boolean)
+l.syncAll = function(relayout)
   if not l.container then
     return
   end
@@ -342,7 +346,9 @@ l.syncAll = function()
   end
   l.container:SetHidden(false)
   l.ultContainer:SetHidden(false)
-  l.layoutRow()
+  if relayout ~= false then
+    l.layoutRow()
+  end
   for slotNum = 3, 8 do
     l.syncSlot(slotNum, hotbar)
   end
@@ -478,7 +484,8 @@ l.registerEvents = function()
     l.syncAll()
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function()
-    l.syncAll()
+    -- 换装高频事件：仅刷数据(可用状态/计数)，不重排锚点
+    l.syncAll(false)
   end)
   EM:AddFilterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_WORN)
 end
