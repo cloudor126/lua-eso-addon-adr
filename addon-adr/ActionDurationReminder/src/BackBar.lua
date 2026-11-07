@@ -332,11 +332,20 @@ end
 ---两行大招列会零间隙贴上造成重叠；键盘 50=50 不受影响)
 ---@type fun(): number
 l.rowSeparation = function()
-  --- 行间距按技能高度(用户要求技能列间隙不变)；手柄大招高于技能导致的
-  --- 大招列重叠由 layoutStaticRow 单独把顶行大招上移高度差解决
+  --- 行间距按技能高度(技能列间隙不变)；手柄大招(70)高于技能(64)导致的
+  --- 大招列重叠由"缩小非激活大招"解决(见 l.inactiveUltSize)
   local _, _, gapY = l.platformOffsets()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   return dims.ability + gapY
+end
+
+---非激活行大招尺寸：使两行大招列的间隙等于其他列的 gapY。
+---推导：间隙 = 行间距 - 激活大招半高 - 非激活大招半高 = gapY →
+---非激活尺寸 = 2×(技能高 - 激活大招半高)。手柄 58，键盘 50(与常量相同)
+---@type fun(): number
+l.inactiveUltSize = function()
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  return 2 * (dims.ability - dims.ult / 2)
 end
 
 ---静态接管期间用空时间线替换原生翻转时间线：原生换武器流程会播放
@@ -399,18 +408,15 @@ end
 ---静态行绝对定位(已验证正确的 CENTER 锚)：以切手默认位为基准的绝对坐标，
 ---每槽 CENTER 锚到 ZO_ActionBar1，槽尺寸显式硬设(不依赖模板注入)
 ---@type fun(set: table, centerY: number, dims: table, abilityGap: number, ultGap: number, swapX: number, swapW: number)
-l.layoutStaticRow = function(set, centerY, dims, abilityGap, ultGap, swapX, swapW, isTop)
-  -- 手柄大招(70)高于技能(64)：仅顶行大招上移高度差，底行保持原生对齐；
-  -- 键盘 50=50 偏移为零，两行大招列恢复 gapY 间隙且技能列间距不变
-  local ultRise = isTop and math.max(0, dims.ult - dims.ability) or 0
+l.layoutStaticRow = function(set, centerY, dims, abilityGap, ultGap, swapX, swapW)
   for slotNum = 3, 8 do
     local button = set[slotNum]
     local x = swapX + swapW + abilityGap
       + (slotNum == 8 and (4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2)
         or ((slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2))
-    local y = centerY - (slotNum == 8 and ultRise or 0)
     button.slot:ClearAnchors()
-    button.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, y)
+    button.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, centerY)
+    -- 大招尺寸由角色系统决定(激活=原生尺寸/非激活=缩小)，布局时先置原生基准
     l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
   end
 end
@@ -483,8 +489,8 @@ l.layoutStatic = function()
   local swapH = weaponSwap:GetHeight()
   local bottomCenterY = swapY + swapH / 2
   local topCenterY = bottomCenterY - l.rowSeparation()
-  l.layoutStaticRow(l.staticPrimary, topCenterY, dims, abilityGap, ultGap, swapX, swapW, true)
-  l.layoutStaticRow(l.staticBackup, bottomCenterY, dims, abilityGap, ultGap, swapX, swapW, false)
+  l.layoutStaticRow(l.staticPrimary, topCenterY, dims, abilityGap, ultGap, swapX, swapW)
+  l.layoutStaticRow(l.staticBackup, bottomCenterY, dims, abilityGap, ultGap, swapX, swapW)
   for slotNum = 3, 8 do
     l.staticPrimary[slotNum].slot:SetHidden(false)
     l.staticBackup[slotNum].slot:SetHidden(false)
@@ -534,7 +540,7 @@ end
 ---静态角色应用：激活行 100%+全亮，非激活行 比例+暗化；换武器仅调此函数
 ---@type fun()
 ---瞬时设置角色(仅首次布局/退出时使用；运行中事件走 applyStaticRoles 动画路径，
----避免瞬时写入打断进行中的渐变)
+---避免瞬时写入打断进行中的渐变)。非激活大招缩小至与其他列同隙
 ---@type fun()
 l.setRolesInstant = function()
   if not l.staticEngaged then
@@ -548,9 +554,15 @@ l.setRolesInstant = function()
     local aButton = activeSet[slotNum]
     aButton.slot:SetScale(1)
     l.applyActiveStyle(aButton)
+    if slotNum == 8 then
+      l.setCloneSize(aButton, (IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard).ult)
+    end
     local iButton = inactiveSet[slotNum]
     iButton.slot:SetScale(s)
     l.applyInactiveStyle(iButton)
+    if slotNum == 8 then
+      l.setCloneSize(iButton, l.inactiveUltSize())
+    end
   end
 end
 
@@ -703,9 +715,19 @@ l.swapGlideTimeline = nil
 ---@type fun(button: table, isActive: boolean, s: number, dimAlpha: number, desat: number)
 l.setRoleInstant = function(button, isActive, s, dimAlpha, desat)
   button.slot:SetScale(isActive and 1 or s)
+  -- 大招尺寸随角色：激活=原生尺寸，非激活=缩小至与其他列同隙
+  if button.slot.slotNum == 8 then
+    local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+    l.setCloneSize(button, isActive and dims.ult or l.inactiveUltSize())
+  end
   if button.icon then
     button.icon:SetAlpha(isActive and 1 or dimAlpha)
     button.icon:SetDesaturation(isActive and 0 or desat)
+  end
+  if isActive then
+    l.showUltNumber(button)
+  elseif button.countText then
+    button.countText:SetHidden(true)
   end
 end
 
@@ -752,9 +774,14 @@ l.animateStaticRoles = function()
       local isActive = (active == HOTBAR_CATEGORY_PRIMARY) == (button == pButton)
       local targetScale = isActive and 1 or s
       local targetAlpha = isActive and 1 or dimAlpha
-      -- 去饱和无原生颜色动画，始终瞬时设置；终极能量数字仅激活行显示
+      -- 去饱和无原生颜色动画，始终瞬时设置；终极能量数字仅激活行显示；
+      -- 大招尺寸随角色(激活=原生，非激活=缩小至同隙)
       if button.icon then
         button.icon:SetDesaturation(isActive and 0 or desat)
+      end
+      if button.slot.slotNum == 8 then
+        local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+        l.setCloneSize(button, isActive and dims.ult or l.inactiveUltSize())
       end
       if isActive then
         l.showUltNumber(button)
