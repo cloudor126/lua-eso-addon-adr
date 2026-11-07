@@ -921,6 +921,17 @@ l.animateStaticSwap = function()
   if not l.staticEngaged then
     return
   end
+  -- 切手后原生 keybind 系统可能重锚 Q 标签，重新断言我们的锚
+  if not (DoesUnitExist("companion") and HasActiveCompanion()) then
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    if qs and qs.slot then
+      local qsText = qs.slot:GetNamedChild("ButtonText")
+      if qsText then
+        qsText:ClearAnchors()
+        qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, IsInGamepadPreferredMode() and 2 or 1)
+      end
+    end
+  end
   local _, _, gapY, swapX, swapY = l.platformOffsets()
   local nativeButton3 = ZO_ActionBar_GetButton(3)
   local liftY = l.rowSeparation()
