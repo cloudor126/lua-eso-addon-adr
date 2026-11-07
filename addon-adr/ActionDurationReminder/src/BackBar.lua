@@ -409,7 +409,10 @@ l.createStaticRows = function()
         button.slot.slotNum = slotNum
         button.button.slotNum = slotNum
         button:SetShowBindingText(false)
+        -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation；
+        -- 且 ZO_ActionButton 虚拟模板不带尺寸，不注入平台模板则 FlipCard 0x0 图标不可见
         button:SetupBounceAnimation()
+        button:ApplyStyle(ZO_GetPlatformTemplate(template))
         l.setupDragDropHandlers(button, function()
           return button.slot.hotbarCategory
         end)
