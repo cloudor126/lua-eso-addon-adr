@@ -515,14 +515,6 @@ l.createStaticRows = function()
         button.slot.hotbarCategory = twinCategory
         button.button.hotbarCategory = twinCategory
         button:SetShowBindingText(false)
-        -- 角色渐变时间线(尺寸/透明，换武器时播放)
-        button.adrRoleTimeline = ANIMATION_MANAGER:CreateTimeline()
-        button.adrRoleScale = button.adrRoleTimeline:CreateAnimation(ANIMATION_SCALE, button.slot)
-        button.adrRoleScale:SetDuration(250)
-        button.adrRoleScale:SetEasingFunction(ZO_EaseOutQuadratic)
-        button.adrRoleAlpha = button.adrRoleTimeline:CreateAnimation(ANIMATION_ALPHA, button.icon)
-        button.adrRoleAlpha:SetDuration(250)
-        button.adrRoleAlpha:SetEasingFunction(ZO_EaseOutQuadratic)
         -- 创建即隐藏：锚定完成前不可见(否则短暂/永久停留在容器原点=左上角)
         button.slot:SetHidden(true)
         -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation；
@@ -622,6 +614,43 @@ end
 ---2) 两行角色(尺寸/透明)渐变(ScaleAnimation+AlphaAnimation)，去饱和瞬时设置
 l.swapGlideTimeline = nil
 
+---瞬时设置角色(动画不可用/首次布局时使用)
+---@type fun(button: table, isActive: boolean, s: number, dimAlpha: number, desat: number)
+l.setRoleInstant = function(button, isActive, s, dimAlpha, desat)
+  button.slot:SetScale(isActive and 1 or s)
+  if button.icon then
+    button.icon:SetAlpha(isActive and 1 or dimAlpha)
+    button.icon:SetDesaturation(isActive and 0 or desat)
+  end
+end
+
+---懒创建角色渐变时间线(创建失败退化为瞬时切换，不影响按钮本身)
+---@type fun(button: table): boolean
+l.ensureRoleTimeline = function(button)
+  if button.adrRoleTimeline then
+    return true
+  end
+  if button.adrRoleFailed then
+    return false
+  end
+  local ok = pcall(function()
+    button.adrRoleTimeline = ANIMATION_MANAGER:CreateTimeline()
+    button.adrRoleScale = button.adrRoleTimeline:CreateAnimation(ANIMATION_SCALE, button.slot)
+    button.adrRoleScale:SetDuration(250)
+    button.adrRoleScale:SetEasingFunction(ZO_EaseOutQuadratic)
+    button.adrRoleAlpha = button.adrRoleTimeline:CreateAnimation(ANIMATION_ALPHA, button.icon)
+    button.adrRoleAlpha:SetDuration(250)
+    button.adrRoleAlpha:SetEasingFunction(ZO_EaseOutQuadratic)
+  end)
+  if not ok then
+    button.adrRoleFailed = true
+    button.adrRoleTimeline = nil
+    d("[ADR] role animation unavailable, using instant swap")
+    return false
+  end
+  return true
+end
+
 ---@type fun()
 l.animateStaticRoles = function()
   if not l.staticEngaged then
@@ -646,6 +675,16 @@ l.animateStaticRoles = function()
         button.adrRoleAlpha:SetStartAlpha(button.icon and button.icon:GetAlpha() or 1)
         button.adrRoleAlpha:SetEndAlpha(isActive and 1 or dimAlpha)
         button.adrRoleTimeline:PlayFromStart()
+      elseif l.ensureRoleTimeline(button) then
+        -- 首次确保后重试一次本帧播放
+        local b2 = button
+        zo_callLater(function()
+          if b2.adrRoleTimeline and l.staticEngaged then
+            l.animateStaticRoles()
+          end
+        end, 10)
+      else
+        l.setRoleInstant(button, isActive, s, dimAlpha, desat)
       end
     end
   end
