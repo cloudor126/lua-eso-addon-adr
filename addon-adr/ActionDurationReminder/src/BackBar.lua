@@ -690,6 +690,42 @@ l.animateStaticRoles = function()
   end
 end
 
+---切手按钮滑动(TranslateAnimation)。动画栈不可用时退化为瞬时落位，绝不让异常炸同步链
+---@type fun(weaponSwap: Control, swapX: number, fromY: number, toY: number)
+l.playSwapGlide = function(weaponSwap, swapX, fromY, toY)
+  local setAnchor = function(y)
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, y)
+  end
+  if l.swapGlideFailed then
+    setAnchor(toY)
+    return
+  end
+  local ok = pcall(function()
+    if not l.swapGlideTimeline then
+      l.swapGlideTimeline = ANIMATION_MANAGER:CreateTimeline()
+      l.swapGlideTranslate = l.swapGlideTimeline:CreateAnimation(ANIMATION_TRANSLATE, weaponSwap)
+      l.swapGlideTranslate:SetDuration(250)
+      l.swapGlideTranslate:SetEasingFunction(ZO_EaseOutQuadratic)
+    end
+    setAnchor(fromY)
+    l.swapGlideTranslate:SetStartOffsetX(0)
+    l.swapGlideTranslate:SetStartOffsetY(0)
+    l.swapGlideTranslate:SetEndOffsetX(0)
+    l.swapGlideTranslate:SetEndOffsetY(toY - fromY)
+    l.swapGlideTimeline:SetHandler("OnStop", function()
+      setAnchor(toY)
+    end)
+    l.swapGlideTimeline:PlayFromStart()
+  end)
+  if not ok then
+    l.swapGlideFailed = true
+    l.swapGlideTimeline = nil
+    d("[ADR] swap glide animation unavailable, using instant positioning")
+    setAnchor(toY)
+  end
+end
+
 ---@type fun()
 l.animateStaticSwap = function()
   if not l.staticEngaged then
@@ -703,19 +739,7 @@ l.animateStaticSwap = function()
   if weaponSwap then
     local fromY = onTop and swapY or (swapY - liftY)
     local toY = onTop and (swapY - liftY) or swapY
-    if not l.swapGlideTimeline then
-      l.swapGlideTimeline = ANIMATION_MANAGER:CreateTimeline()
-      l.swapGlideTranslate = l.swapGlideTimeline:CreateAnimation(ANIMATION_TRANSLATE, weaponSwap)
-      l.swapGlideTranslate:SetDuration(250)
-      l.swapGlideTranslate:SetEasingFunction(ZO_EaseInOutQuadratic)
-    end
-    weaponSwap:ClearAnchors()
-    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, fromY)
-    l.swapGlideTranslate:SetStartOffsetX(0)
-    l.swapGlideTranslate:SetStartOffsetY(0)
-    l.swapGlideTranslate:SetEndOffsetX(0)
-    l.swapGlideTranslate:SetEndOffsetY(toY - fromY)
-    l.swapGlideTimeline:PlayFromStart()
+    l.playSwapGlide(weaponSwap, swapX, fromY, toY)
   end
   l.animateStaticRoles()
 end
