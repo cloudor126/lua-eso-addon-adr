@@ -315,13 +315,15 @@ l.unpinKeybinds = function()
 end
 
 ---静态下用淡入淡出时间线替换原生按钮的翻转时间线：原生代码在换武器时无条件
----静态克隆槽 X 偏移(切手基准，屏幕单位)：技能 3-7 链式，大招在技能段+原生大招间距处
----@type fun(slotNum: number, dims: table, abilityGap: number, ultGap: number): number
-l.staticOffsetX = function(slotNum, dims, abilityGap, ultGap)
-  if slotNum == 8 then
-    return abilityGap + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
-  end
-  return abilityGap + (slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2
+---静态双行行间距：按平台最高槽位计算(手柄大招70高于技能64，若按技能高度
+---两行大招列会零间隙贴上造成重叠；键盘 50=50 不受影响)
+---@type fun(): number
+l.rowSeparation = function()
+  --- 行间距按技能高度(用户要求技能列间隙不变)；手柄大招高于技能导致的
+  --- 大招列重叠由 layoutStaticRow 单独把顶行大招上移高度差解决
+  local _, _, gapY = l.platformOffsets()
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  return dims.ability + gapY
 end
 
 ---静态接管期间用空时间线替换原生翻转时间线：原生换武器流程会播放
@@ -384,14 +386,18 @@ end
 ---静态行绝对定位(已验证正确的 CENTER 锚)：以切手默认位为基准的绝对坐标，
 ---每槽 CENTER 锚到 ZO_ActionBar1，槽尺寸显式硬设(不依赖模板注入)
 ---@type fun(set: table, centerY: number, dims: table, abilityGap: number, ultGap: number, swapX: number, swapW: number)
-l.layoutStaticRow = function(set, centerY, dims, abilityGap, ultGap, swapX, swapW)
+l.layoutStaticRow = function(set, centerY, dims, abilityGap, ultGap, swapX, swapW, isTop)
+  -- 手柄大招(70)高于技能(64)：仅顶行大招上移高度差，底行保持原生对齐；
+  -- 键盘 50=50 偏移为零，两行大招列恢复 gapY 间隙且技能列间距不变
+  local ultRise = isTop and math.max(0, dims.ult - dims.ability) or 0
   for slotNum = 3, 8 do
     local button = set[slotNum]
     local x = swapX + swapW + abilityGap
       + (slotNum == 8 and (4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2)
         or ((slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2))
+    local y = centerY - (slotNum == 8 and ultRise or 0)
     button.slot:ClearAnchors()
-    button.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, centerY)
+    button.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, y)
     l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
   end
 end
@@ -428,7 +434,7 @@ l.layoutStatic = function()
       ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, false)
     end
     local _, _, gapY2, swapX2, swapY2 = l.platformOffsets()
-    local liftY2 = ZO_ActionBar_GetButton(3).slot:GetHeight() + gapY2
+    local liftY2 = l.rowSeparation()
     local onTop2 = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -461,9 +467,9 @@ l.layoutStatic = function()
   local swapW = weaponSwap:GetWidth()
   local swapH = weaponSwap:GetHeight()
   local bottomCenterY = swapY + swapH / 2
-  local topCenterY = bottomCenterY - dims.ability - gapY
-  l.layoutStaticRow(l.staticPrimary, topCenterY, dims, abilityGap, ultGap, swapX, swapW)
-  l.layoutStaticRow(l.staticBackup, bottomCenterY, dims, abilityGap, ultGap, swapX, swapW)
+  local topCenterY = bottomCenterY - l.rowSeparation()
+  l.layoutStaticRow(l.staticPrimary, topCenterY, dims, abilityGap, ultGap, swapX, swapW, true)
+  l.layoutStaticRow(l.staticBackup, bottomCenterY, dims, abilityGap, ultGap, swapX, swapW, false)
   for slotNum = 3, 8 do
     l.staticPrimary[slotNum].slot:SetHidden(false)
     l.staticBackup[slotNum].slot:SetHidden(false)
@@ -811,7 +817,7 @@ l.animateStaticSwap = function()
   end
   local _, _, gapY, swapX, swapY = l.platformOffsets()
   local nativeButton3 = ZO_ActionBar_GetButton(3)
-  local liftY = nativeButton3.slot:GetHeight() + gapY
+  local liftY = l.rowSeparation()
   local onTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if weaponSwap then
