@@ -224,14 +224,14 @@ l.onCoreUpdate = function()
     end
   end
   -- 4. prepare to show shift and extend
-  -- 克隆行可用性(存在、已同步非激活条、非 Oakensoul)；不可用时退回贴图行
+  -- 克隆行可用性(存在、已同步非激活条、非 Oakensoul)；不可用时退回贴图行。
+  -- 克隆行可用时贴图 shift 控件一律淘汰(含 classic：所有槽位动作已上克隆槽，
+  -- 防止 Oakensoul 期间残留 visible 的贴图图标)
   local nativeUsable = backBar.isRowUsable()
-  -- 混合模式下的控件类型满理：动态/静态全克隆模式贴图控件退场；
-  -- 经典模式两种共存，仅克隆行不可用时退场 native 控件
   local classicHybrid = backBar.isActive() and backBar.isClassicMode()
   for slotNum, widget in pairs(l.shiftedBarWidgetMap) do
     local isTexture = widget.backdrop ~= nil
-    if isTexture and nativeUsable and not classicHybrid then
+    if isTexture and nativeUsable then
       widget:hide()
       l.shiftedBarWidgetMap[slotNum] = nil
     elseif not isTexture and not nativeUsable then
@@ -263,7 +263,8 @@ l.onCoreUpdate = function()
     end
   end
   -- 4.1 sort later actions show first
-  -- 经典模式下仅非激活条的动作上克隆槽(槽位语义)；其余(激活条/无分类)走贴图行
+  -- 所有槽位动作的计时都骑克隆按钮(标签为克隆槽子控件，任意缩放下天然对齐)；
+  -- 仅克隆行不可用(Oakensoul等)时回退贴图行
   local nativeVisibleMap = {}
   if #toShowIdList > 0 then
     table.sort(toShowIdList, function(id1, id2)
@@ -275,9 +276,7 @@ l.onCoreUpdate = function()
       local action = toShowActionMap[id]
       local slotNum = action.slotNum
       local inAppend = false
-      -- 经典混合模式下按动作来源决定控件类型；类型不符的旧控件先消理
       local wantNative = nativeUsable
-        and (not classicHybrid or action.hotbarCategory == backBar.getHotbar())
       local widget = l.shiftedBarWidgetMap[slotNum]
       if widget and (widget.backdrop ~= nil) ~= wantNative then
         widget:hide()
@@ -532,12 +531,12 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       },
       {
         type = "submenu",
-        name = text("Double Bar"),
+        name = text("Shift Bar"),
         controls = {
           {
             type = "slider",
-            name = text("Second Bar Icon Opacity"),
-            tooltip = text("Opacity of the inactive weapon bar icons; 100 keeps them fully bright"),
+            name = text("Shift Bar Icon Opacity"),
+            tooltip = text("Opacity of the shift bar icons; 100 keeps them fully bright"),
             min = 10,
             max = 100,
             step = 5,
@@ -553,8 +552,8 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           },
           {
             type = "slider",
-            name = text("Second Bar Icon Desaturation"),
-            tooltip = text("Desaturation of the inactive weapon bar icons; 0 keeps full color"),
+            name = text("Shift Bar Icon Desaturation"),
+            tooltip = text("Desaturation of the shift bar icons; 0 keeps full color"),
             min = 0,
             max = 100,
             step = 5,
