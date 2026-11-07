@@ -431,9 +431,30 @@ end
 ---@type fun(button: table, w: number)
 l.setCloneSize = function(button, w)
   button.slot:SetDimensions(w, w)
+  local fcSize = w - 3
   local flipCard = button.slot:GetNamedChild("FlipCard")
   if flipCard then
-    flipCard:SetDimensions(w - 3, w - 3)
+    flipCard:SetDimensions(fcSize, fcSize)
+  end
+  -- Button(边框贴图)：模板默认 ult=70/ability=64，需跟随统一尺寸
+  local buttonChild = button.slot:GetNamedChild("Button")
+  if buttonChild then
+    buttonChild:SetDimensions(w, w)
+  end
+  -- Backdrop(边框背景)：ult 模板锚在 FlipCard ±12(视觉≈85px)，
+  -- 技能模板锚在 ±4(视觉≈69px)——重锚到统一的 ±4
+  local backdrop = button.slot:GetNamedChild("Backdrop")
+  if backdrop then
+    backdrop:ClearAnchors()
+    backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
+    backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
+  end
+  -- Frame(ult 独有装饰框，同样锚 ±12)：已隐藏但一并重锚保险
+  local frame = button.slot:GetNamedChild("Frame")
+  if frame and flipCard then
+    frame:ClearAnchors()
+    frame:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
+    frame:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
   end
 end
 
