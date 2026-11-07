@@ -128,8 +128,8 @@ l.stashShiftedWidget = function(slotNum, widget)
   bucket[widget.backdrop and "texture" or "native"] = widget
 end
 
----@type fun(slotNum: number, wantNative: boolean): adr.views.Widget|nil
-l.takeShiftedWidget = function(slotNum, wantNative)
+---@type fun(slotNum: number, wantNative: boolean, desiredSlot?: Control): adr.views.Widget|nil
+l.takeShiftedWidget = function(slotNum, wantNative, desiredSlot)
   local bucket = l.shiftedWidgetFreelist[slotNum]
   if not bucket then
     return nil
@@ -138,6 +138,12 @@ l.takeShiftedWidget = function(slotNum, wantNative)
   local widget = bucket[key]
   if widget then
     bucket[key] = nil
+    -- 父控件校验：native 控件挂在哪组克隆取决于模式(动态=D组/静态=twin组)，
+    -- 归还挂在错误组(如静态切回动态时挂在已隐藏 twin 上)的控件=隐形标签，直接废弃
+    if desiredSlot and widget.slot ~= desiredSlot then
+      widget:hide()
+      return nil
+    end
     -- 复用时重应用当前样式(回收期间可能改过字体/颜色设置)
     views.updateWidgetFont(widget)
     views.updateWidgetLabelYOffset(widget)
@@ -335,8 +341,10 @@ l.onCoreUpdate = function()
           l.appendedBarWidgetMap[appendIndex] = widget
         end
       elseif not widget then
-        widget = l.takeShiftedWidget(slotNum, wantNative)
-          or views.newWidget(slotNum, true, nil, wantNative and backBar.getSlotControl(slotNum) or nil)
+        local nativeSlot = wantNative and backBar.getSlotControl(slotNum) or nil
+        local desiredSlot = nativeSlot or ZO_ActionBar_GetButton(slotNum).slot
+        widget = l.takeShiftedWidget(slotNum, wantNative, desiredSlot)
+          or views.newWidget(slotNum, true, nil, nativeSlot)
         l.shiftedBarWidgetMap[slotNum] = widget
       end
       if wantNative then
