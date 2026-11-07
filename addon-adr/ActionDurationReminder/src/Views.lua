@@ -403,28 +403,18 @@ end
 
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetStackLabelYOffset = function(widget)
+  -- 与 newWidget 的初始定位严格一致(框内右上/左上角)，
+  -- 否则滑条调整或回收站复用后标签会跳到顶边外(表现为“超过边框”)
   local textureShifted = widget.shifted and not widget.nativeMode
+  local offsetY = textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift + 2)
+    or (-l.getSavedVars().barStackLabelYOffset + 0)
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()
-    widget.stackLabel:SetAnchor(
-      TOPRIGHT,
-      widget.stackLabel:GetParent(),
-      TOPRIGHT,
-      0,
-      textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
-        or (-l.getSavedVars().barStackLabelYOffset - 5)
-    )
+    widget.stackLabel:SetAnchor(TOPRIGHT, widget.stackLabel:GetParent(), TOPRIGHT, -5, offsetY)
   end
   if widget.stackLabel2 then
     widget.stackLabel2:ClearAnchors()
-    widget.stackLabel2:SetAnchor(
-      TOPLEFT,
-      widget.stackLabel2:GetParent(),
-      TOPLEFT,
-      2,
-      textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift - 5)
-        or (-l.getSavedVars().barStackLabelYOffset - 5)
-    )
+    widget.stackLabel2:SetAnchor(TOPLEFT, widget.stackLabel2:GetParent(), TOPLEFT, 5, offsetY)
   end
 end
 
