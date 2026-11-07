@@ -176,7 +176,7 @@ end
 ---不用 GetWidth 测量：ESO 返回的是已含 scale 的屏幕值，缩放后会越量越小
 local PLATFORM_DIMS = {
   keyboard = { ability = 50, ult = 50 },
-  gamepad = { ability = 64, ult = 70 },
+  gamepad = { ability = 64, ult = 64 },
 }
 
 ---测量克隆技能段(3-7)原始尺寸(本地像素，平台常量)
@@ -377,20 +377,11 @@ end
 ---两行大招列会零间隙贴上造成重叠；键盘 50=50 不受影响)
 ---@type fun(): number
 l.rowSeparation = function()
-  --- 行间距按技能高度(技能列间隙不变)；手柄大招(70)高于技能(64)导致的
-  --- 大招列重叠由"缩小非激活大招"解决(见 l.inactiveUltSize)
+  --- 行间距按技能高度；手柄大招统一缩到与技能同高(64)，所有列等宽等高，
+  --- 无重叠且视觉统一(键盘 50=50 本就一致)
   local _, _, gapY = l.platformOffsets()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   return dims.ability + gapY
-end
-
----非激活行大招尺寸：使两行大招列的间隙等于其他列的 gapY。
----推导：间隙 = 行间距 - 激活大招半高 - 非激活大招半高 = gapY →
----非激活尺寸 = 2×(技能高 - 激活大招半高)。手柄 58，键盘 50(与常量相同)
----@type fun(): number
-l.inactiveUltSize = function()
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  return 2 * (dims.ability - dims.ult / 2)
 end
 
 ---静态接管期间用空时间线替换原生翻转时间线：原生换武器流程会播放
@@ -615,7 +606,7 @@ l.setRolesInstant = function()
     iButton.slot:SetScale(s)
     l.applyInactiveStyle(iButton)
     if slotNum == 8 then
-      l.setCloneSize(iButton, l.inactiveUltSize())
+      l.setCloneSize(iButton, (IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard).ult)
     end
   end
 end
@@ -769,10 +760,9 @@ l.swapGlideTimeline = nil
 ---@type fun(button: table, isActive: boolean, s: number, dimAlpha: number, desat: number)
 l.setRoleInstant = function(button, isActive, s, dimAlpha, desat)
   button.slot:SetScale(isActive and 1 or s)
-  -- 大招尺寸随角色：激活=原生尺寸，非激活=缩小至与其他列同隙
+  -- 大招尺寸统一(dims.ult：手柄=技能高，键盘=50)，与角色无关
   if button.slot.slotNum == 8 then
-    local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-    l.setCloneSize(button, isActive and dims.ult or l.inactiveUltSize())
+    l.setCloneSize(button, (IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard).ult)
   end
   if button.icon then
     button.icon:SetAlpha(isActive and 1 or dimAlpha)
@@ -829,13 +819,12 @@ l.animateStaticRoles = function()
       local targetScale = isActive and 1 or s
       local targetAlpha = isActive and 1 or dimAlpha
       -- 去饱和无原生颜色动画，始终瞬时设置；终极能量数字仅激活行显示；
-      -- 大招尺寸随角色(激活=原生，非激活=缩小至同隙)
+      -- 大招尺寸统一(dims.ult：手柄=技能高，键盘=50)，与角色无关
       if button.icon then
         button.icon:SetDesaturation(isActive and 0 or desat)
       end
       if button.slot.slotNum == 8 then
-        local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-        l.setCloneSize(button, isActive and dims.ult or l.inactiveUltSize())
+        l.setCloneSize(button, (IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard).ult)
       end
       if isActive then
         l.showUltNumber(button)
