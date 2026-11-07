@@ -55,6 +55,7 @@ local zhFlags = {
 ---扩展 adr.settings.SavedVars:本模块持久化字段,与下方 defaults 一一对应
 ---@class adr.settings.SavedVars
 ---@field alertEnabled? boolean
+---@field alertTextColor? number[]
 ---@field alertIconOnly? boolean
 ---@field alertPlaySound? boolean
 ---@field alertSoundName? string

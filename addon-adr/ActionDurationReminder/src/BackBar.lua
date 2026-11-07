@@ -26,6 +26,13 @@ local m = { l = l }
 ---@field getSlotControl? fun(slotNum: number): Control|nil
 ---@field updateScale? fun()
 ---@field updateLayout? fun()
+---@field isRowUsable? fun(): boolean
+---@field isClassicMode? fun(): boolean
+---@field getHotbar? fun(): number|nil
+---@field setSlotsVisible? fun(visibleMap: table<number, boolean>|nil)
+---@field getActiveSlotControl? fun(slotNum: number): Control|nil
+---@field isStaticNativeHidden? fun(): boolean
+---@field updateStyle? fun()
 
 --========================================
 --        l
@@ -77,17 +84,17 @@ l.classicVisibleMap = nil
 
 ---冲突检测(会话级)：FAB 自带完整双bar，存在时硬回退①；
 ---BUI/Azurah 只会整体移动/换肤动作条，本模块锚点为相对锚可跟随，仅警告不降级；每次会话提示一次
----@type fun(): string
+---@type fun(): string?
 l.effectivePreset = function()
   local preset = l.getSavedVars().barPreset
   if preset == "classic" then
     return "classic"
   end
-  if _G.FancyActionBar then
+  if FancyActionBar then
     l.notifyConflict("fancy")
     return "classic"
   end
-  if preset == "static" and (_G.BanditsUserInterface or _G.BUI or _G.Azurah) then
+  if preset == "static" and (BanditsUserInterface or BUI or Azurah) then
     l.notifyConflict("mover")
   end
   return preset
@@ -345,7 +352,6 @@ end
 ---仅隐藏原生6个技能按钮(切手/药剂/伴侣等全部不动)；键位数字钉在原位；
 ---激活行 100% 尺寸全亮(不吃比例/暗化)，非激活行用比例+暗化；换武器仅互换明暗/尺寸角色，
 ---内容永不重刷(两行各自恒绑定自己的武器集)
----@type fun()
 ---显式硬设克隆槽尺寸(槽体+FlipCard)：不依赖 ApplyTemplateToControl 的模板注入，
 ---避免 FlipCard 0x0 导致图标不可见
 ---@type fun(button: table, w: number)
@@ -849,7 +855,7 @@ local function onSwapAnimationDone(_, button)
   button.noUpdates = false
 end
 
----@type fun(button: table)
+---@type fun(button: table, getCategory?: fun(): number|nil)
 l.setupDragDropHandlers = function(button, getCategory)
   local buttonControl = button.button
   if not buttonControl then
@@ -1112,7 +1118,7 @@ l.onCoreUpdate = function()
   local sv = l.getSavedVars()
   -- FAB 存在时任何预设都不激活克隆行(回退贴图经典)；否则所有预设激活，
   -- classic 仅作为可见性模式(每槽有计时才显示，由 Bar 模块每帧传入可见集)
-  local want = sv.barEnabled and _G.FancyActionBar == nil
+  local want = sv.barEnabled and FancyActionBar == nil
   if want and not l.active then
     l.activate()
   elseif not want and l.active then
@@ -1150,7 +1156,7 @@ m.isActive = function()
   return l.active and l.buttons[3] ~= nil
 end
 
----@type fun(): string
+---@type fun(): string?
 m.getEffectivePreset = function()
   return l.effectivePreset()
 end

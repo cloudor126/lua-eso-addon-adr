@@ -167,6 +167,8 @@ end
 ---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
 addon.hookStart(function()
   local sv = l.getSavedVars()
+  --旧字段一次性迁移(字段已从类定义移除，访问需临时关闭诊断)
+  ---@diagnostic disable: undefined-field, inject-field
   if sv.barShowShift ~= nil or sv.barShowShiftFully ~= nil then
     if sv.barShowShift ~= false and sv.barShowShiftFully then
       sv.barPreset = "dynamic"
@@ -176,6 +178,7 @@ addon.hookStart(function()
     sv.barShowShift = nil
     sv.barShowShiftFully = nil
   end
+  ---@diagnostic enable: undefined-field, inject-field
   -- 非法值重置为默认(如下拉框写入过本地化文本)
   if sv.barPreset ~= "classic" and sv.barPreset ~= "dynamic" and sv.barPreset ~= "static" then
     sv.barPreset = barSavedVarsDefaults.barPreset
@@ -209,6 +212,7 @@ l.onCoreUpdate = function()
   -- 换武器后激活集互换，旧控件挂在旧集上一并清洗重建(标签+冷却线随之落位新集)
   local staticEngaged = backBar.isStaticNativeHidden()
   for slotNum = 3, 8 do
+    ---@type adr.views.Widget|nil
     local widget = l.mainBarWidgetMap[slotNum]
     if
       widget
