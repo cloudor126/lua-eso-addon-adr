@@ -188,6 +188,10 @@ l.applyActiveStyle = function(button)
     button.icon:SetAlpha(1)
     button.icon:SetDesaturation(0)
   end
+  -- 终极能量数字只在激活 ult 上显示(原生语义；尊重游戏设置)
+  if button.RefreshUltimateNumberVisibility then
+    button:RefreshUltimateNumberVisibility()
+  end
 end
 
 ---应用克隆槽缩放：动态/经典=统一比例；静态=激活行100%、非激活行用比例
@@ -584,6 +588,10 @@ l.applyInactiveStyle = function(button)
     button.icon:SetAlpha((sv.backBarDimAlpha or 50) / 100)
     button.icon:SetDesaturation((sv.backBarDesaturation or 50) / 100)
   end
+  -- 非激活克隆的终极能量数字隐藏(避免与激活条 ult 数字重复)
+  if button.countText then
+    button.countText:SetHidden(true)
+  end
 end
 
 ---同步单个克隆槽位(原生刷新链：图标/actionId/状态/不可用发暗)
@@ -678,9 +686,16 @@ l.animateStaticRoles = function()
       local isActive = (active == HOTBAR_CATEGORY_PRIMARY) == (button == pButton)
       local targetScale = isActive and 1 or s
       local targetAlpha = isActive and 1 or dimAlpha
-      -- 去饱和无原生颜色动画，始终瞬时设置
+      -- 去饱和无原生颜色动画，始终瞬时设置；终极能量数字仅激活行显示
       if button.icon then
         button.icon:SetDesaturation(isActive and 0 or desat)
+      end
+      if isActive then
+        if button.RefreshUltimateNumberVisibility then
+          button:RefreshUltimateNumberVisibility()
+        end
+      elseif button.countText then
+        button.countText:SetHidden(true)
       end
       if button.adrRoleTimeline then
         -- 已在目标值上则跳过重播(高频事件防抖；目标变化时从当前实时值平滑重定)
