@@ -203,23 +203,25 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
----静态预设：切手按钮垂直移动会带动锚在其左侧的药剂快捷栏(含Q键提示)。
----仅无激活伴侣时快捷栏才锚在切手上(原生常量 offset -5)；此情形下垂直补偿回原位。
----有伴侣时快捷栏锚伴侣大招槽，不受切手移动影响，无需补偿
----@type fun(nativeOnTop: boolean, liftY: number)
-l.compensateQuickslot = function(nativeOnTop, liftY)
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  if not weaponSwap then
-    return
-  end
+---静态预设：药剂快捷栏锚到切手默认位的绝对坐标(ZO_ActionBar1 空间)，
+---切手按钮滑移动画期间不再被拖动。仅无激活伴侣时接管；有伴侣时原生把它
+---锚在伴侣大招槽上，不动它
+---@type fun()
+l.compensateQuickslot = function()
   l.quickslotCompensated = false
   if DoesUnitExist("companion") and HasActiveCompanion() then
     return
   end
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if not weaponSwap then
+    return
+  end
+  local _, _, _, swapX, swapY = l.platformOffsets()
+  local swapH = weaponSwap:GetHeight()
   local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
   if qs and qs.slot then
     qs.slot:ClearAnchors()
-    qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, nativeOnTop and liftY or 0)
+    qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX - 5, swapY + swapH / 2)
     l.quickslotCompensated = true
   end
 end
@@ -372,29 +374,32 @@ l.layoutStatic = function()
   end
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   local scale = l.getSavedVars().barShowShiftScalePercent / 100
-  -- 切手按钮随原生行上下移动(始终在原生条左侧)，原生条跟随切手(与默认锚同形)。
-  -- 移动后 weaponSwap RIGHT 点即当前原生行的中心线。
+  -- 静态定位基准全部换算到 ZO_ActionBar1 绝对坐标(切手默认位)：
+  -- 切手按钮滑移动画期间不被任何控件跟随，其他控件也不再依赖它
   local _, _, _, swapX, swapY = l.platformOffsets()
+  local swapW, swapH = weaponSwap:GetWidth(), weaponSwap:GetHeight()
+  local swapCenterY = swapY + swapH / 2
+  -- 切手按钮：抬升状态偏移 -liftY
   weaponSwap:ClearAnchors()
   weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY + (nativeOnTop and -liftY or 0))
+  -- 原生3号槽(整条原生链跟随)：LEFT 锚到切手默认右侧的绝对位
   nativeButton3.slot:ClearAnchors()
-  nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, 0)
+  nativeButton3.slot:SetAnchor(LEFT, ZO_ActionBar1, TOPLEFT, swapX + swapW + abilityGap, swapCenterY + (nativeOnTop and -liftY or 0))
   l.nativeLifted = nativeOnTop
-  l.compensateQuickslot(nativeOnTop, liftY)
+  l.compensateQuickslot()
   l.suppressNativeFlip()
-  -- 克隆行常量行距锚定：克隆行边缘锚到切手基准 + 行距，
-  -- 渲染后的行间隙 = gapY 恒定(不随缩放变化)。
-  --   克隆在下(原生抬升)：TOP 锚，offsetY_local = +(liftY - H/2)/scale
-  --     (渲染后克隆顶 = 原生底 + gapY；liftY - H/2 = H/2 + gapY)
-  --   克隆在上(原生在原位)：BOTTOM 锚，offsetY_local = -(H/2 + gapY)/scale = -(liftY - H/2)/scale
-  local rowOffLocal = (liftY - dims.ability / 2) / scale
+  -- 克隆行常量行距锚定(绝对坐标)：行间隙 = gapY 恒定(不随缩放变化)。
+  --   克隆在下(原生抬升)：TOP 锚，克隆顶 = 原生底 + gapY = swapCenterY - H/2
+  --   克隆在上(原生在原位)：BOTTOM 锚，克隆底 = 原生顶 - gapY = swapCenterY - H/2 - gapY
+  --   x 同理换算；offset 均为克隆槽本地单位(/scale)，且切手滑移期间完全静止
+  local rowTopY = swapCenterY - dims.ability / 2
   local cloneAnchorType = nativeOnTop and TOP or BOTTOM
-  local cloneOffY = nativeOnTop and rowOffLocal or -rowOffLocal
+  local cloneOffY = (nativeOnTop and rowTopY or (rowTopY - gapY)) / scale
   for slotNum = 3, 8 do
     local button = l.buttons[slotNum]
-    local offsetX = l.staticOffsetX(slotNum, dims, abilityGap, ultGap)
+    local offsetX = (swapX + swapW + l.staticOffsetX(slotNum, dims, abilityGap, ultGap)) / scale
     button.slot:ClearAnchors()
-    button.slot:SetAnchor(cloneAnchorType, weaponSwap, RIGHT, offsetX, cloneOffY)
+    button.slot:SetAnchor(cloneAnchorType, ZO_ActionBar1, TOPLEFT, offsetX, cloneOffY)
   end
   l.applyScale()
   -- 主手激活(原生条抬升)时钉住键位提示；副手时原生条已在原位，解除钉住
