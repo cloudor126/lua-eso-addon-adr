@@ -633,7 +633,7 @@ l.ensureRoleTimeline = function(button)
   if button.adrRoleFailed then
     return false
   end
-  local ok = pcall(function()
+  local ok, err = pcall(function()
     button.adrRoleTimeline = ANIMATION_MANAGER:CreateTimeline()
     button.adrRoleScale = button.adrRoleTimeline:CreateAnimation(ANIMATION_SCALE, button.slot)
     button.adrRoleScale:SetDuration(400)
@@ -645,7 +645,7 @@ l.ensureRoleTimeline = function(button)
   if not ok then
     button.adrRoleFailed = true
     button.adrRoleTimeline = nil
-    d("[ADR] role animation unavailable, using instant swap")
+    d(string.format("[ADR] role animation unavailable: %s", tostring(err)))
     return false
   end
   return true
@@ -701,7 +701,7 @@ l.playSwapGlide = function(weaponSwap, swapX, fromY, toY)
     setAnchor(toY)
     return
   end
-  local ok = pcall(function()
+  local ok, err = pcall(function()
     if not l.swapGlideTimeline then
       l.swapGlideTimeline = ANIMATION_MANAGER:CreateTimeline()
       l.swapGlideTranslate = l.swapGlideTimeline:CreateAnimation(ANIMATION_TRANSLATE, weaponSwap)
@@ -721,7 +721,7 @@ l.playSwapGlide = function(weaponSwap, swapX, fromY, toY)
   if not ok then
     l.swapGlideFailed = true
     l.swapGlideTimeline = nil
-    d("[ADR] swap glide animation unavailable, using instant positioning")
+    d(string.format("[ADR] swap glide animation unavailable: %s", tostring(err)))
     setAnchor(toY)
   end
 end
