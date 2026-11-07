@@ -379,6 +379,26 @@ l.layoutStatic = function()
   end
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
+  -- 切手按钮落位到当前激活行左侧(瞬时；换武器时由 TranslateAnimation 滑动)，
+  -- 药剂快捷栏钉绝对坐标(不被切手按钮的移动/滑动拖动；仅无伴侣时接管)
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local _, _, gapY2, swapX2, swapY2 = l.platformOffsets()
+  local liftY2 = ZO_ActionBar_GetButton(3).slot:GetHeight() + gapY2
+  local onTop2 = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
+  if l.swapGlideTimeline then
+    l.swapGlideTimeline:Stop()
+  end
+  weaponSwap:ClearAnchors()
+  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX2, swapY2 + (onTop2 and -liftY2 or 0))
+  l.quickslotPinned = false
+  if not (DoesUnitExist("companion") and HasActiveCompanion()) then
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    if qs and qs.slot then
+      qs.slot:ClearAnchors()
+      qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
+      l.quickslotPinned = true
+    end
+  end
   -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)，
   -- 并替换其翻转时间线(防止换武器时动画回调揭开原生槽造成闪烁)
   for slotNum = 3, 8 do
@@ -415,6 +435,23 @@ l.exitStatic = function()
   end
   l.staticEngaged = false
   l.restoreNativeFlip()
+  if l.swapGlideTimeline then
+    l.swapGlideTimeline:Stop()
+  end
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if weaponSwap then
+    local _, _, _, swapX, swapY = l.platformOffsets()
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
+    if l.quickslotPinned then
+      l.quickslotPinned = false
+      local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+      if qs and qs.slot then
+        qs.slot:ClearAnchors()
+        qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, 0)
+      end
+    end
+  end
   for slotNum = 3, 8 do
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(false)
     l.staticPrimary[slotNum].slot:SetHidden(true)
@@ -478,6 +515,14 @@ l.createStaticRows = function()
         button.slot.hotbarCategory = twinCategory
         button.button.hotbarCategory = twinCategory
         button:SetShowBindingText(false)
+        -- 角色渐变时间线(尺寸/透明，换武器时播放)
+        button.adrRoleTimeline = ANIMATION_MANAGER:CreateTimeline()
+        button.adrRoleScale = button.adrRoleTimeline:CreateAnimation(ANIMATION_SCALE, button.slot)
+        button.adrRoleScale:SetDuration(250)
+        button.adrRoleScale:SetEasingFunction(ZO_EaseOutQuadratic)
+        button.adrRoleAlpha = button.adrRoleTimeline:CreateAnimation(ANIMATION_ALPHA, button.icon)
+        button.adrRoleAlpha:SetDuration(250)
+        button.adrRoleAlpha:SetEasingFunction(ZO_EaseOutQuadratic)
         -- 创建即隐藏：锚定完成前不可见(否则短暂/永久停留在容器原点=左上角)
         button.slot:SetHidden(true)
         -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation；
@@ -570,6 +615,70 @@ l.syncButton = function(button, hotbar)
   if not l.staticEngaged and l.classicMode then
     button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
   end
+end
+
+---静态切换动画(优雅实现：全部 ANIMATION_MANAGER 时间线，无手写逐帧控制)：
+---1) 切手按钮在两行间滑动(TranslateAnimation，结束后落位持久锚)
+---2) 两行角色(尺寸/透明)渐变(ScaleAnimation+AlphaAnimation)，去饱和瞬时设置
+l.swapGlideTimeline = nil
+
+---@type fun()
+l.animateStaticRoles = function()
+  if not l.staticEngaged then
+    return
+  end
+  local s = l.getSavedVars().barShowShiftScalePercent / 100
+  local dimAlpha = l.getSavedVars().backBarDimAlpha / 100
+  local desat = l.getSavedVars().backBarDesaturation / 100
+  local active = GetActiveHotbarCategory()
+  for slotNum = 3, 8 do
+    local pButton = l.staticPrimary[slotNum]
+    local bButton = l.staticBackup[slotNum]
+    for _, button in ipairs({ pButton, bButton }) do
+      local isActive = (active == HOTBAR_CATEGORY_PRIMARY) == (button == pButton)
+      if button.adrRoleTimeline then
+        -- 去饱和无原生颜色动画，瞬时设置
+        if button.icon then
+          button.icon:SetDesaturation(isActive and 0 or desat)
+        end
+        button.adrRoleScale:SetStartScale(button.slot:GetScale())
+        button.adrRoleScale:SetEndScale(isActive and 1 or s)
+        button.adrRoleAlpha:SetStartAlpha(button.icon and button.icon:GetAlpha() or 1)
+        button.adrRoleAlpha:SetEndAlpha(isActive and 1 or dimAlpha)
+        button.adrRoleTimeline:PlayFromStart()
+      end
+    end
+  end
+end
+
+---@type fun()
+l.animateStaticSwap = function()
+  if not l.staticEngaged then
+    return
+  end
+  local _, _, gapY, swapX, swapY = l.platformOffsets()
+  local nativeButton3 = ZO_ActionBar_GetButton(3)
+  local liftY = nativeButton3.slot:GetHeight() + gapY
+  local onTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if weaponSwap then
+    local fromY = onTop and swapY or (swapY - liftY)
+    local toY = onTop and (swapY - liftY) or swapY
+    if not l.swapGlideTimeline then
+      l.swapGlideTimeline = ANIMATION_MANAGER:CreateTimeline()
+      l.swapGlideTranslate = l.swapGlideTimeline:CreateAnimation(ANIMATION_TRANSLATE, weaponSwap)
+      l.swapGlideTranslate:SetDuration(250)
+      l.swapGlideTranslate:SetEasingFunction(ZO_EaseInOutQuadratic)
+    end
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, fromY)
+    l.swapGlideTranslate:SetStartOffsetX(0)
+    l.swapGlideTranslate:SetStartOffsetY(0)
+    l.swapGlideTranslate:SetEndOffsetX(0)
+    l.swapGlideTranslate:SetEndOffsetY(toY - fromY)
+    l.swapGlideTimeline:PlayFromStart()
+  end
+  l.animateStaticRoles()
 end
 
 ---同步整行(换武器/全量刷新)。relayout=false 时仅刷数据不重排锚点
@@ -798,8 +907,8 @@ l.registerEvents = function()
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
     if l.staticEngaged then
-      -- 静态：位置/内容均不变，仅激活角色(明暗/尺寸)互换
-      l.applyStaticRoles()
+      -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
+      l.animateStaticSwap()
       return
     end
     if didActiveHotbarChange then
