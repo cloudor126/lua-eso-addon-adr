@@ -282,7 +282,9 @@ l.pinKeybinds = function()
   end
   local abilityGap, ultGap, _, swapX, swapY = l.platformOffsets()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  local textOff = IsInGamepadPreferredMode() and -6 or 1
+  -- 钉扎态偏移：手柄用边外+2(原生-6是内嵌进自家槽位底边的设计，静态下
+  -- 该位置被副手 twin 行占据，内嵌即重叠)；键盘原生+1本就在边外
+  local textOff = IsInGamepadPreferredMode() and 2 or 1
   local swapW, swapH = weaponSwap:GetWidth(), weaponSwap:GetHeight()
   for slotNum = 3, 8 do
     local nb = ZO_ActionBar_GetButton(slotNum)
