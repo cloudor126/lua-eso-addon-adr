@@ -240,8 +240,21 @@ l.layoutDynamic = function()
   if not l.container or not l.buttons[3] then
     return
   end
-  local _, _, gapY = l.platformOffsets()
+  local _, _, gapY, swapX, swapY = l.platformOffsets()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  -- 手柄下解除切手按钮的永久隐藏并锚回平台默认位(动态/经典下切手不随行移动，
+  -- 药剂的原生锚链不受拖动；键盘下重新断言默认锚为无害操作)
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if weaponSwap then
+    if l.swapGlideTimeline then
+      l.swapGlideTimeline:Stop()
+    end
+    if IsInGamepadPreferredMode() and ZO_WeaponSwap_SetPermanentlyHidden then
+      ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, false)
+    end
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
+  end
   for slotNum = 3, 8 do
     local nativeButton = ZO_ActionBar_GetButton(slotNum)
     local button = l.buttons[slotNum]
@@ -1140,6 +1153,16 @@ l.deactivate = function()
   l.active = false
   l.lastAppliedPreset = nil
   l.exitStatic()
+  -- 手柄下恢复切手按钮的原生行为(永久隐藏)并回默认锚
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if weaponSwap then
+    local _, _, _, swapX, swapY = l.platformOffsets()
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
+    if IsInGamepadPreferredMode() and ZO_WeaponSwap_SetPermanentlyHidden then
+      ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, true)
+    end
+  end
   if l.container then
     l.container:SetHidden(true)
   end
