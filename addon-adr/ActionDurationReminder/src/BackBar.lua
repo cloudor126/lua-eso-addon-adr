@@ -40,7 +40,7 @@ local ROW_GAP_Y = 4
 ---@field backBarDesaturation? number
 ---@type adr.settings.SavedVars
 local backBarSavedVarsDefaults = {
-  backBarDimAlpha = 40,
+  backBarDimAlpha = 50,
   backBarDesaturation = 50,
 }
 
@@ -252,7 +252,7 @@ end
 l.applyInactiveStyle = function(button)
   local sv = l.getSavedVars()
   if button.icon then
-    button.icon:SetAlpha((sv.backBarDimAlpha or 40) / 100)
+    button.icon:SetAlpha((sv.backBarDimAlpha or 50) / 100)
     button.icon:SetDesaturation((sv.backBarDesaturation or 50) / 100)
   end
 end
@@ -569,49 +569,7 @@ addon.extend(settings.EXTKEY_ADD_DEFAULTS, function()
   settings.addDefaults(backBarSavedVarsDefaults)
 end)
 
-addon.extend(settings.EXTKEY_ADD_MENUS, function()
-  local text = addon.text
-  settings.addMenuOptions({
-    type = "submenu",
-    name = text("Double Bar"),
-    controls = {
-      {
-        type = "slider",
-        name = text("Second Bar Icon Opacity"),
-        tooltip = text("Opacity of the inactive weapon bar icons; 100 keeps them fully bright"),
-        min = 10,
-        max = 100,
-        step = 5,
-        getFunc = function()
-          return l.getSavedVars().backBarDimAlpha
-        end,
-        setFunc = function(value)
-          l.getSavedVars().backBarDimAlpha = value
-          m.updateStyle()
-        end,
-        width = "full",
-        default = backBarSavedVarsDefaults.backBarDimAlpha,
-      },
-      {
-        type = "slider",
-        name = text("Second Bar Icon Desaturation"),
-        tooltip = text("Desaturation of the inactive weapon bar icons; 0 keeps full color"),
-        min = 0,
-        max = 100,
-        step = 5,
-        getFunc = function()
-          return l.getSavedVars().backBarDesaturation
-        end,
-        setFunc = function(value)
-          l.getSavedVars().backBarDesaturation = value
-          m.updateStyle()
-        end,
-        width = "full",
-        default = backBarSavedVarsDefaults.backBarDesaturation,
-      },
-    },
-  })
-end)
+-- 菜单项由 Bar 模块以二级子菜单(Double Bar)形式挂在 Bar 组内，紧随预设下拉框
 
 --诊断命令：/adrbackbar 输出第二行引擎的实时状态并强制重布局
 SLASH_COMMANDS["/adrbackbar"] = function()

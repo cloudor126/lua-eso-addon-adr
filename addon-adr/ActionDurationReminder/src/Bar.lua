@@ -507,6 +507,46 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         end,
       },
       {
+        type = "submenu",
+        name = text("Double Bar"),
+        controls = {
+          {
+            type = "slider",
+            name = text("Second Bar Icon Opacity"),
+            tooltip = text("Opacity of the inactive weapon bar icons; 100 keeps them fully bright"),
+            min = 10,
+            max = 100,
+            step = 5,
+            getFunc = function()
+              return l.getSavedVars().backBarDimAlpha
+            end,
+            setFunc = function(value)
+              l.getSavedVars().backBarDimAlpha = value
+              backBar.updateStyle()
+            end,
+            width = "full",
+            default = 50,
+          },
+          {
+            type = "slider",
+            name = text("Second Bar Icon Desaturation"),
+            tooltip = text("Desaturation of the inactive weapon bar icons; 0 keeps full color"),
+            min = 0,
+            max = 100,
+            step = 5,
+            getFunc = function()
+              return l.getSavedVars().backBarDesaturation
+            end,
+            setFunc = function(value)
+              l.getSavedVars().backBarDesaturation = value
+              backBar.updateStyle()
+            end,
+            width = "full",
+            default = 50,
+          },
+        },
+      },
+      {
         type = "slider",
         name = text("Shift Bar Scale"),
         tooltip = text("Scale of the shift bar"),
