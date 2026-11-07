@@ -473,6 +473,10 @@ l.createStaticRows = function()
       for _, button in ipairs({ pButton, bButton }) do
         button.slot.slotNum = slotNum
         button.button.slotNum = slotNum
+        -- 显式设置分类(与动态组一致)：不依赖 Initialize 参数传递
+        local twinCategory = (pButton == button) and HOTBAR_CATEGORY_PRIMARY or HOTBAR_CATEGORY_BACKUP
+        button.slot.hotbarCategory = twinCategory
+        button.button.hotbarCategory = twinCategory
         button:SetShowBindingText(false)
         -- 创建即隐藏：锚定完成前不可见(否则短暂/永久停留在容器原点=左上角)
         button.slot:SetHidden(true)
@@ -549,6 +553,14 @@ l.syncButton = function(button, hotbar)
   button.slot.hotbarCategory = hotbar
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
+  -- 纹理兑底：若原生链未能设置图标纹理，强制补没
+  if button.icon then
+    local tex = GetSlotTexture(button.slot.slotNum, hotbar)
+    if tex and tex ~= "" then
+      button.icon:SetTexture(tex)
+      button.icon:SetHidden(false)
+    end
+  end
   if l.staticEngaged then
     l.applyStaticRoles()
   else
@@ -1083,9 +1095,10 @@ SLASH_COMMANDS["/adrbackbar"] = function()
             end
           end
           d(string.format(
-            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%s a=%.2f desat=%.2f hidden=%s w=%.0f",
+            "[ADR] %s%d cat=%s parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%s a=%.2f desat=%.2f hidden=%s w=%.0f",
             label,
             slotNum,
+            tostring(b.slot.hotbarCategory),
             s:GetParent() and s:GetParent():GetName() or "?",
             s:GetNumAnchors(),
             s:GetLeft() or -1,
