@@ -241,11 +241,15 @@ l.layoutDynamic = function()
     return
   end
   local _, _, gapY = l.platformOffsets()
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   for slotNum = 3, 8 do
     local nativeButton = ZO_ActionBar_GetButton(slotNum)
     local button = l.buttons[slotNum]
     button.slot:ClearAnchors()
     button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP, 0, -gapY)
+    -- 硬设尺寸(与静态双行同款)：ApplyStyle 模板注入在克隆上不可靠，
+    -- 键盘下基模板50恰好撞对，手柄下原生变64而克隆仍50就会偏小
+    l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
   end
   l.applyScale()
 end
