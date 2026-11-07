@@ -51,6 +51,8 @@ l.nativeLifted = false
 l.buttons = {}
 ---@type Control|nil
 l.container = nil
+---@type Control|nil 内层容器(承载克隆按钮，缩放支点=底边中心，保证缩小后居中)
+l.inner = nil
 ---@type boolean 行已激活(事件已注册)
 l.active = false
 ---@type boolean 克隆行创建失败闭锁(本会话不再重试)
@@ -155,17 +157,24 @@ l.hideUltimateDecorations = function(button)
   end
 end
 
----布局：动态预设——克隆行锚在原生条正上方，X 与原生条对齐(3号槽对齐，其余链式排布)
+---测量克隆行原始尺寸(本地像素，模板尺寸与平台间距)
+---@type fun(): number, number
+l.measureRowDims = function()
+  local abilityGap, ultGap = l.platformOffsets()
+  local first = l.buttons[3].slot
+  local ult = l.buttons[8].slot
+  local width = first:GetWidth() * 5 + abilityGap * 4 + ultGap + ult:GetWidth()
+  local height = math.max(first:GetHeight(), ult:GetHeight())
+  return width, height
+end
+
+---内层按钮链式布局(动态/静态共用；全部锚在内层容器内)
 ---@type fun()
-l.layoutDynamic = function()
+l.layoutButtons = function()
+  local abilityGap, ultGap = l.platformOffsets()
   local first = l.buttons[3]
-  if not first or not l.container then
-    return
-  end
-  local abilityGap, ultGap, gapY = l.platformOffsets()
-  local nativeSlot3 = ZO_ActionBar_GetButton(3).slot
   first.slot:ClearAnchors()
-  first.slot:SetAnchor(BOTTOMLEFT, nativeSlot3, TOPLEFT, 0, -gapY)
+  first.slot:SetAnchor(BOTTOMLEFT, l.inner, BOTTOMLEFT, 0, 0)
   for slotNum = 4, 7 do
     local button = l.buttons[slotNum]
     button.slot:ClearAnchors()
@@ -174,6 +183,24 @@ l.layoutDynamic = function()
   local ult = l.buttons[8]
   ult.slot:ClearAnchors()
   ult:ApplyAnchor(l.buttons[7].slot, ultGap)
+end
+
+---布局：动态预设——外层双锚横跨原生条(slot3→ult)上方，内层底边贴外层底边，
+---缩放围绕底边中心对称收缩，缩小后仍与原生条居中对齐
+---@type fun()
+l.layoutDynamic = function()
+  if not l.inner or not l.container or not l.buttons[3] then
+    return
+  end
+  local _, _, gapY = l.platformOffsets()
+  local nativeSlot3 = ZO_ActionBar_GetButton(3).slot
+  local nativeUlt = ZO_ActionBar_GetButton(8).slot
+  local width, height = l.measureRowDims()
+  l.inner:SetDimensions(width, height)
+  l.container:ClearAnchors()
+  l.container:SetAnchor(BOTTOMLEFT, nativeSlot3, TOPLEFT, 0, -gapY)
+  l.container:SetAnchor(BOTTOMRIGHT, nativeUlt, TOPRIGHT, 0, -gapY)
+  l.layoutButtons()
 end
 
 ---恢复原生3号槽默认锚(仅静态预设拍升过才需要)
@@ -197,11 +224,10 @@ end
 ---副手激活时原生条留在原位，克隆行(主手)在上。均以武器切换按钮为锚基准(同FAB)。
 ---@type fun()
 l.layoutStatic = function()
-  local first = l.buttons[3]
-  if not first or not l.container then
+  if not l.inner or not l.container or not l.buttons[3] then
     return
   end
-  local abilityGap, ultGap, gapY = l.platformOffsets()
+  local abilityGap, _, gapY = l.platformOffsets()
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if not weaponSwap then
     d("[ADR] layoutStatic: WeaponSwap not found, falling back to dynamic layout")
@@ -219,16 +245,13 @@ l.layoutStatic = function()
   end
   -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上
   local cloneY = nativeOnTop and 0 or -liftY
-  first.slot:ClearAnchors()
-  first.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, cloneY)
-  for slotNum = 4, 7 do
-    local button = l.buttons[slotNum]
-    button.slot:ClearAnchors()
-    button:ApplyAnchor(l.buttons[slotNum - 1].slot, abilityGap)
-  end
-  local ult = l.buttons[8]
-  ult.slot:ClearAnchors()
-  ult:ApplyAnchor(l.buttons[7].slot, ultGap)
+  local width, height = l.measureRowDims()
+  l.inner:SetDimensions(width, height)
+  l.container:SetDimensions(width, height)
+  l.container:ClearAnchors()
+  -- 外层底边中心锚到武器切换按钮右侧的行位(底边中心=内层缩放支点，缩小后居中)
+  l.container:SetAnchor(BOTTOM, weaponSwap, RIGHT, abilityGap + width / 2, cloneY + height / 2)
+  l.layoutButtons()
   -- 原生条：主手激活时抬到上行，副手激活时回原位
   nativeButton3.slot:ClearAnchors()
   nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, nativeOnTop and -liftY or 0)
@@ -241,7 +264,7 @@ l.layoutRow = function()
   if not l.buttons[3] or not l.container then
     return
   end
-  l.container:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
     l.layoutStatic()
   else
@@ -350,13 +373,15 @@ l.createRow = function()
   end
   local parent = ZO_ActionBar_GetButton(3).slot:GetParent()
   l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", parent, CT_CONTROL)
+  l.inner = WINDOW_MANAGER:CreateControl("ADRBackBarRowInner", l.container, CT_CONTROL)
+  l.inner:SetAnchor(BOTTOM, l.container, BOTTOM, 0, 0)
   local hotbar = l.inactiveHotbar() or HOTBAR_CATEGORY_BACKUP
   for slotNum = 3, 8 do
     local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
     local button = ActionButton:New(
       slotNum + CLONE_SLOT_OFFSET,
       ACTION_BUTTON_TYPE_VISIBLE,
-      l.container,
+      l.inner,
       template,
       hotbar
     )
@@ -538,8 +563,8 @@ end
 ---菜单滑条直接调用：立即应用第二行缩放
 ---@type fun()
 m.updateScale = function()
-  if l.container then
-    l.container:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  if l.inner then
+    l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   end
 end
 
