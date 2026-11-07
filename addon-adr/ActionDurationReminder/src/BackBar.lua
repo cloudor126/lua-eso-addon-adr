@@ -589,6 +589,14 @@ l.syncAll = function(relayout)
   if relayout ~= false then
     l.layoutRow()
   end
+  -- 静态：两行各自按恒定分类同步，与激活状态无关(内容永不随换武器重刷)
+  if l.staticEngaged then
+    for slotNum = 3, 8 do
+      l.syncButton(l.staticPrimary[slotNum], HOTBAR_CATEGORY_PRIMARY)
+      l.syncButton(l.staticBackup[slotNum], HOTBAR_CATEGORY_BACKUP)
+    end
+    return
+  end
   for slotNum = 3, 8 do
     l.syncSlot(slotNum, hotbar)
   end
