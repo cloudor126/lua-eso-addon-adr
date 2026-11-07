@@ -1431,39 +1431,34 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
     -- 克隆控件转储：名称/父链/锚数/位置/尺寸/缩放/隐藏，定位游离控件
     -- 子控件结构转储：定位槽位视觉尺寸不一致的层(边框/FlipCard/Backdrop等)
+    -- ESO 控件无 GetChildren，用固定名单枚举
     local dumpChildren = function(label, button)
-      local children = { button.slot:GetChildren() }
-      -- 部分实现 GetChildren 返回表；无则退化为仅关键命名子控件
-      if type(children) ~= "table" then
-        children = {}
-      end
-      if #children == 0 then
-        local names = { "FlipCard", "Icon", "Button", "Backdrop", "Frame", "BG", "Status", "Cooldown" }
-        for _, n in ipairs(names) do
-          local c = button.slot:GetNamedChild(n)
-          if c then
-            children[#children + 1] = c
-          end
+      local names = {
+        "FlipCard", "Icon", "Button", "Backdrop", "Frame", "BG", "Status",
+        "Cooldown", "CooldownIcon", "CooldownEdge", "Glow", "Decoration",
+        "UltimateBar", "LeadingEdge", "TimerText", "StackCountText", "CountText",
+        "ButtonText", "TimerOverlay", "ActivationHighlight",
+      }
+      for i = 1, #names do
+        local c = button.slot:GetNamedChild(names[i])
+        if c then
+          pcall(function()
+            local cname = c:GetName()
+            if cname == "" or cname == nil then
+              cname = names[i]
+            end
+            d(string.format(
+              "[ADR] %s.child[%s] w=%.0f h=%.0f l=%.0f t=%.0f hidden=%s",
+              label,
+              cname,
+              c:GetWidth() or -1,
+              c:GetHeight() or -1,
+              c:GetLeft() or -1,
+              c:GetTop() or -1,
+              tostring(c:IsControlHidden())
+            ))
+          end)
         end
-      end
-      for i = 1, #children do
-        local c = children[i]
-        pcall(function()
-          local cname = c:GetName()
-          if cname == "" or cname == nil then
-            cname = "?"
-          end
-          d(string.format(
-            "[ADR] %s.child[%s] w=%.0f h=%.0f l=%.0f t=%.0f hidden=%s",
-            label,
-            cname,
-            c:GetWidth() or -1,
-            c:GetHeight() or -1,
-            c:GetLeft() or -1,
-            c:GetTop() or -1,
-            tostring(c:IsControlHidden())
-          ))
-        end)
       end
     end
     local dump = function(label, set)
