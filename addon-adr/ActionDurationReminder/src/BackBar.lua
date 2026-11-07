@@ -288,6 +288,40 @@ l.staticOffsetX = function(slotNum, dims, abilityGap, ultGap)
   return abilityGap + (slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2
 end
 
+---静态接管期间用空时间线替换原生翻转时间线：原生换武器流程会播放
+---hotbarSwapAnimation，其回调 HandleSlotChanged→SetEnabled(true) 会揭开被隐藏的
+---原生槽(闪烁)；空时间线无动作无回调，原生条彻底不显形。退出时还原并复位
+l.staticSwapSaved = {}
+
+---@type fun()
+l.suppressNativeFlip = function()
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    if nb and nb.hotbarSwapAnimation and not l.staticSwapSaved[slotNum] then
+      l.staticSwapSaved[slotNum] = nb.hotbarSwapAnimation
+      if not nb.adrEmptyTimeline then
+        nb.adrEmptyTimeline = ANIMATION_MANAGER:CreateTimeline()
+      end
+      nb.hotbarSwapAnimation = nb.adrEmptyTimeline
+    end
+  end
+end
+
+---@type fun()
+l.restoreNativeFlip = function()
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    if nb and l.staticSwapSaved[slotNum] then
+      nb.hotbarSwapAnimation = l.staticSwapSaved[slotNum]
+      l.staticSwapSaved[slotNum] = nil
+      -- 原生翻转结束回调的职责补齐(空时间线期间未执行)：
+      -- 复位 noUpdates 并重刷内容，避免原生条状态冻结
+      nb.noUpdates = false
+      nb:HandleSlotChanged(GetActiveHotbarCategory())
+    end
+  end
+end
+
 ---静态预设：双克隆行。主手行(P)恒在上、副手行(B)恒在下，位置永不变化；
 ---仅隐藏原生6个技能按钮(切手/药剂/伴侣等全部不动)；键位数字钉在原位；
 ---激活行 100% 尺寸全亮(不吃比例/暗化)，非激活行用比例+暗化；换武器仅互换明暗/尺寸角色，
@@ -319,10 +353,12 @@ l.layoutStatic = function()
   local topCenterY = bottomCenterY - dims.ability - gapY
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
-  -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)
+  -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)，
+  -- 并替换其翻转时间线(防止换武器时动画回调揭开原生槽造成闪烁)
   for slotNum = 3, 8 do
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
   end
+  l.suppressNativeFlip()
   -- 隐藏动态单克隆行，展示两静态行；位置为绝对坐标(锚点 offset 为屏幕单位，
   -- 不随槽自身 scale 变化)
   for slotNum = 3, 8 do
@@ -350,6 +386,7 @@ l.exitStatic = function()
     return
   end
   l.staticEngaged = false
+  l.restoreNativeFlip()
   for slotNum = 3, 8 do
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(false)
     l.staticPrimary[slotNum].slot:SetHidden(true)
