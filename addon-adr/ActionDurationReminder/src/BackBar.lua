@@ -1368,6 +1368,19 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     dump("D", l.buttons)
     dump("P", l.staticPrimary)
     dump("B", l.staticBackup)
+    -- 原生槽尺寸对照(定位克隆与原生大小差异)
+    local ns3 = ZO_ActionBar_GetButton(3).slot
+    local ns8 = ZO_ActionBar_GetButton(8).slot
+    d(string.format(
+      "[ADR] NATIVE slot3 w=%.0f h=%.0f scale=%.2f | slot8 w=%.0f h=%.0f scale=%.2f | platform=%s",
+      ns3:GetWidth() or -1,
+      ns3:GetHeight() or -1,
+      ns3:GetScale() or -1,
+      ns8:GetWidth() or -1,
+      ns8:GetHeight() or -1,
+      ns8:GetScale() or -1,
+      tostring(IsInGamepadPreferredMode())
+    ))
   else
     d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
   end
