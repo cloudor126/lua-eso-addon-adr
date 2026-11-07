@@ -424,7 +424,7 @@ l.layoutStatic = function()
     l.staticBackup[slotNum].slot:SetHidden(false)
   end
   l.staticEngaged = true
-  l.applyStaticRoles()
+  l.setRolesInstant()
 end
 
 ---退出静态：恢复原生槽显示、还原键位数字、隐藏两静态行
@@ -463,7 +463,10 @@ end
 
 ---静态角色应用：激活行 100%+全亮，非激活行 比例+暗化；换武器仅调此函数
 ---@type fun()
-l.applyStaticRoles = function()
+---瞬时设置角色(仅首次布局/退出时使用；运行中事件走 applyStaticRoles 动画路径，
+---避免瞬时写入打断进行中的渐变)
+---@type fun()
+l.setRolesInstant = function()
   if not l.staticEngaged then
     return
   end
@@ -479,6 +482,14 @@ l.applyStaticRoles = function()
     iButton.slot:SetScale(s)
     l.applyInactiveStyle(iButton)
   end
+end
+
+---应用角色：动画路径(平滑重定目标，从当前实时值续接)；时间线不可用时退化瞬时
+l.applyStaticRoles = function()
+  if not l.staticEngaged then
+    return
+  end
+  l.animateStaticRoles()
 end
 
 ---创建静态双克隆行(幂等，失败闭锁)
@@ -665,14 +676,21 @@ l.animateStaticRoles = function()
     local bButton = l.staticBackup[slotNum]
     for _, button in ipairs({ pButton, bButton }) do
       local isActive = (active == HOTBAR_CATEGORY_PRIMARY) == (button == pButton)
+      local targetScale = isActive and 1 or s
+      local targetAlpha = isActive and 1 or dimAlpha
+      -- 去饱和无原生颜色动画，始终瞬时设置
+      if button.icon then
+        button.icon:SetDesaturation(isActive and 0 or desat)
+      end
       if button.adrRoleTimeline then
-        -- 去饱和无原生颜色动画，瞬时设置
-        if button.icon then
-          button.icon:SetDesaturation(isActive and 0 or desat)
+        -- 已在目标值上则跳过重播(高频事件防抖；目标变化时从当前实时值平滑重定)
+        local curScale = button.slot:GetScale()
+        local curAlpha = button.icon and button.icon:GetAlpha() or 1
+        if math.abs(curScale - targetScale) > 0.001 or math.abs(curAlpha - targetAlpha) > 0.001 then
+          button.adrRoleScale:SetScaleValues(curScale, targetScale)
+          button.adrRoleAlpha:SetAlphaValues(curAlpha, targetAlpha)
+          button.adrRoleTimeline:PlayFromStart()
         end
-        button.adrRoleScale:SetScaleValues(button.slot:GetScale(), isActive and 1 or s)
-        button.adrRoleAlpha:SetAlphaValues(button.icon and button.icon:GetAlpha() or 1, isActive and 1 or dimAlpha)
-        button.adrRoleTimeline:PlayFromStart()
       elseif l.ensureRoleTimeline(button) then
         -- 首次确保后重试一次本帧播放
         local b2 = button
@@ -705,6 +723,11 @@ l.playSwapGlide = function(weaponSwap, swapX, fromY, toY)
       l.swapGlideTranslate = l.swapGlideTimeline:InsertAnimation(ANIMATION_TRANSLATE, weaponSwap)
       l.swapGlideTranslate:SetDuration(300)
       l.swapGlideTranslate:SetEasingFunction(ZO_EaseOutQuadratic)
+    end
+    -- 并发控制：滑移中重触发先停在当前目标(OnStop 落位)，新滑移从那里出发，
+    -- 避免回跳到旧起点
+    if l.swapGlideTimeline:IsPlaying() then
+      l.swapGlideTimeline:Stop()
     end
     setAnchor(fromY)
     -- SetTranslateDeltas 自动以控件当前锚定位置为原点做增量平移
