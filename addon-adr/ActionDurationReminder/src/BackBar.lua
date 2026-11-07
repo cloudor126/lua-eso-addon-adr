@@ -248,6 +248,58 @@ l.restoreNativeAnchor = function()
       qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, 0)
     end
   end
+  l.unpinKeybinds()
+end
+
+---按键提示(ButtonText)固定/还原：静态抬升原生条时，1-5/T 键提示钉在原始屏幕位置，
+---不随原生条上下移动；还原时恢复原生锚形(TOP→slot.BOTTOM, offsetY 键盘1/手柄-6)
+l.keybindsPinned = false
+
+---@type fun()
+l.pinKeybinds = function()
+  if l.keybindsPinned then
+    return
+  end
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  if not weaponSwap then
+    return
+  end
+  local abilityGap, ultGap, _, swapX, swapY = l.platformOffsets()
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  local textOff = IsInGamepadPreferredMode() and -6 or 1
+  local swapW, swapH = weaponSwap:GetWidth(), weaponSwap:GetHeight()
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
+    if text then
+      local isUlt = slotNum == 8
+      local w = isUlt and dims.ult or dims.ability
+      local x = swapX + swapW + abilityGap
+        + (isUlt and 5 * (dims.ability + abilityGap) + ultGap or (slotNum - 3) * (dims.ability + abilityGap))
+        + w / 2
+      local y = swapY + swapH / 2 + w / 2 + textOff
+      text:ClearAnchors()
+      text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, x, y)
+    end
+  end
+  l.keybindsPinned = true
+end
+
+---@type fun()
+l.unpinKeybinds = function()
+  if not l.keybindsPinned then
+    return
+  end
+  l.keybindsPinned = false
+  local textOff = IsInGamepadPreferredMode() and -6 or 1
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
+    if text then
+      text:ClearAnchors()
+      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, textOff)
+    end
+  end
 end
 
 ---静态预设：主手条固定在上，副手条固定在下。
@@ -311,6 +363,12 @@ l.layoutStatic = function()
     cloneYUlt
   )
   l.applyScale()
+  -- 主手激活(原生条抬升)时钉住键位提示；副手时原生条已在原位，解除钉住
+  if nativeOnTop then
+    l.pinKeybinds()
+  else
+    l.unpinKeybinds()
+  end
 end
 
 ---按预设分发布局；切回动态/关闭时还原原生锚；同步第二行缩放(所有预设生效)
@@ -503,7 +561,10 @@ l.applyPlatformStyle = function()
   l.syncAll()
 end
 
----换武器时克隆行同步翻转动画(同原生：FlipCard 缩到底→换内容→展开回原)
+---换武器时克隆行动画：动态/经典用翻转(FlipCard缩→换→展，同原生)；
+---静态下技能行位置不变，用淡出→(半程换内容)→淡入的交叉淡化
+---(原生 TimerSwapAnimation 时间线：100ms淡出、300ms起淡入，总时长与翻转一致，
+--- 内容在200ms原生半拍时换入，隐藏窗口内完成)
 ---@type fun()
 l.playSwapAnimation = function()
   if not l.container or not l.buttons[3] then
@@ -512,6 +573,34 @@ l.playSwapAnimation = function()
   local hotbar = l.inactiveHotbar()
   if not hotbar then
     l.syncAll()
+    return
+  end
+  if l.getSavedVars().barPreset == "static" then
+    for slotNum = 3, 8 do
+      local button = l.buttons[slotNum]
+      if button then
+        if not button.adrSwapFade then
+          button.adrSwapFade = ANIMATION_MANAGER:CreateTimelineFromVirtual("TimerSwapAnimation", button.slot)
+        end
+        button.adrSwapFade:PlayFromStart()
+      end
+    end
+    zo_callLater(function()
+      local hb = l.inactiveHotbar()
+      if not hb then
+        return
+      end
+      l.currentHotbar = hb
+      for slotNum = 3, 8 do
+        local button = l.buttons[slotNum]
+        if button then
+          button.slot.hotbarCategory = hb
+          button.button.hotbarCategory = hb
+          button:HandleSlotChanged(hb)
+          l.applyInactiveStyle(button)
+        end
+      end
+    end, 200)
     return
   end
   for slotNum = 3, 8 do
