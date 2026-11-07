@@ -327,6 +327,43 @@ end
 ---激活行 100% 尺寸全亮(不吃比例/暗化)，非激活行用比例+暗化；换武器仅互换明暗/尺寸角色，
 ---内容永不重刷(两行各自恒绑定自己的武器集)
 ---@type fun()
+---显式硬设克隆槽尺寸(槽体+FlipCard)：不依赖 ApplyTemplateToControl 的模板注入，
+---避免 FlipCard 0x0 导致图标不可见
+---@type fun(button: table, w: number)
+l.setCloneSize = function(button, w)
+  button.slot:SetDimensions(w, w)
+  local flipCard = button.slot:GetNamedChild("FlipCard")
+  if flipCard then
+    flipCard:SetDimensions(w - 3, w - 3)
+  end
+end
+
+---静态行链式布局(同FAB/动态行已验证模式)：
+---首槽以近零偏移锚到武器切换按钮(上排 TOPLEFT/下排 BOTTOMLEFT)，后续槽链式 LEFT→RIGHT，
+---大招链式接在技能段后；避免对带 scale 控件使用大偏移 CENTER 锚(原点堆叠/右贴同族问题)
+---@type fun(set: table, onTop: boolean, dims: table, abilityGap: number, ultGap: number)
+l.layoutStaticRow = function(set, onTop, dims, abilityGap, ultGap)
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local first = set[3]
+  first.slot:ClearAnchors()
+  if onTop then
+    first.slot:SetAnchor(TOPLEFT, weaponSwap, RIGHT, abilityGap, 0)
+  else
+    first.slot:SetAnchor(BOTTOMLEFT, weaponSwap, RIGHT, abilityGap, 0)
+  end
+  l.setCloneSize(first, dims.ability)
+  for slotNum = 4, 7 do
+    local button = set[slotNum]
+    button.slot:ClearAnchors()
+    button:ApplyAnchor(set[slotNum - 1].slot, abilityGap)
+    l.setCloneSize(button, dims.ability)
+  end
+  local ult = set[8]
+  ult.slot:ClearAnchors()
+  ult:ApplyAnchor(set[7].slot, ultGap)
+  l.setCloneSize(ult, dims.ult)
+end
+
 l.layoutStatic = function()
   if not l.container or not l.buttons[3] then
     return
@@ -339,18 +376,13 @@ l.layoutStatic = function()
     l.layoutDynamic()
     return
   end
-  local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
-  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local abilityGap, ultGap, gapY = l.platformOffsets()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   -- 首次应用时确认提示(便于验证静态布局确实生效)
   if not l.staticAppliedNotified then
     l.staticAppliedNotified = true
     d(string.format("[ADR] %s", addon.text("ADR static double bar applied")))
   end
-  local swapW = weaponSwap:GetWidth()
-  local swapH = weaponSwap:GetHeight()
-  local bottomCenterY = swapY + swapH / 2
-  local topCenterY = bottomCenterY - dims.ability - gapY
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
   -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)，
@@ -359,21 +391,15 @@ l.layoutStatic = function()
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
   end
   l.suppressNativeFlip()
-  -- 隐藏动态单克隆行，展示两静态行；位置为绝对坐标(锚点 offset 为屏幕单位，
-  -- 不随槽自身 scale 变化)
+  -- 隐藏动态单克隆行，两静态行链式布局：主手恒上、副手恒下
   for slotNum = 3, 8 do
     l.buttons[slotNum].slot:SetHidden(true)
-    local x = swapX + swapW + abilityGap
-      + (slotNum == 8 and (4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2)
-        or ((slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2))
-    local pButton = l.staticPrimary[slotNum]
-    pButton.slot:ClearAnchors()
-    pButton.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, topCenterY)
-    pButton.slot:SetHidden(false)
-    local bButton = l.staticBackup[slotNum]
-    bButton.slot:ClearAnchors()
-    bButton.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, bottomCenterY)
-    bButton.slot:SetHidden(false)
+  end
+  l.layoutStaticRow(l.staticPrimary, true, dims, abilityGap, ultGap)
+  l.layoutStaticRow(l.staticBackup, false, dims, abilityGap, ultGap)
+  for slotNum = 3, 8 do
+    l.staticPrimary[slotNum].slot:SetHidden(false)
+    l.staticBackup[slotNum].slot:SetHidden(false)
   end
   l.staticEngaged = true
   l.applyStaticRoles()
@@ -1029,6 +1055,31 @@ SLASH_COMMANDS["/adrbackbar"] = function()
   if l.active and l.container then
     l.syncAll()
     d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
+    -- 克隆控件转储：名称/父链/锚数/位置/尺寸/缩放/隐藏，定位游离控件
+    local dump = function(label, set)
+      for slotNum = 3, 8 do
+        local b = set[slotNum]
+        if b and b.slot then
+          local s = b.slot
+          d(string.format(
+            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s",
+            label,
+            slotNum,
+            s:GetParent() and s:GetParent():GetName() or "?",
+            s:GetNumAnchors(),
+            s:GetLeft() or -1,
+            s:GetTop() or -1,
+            s:GetWidth() or -1,
+            s:GetHeight() or -1,
+            s:GetScale() or -1,
+            tostring(s:IsControlHidden())
+          ))
+        end
+      end
+    end
+    dump("D", l.buttons)
+    dump("P", l.staticPrimary)
+    dump("B", l.staticBackup)
   else
     d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
   end
