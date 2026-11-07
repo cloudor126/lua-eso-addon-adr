@@ -278,7 +278,10 @@ l.pinKeybinds = function()
             or ((slotNum - 3) * (dims.ability + abilityGap)))
         + w / 2
       local y = swapY + swapH / 2 + w / 2 + textOff
-      -- 重父到 ZO_ActionBar1：静态下原生槽被隐藏，子控件需独立父级才能保持可见
+      -- 重父到 ZO_ActionBar1：静态下原生槽被隐藏，子控件需独立父级才能保持可见。
+      -- 重父后 GetNamedChild 查不到(不再是子控件)，必须保存引用供还原使用
+      l.pinnedKeybindTexts = l.pinnedKeybindTexts or {}
+      l.pinnedKeybindTexts[slotNum] = { text = text, slot = nb.slot }
       text:SetParent(ZO_ActionBar1)
       text:ClearAnchors()
       text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, x, y)
@@ -294,12 +297,15 @@ l.unpinKeybinds = function()
   end
   l.keybindsPinned = false
   local textOff = IsInGamepadPreferredMode() and -6 or 1
+  -- 用 pin 时保存的引用还原(重父后 GetNamedChild 已查不到)
+  local pinned = l.pinnedKeybindTexts or {}
   for slotNum = 3, 8 do
-    local nb = ZO_ActionBar_GetButton(slotNum)
-    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
-    if text then
-      text:ClearAnchors()
-      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, textOff)
+    local entry = pinned[slotNum]
+    if entry and entry.text and entry.slot then
+      entry.text:SetParent(entry.slot)
+      entry.text:ClearAnchors()
+      entry.text:SetAnchor(TOP, entry.slot, BOTTOM, 0, textOff)
+      pinned[slotNum] = nil
     end
   end
 end
