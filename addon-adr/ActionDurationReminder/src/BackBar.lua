@@ -539,6 +539,8 @@ l.activate = function()
       end)
       l.ultContainer = nil
     end
+    l.inner = nil
+    l.ultInner = nil
     return
   end
   l.active = true

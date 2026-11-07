@@ -113,6 +113,40 @@ l.shiftedBarWidgetMap = {}
 ---@type table<number, adr.views.Widget>
 l.appendedBarWidgetMap = {}
 
+---shift控件回收站：slotNum -> {texture=, native=}；预设/模式切换时隐藏的控件
+---进入回收站而非丢弃，下次需要同类型时复用，避免反复切换累积隐藏控件
+---@type table<number, table<string, adr.views.Widget>>
+l.shiftedWidgetFreelist = {}
+
+---@type fun(slotNum: number, widget: adr.views.Widget)
+l.stashShiftedWidget = function(slotNum, widget)
+  local bucket = l.shiftedWidgetFreelist[slotNum]
+  if not bucket then
+    bucket = {}
+    l.shiftedWidgetFreelist[slotNum] = bucket
+  end
+  bucket[widget.backdrop and "texture" or "native"] = widget
+end
+
+---@type fun(slotNum: number, wantNative: boolean): adr.views.Widget|nil
+l.takeShiftedWidget = function(slotNum, wantNative)
+  local bucket = l.shiftedWidgetFreelist[slotNum]
+  if not bucket then
+    return nil
+  end
+  local key = wantNative and "native" or "texture"
+  local widget = bucket[key]
+  if widget then
+    bucket[key] = nil
+    -- 复用时重应用当前样式(回收期间可能改过字体/颜色设置)
+    views.updateWidgetFont(widget)
+    views.updateWidgetLabelYOffset(widget)
+    views.updateWidgetStackLabelYOffset(widget)
+    views.updateWidgetCooldown(widget)
+  end
+  return widget
+end
+
 ---@type fun(): adr.settings.SavedVars
 l.getSavedVars = function()
   return settings.getSavedVars()
@@ -233,9 +267,11 @@ l.onCoreUpdate = function()
     local isTexture = widget.backdrop ~= nil
     if isTexture and nativeUsable then
       widget:hide()
+      l.stashShiftedWidget(slotNum, widget)
       l.shiftedBarWidgetMap[slotNum] = nil
     elseif not isTexture and not nativeUsable then
       widget:hide()
+      l.stashShiftedWidget(slotNum, widget)
       l.shiftedBarWidgetMap[slotNum] = nil
     end
   end
@@ -280,6 +316,7 @@ l.onCoreUpdate = function()
       local widget = l.shiftedBarWidgetMap[slotNum]
       if widget and (widget.backdrop ~= nil) ~= wantNative then
         widget:hide()
+        l.stashShiftedWidget(slotNum, widget)
         l.shiftedBarWidgetMap[slotNum] = nil
         widget = nil
       end
@@ -291,7 +328,8 @@ l.onCoreUpdate = function()
           l.appendedBarWidgetMap[appendIndex] = widget
         end
       elseif not widget then
-        widget = views.newWidget(slotNum, true, nil, wantNative and backBar.getSlotControl(slotNum) or nil)
+        widget = l.takeShiftedWidget(slotNum, wantNative)
+          or views.newWidget(slotNum, true, nil, wantNative and backBar.getSlotControl(slotNum) or nil)
         l.shiftedBarWidgetMap[slotNum] = widget
       end
       if wantNative then

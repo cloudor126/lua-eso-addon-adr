@@ -133,8 +133,6 @@ l.getStackLabelFont = function()
     .. l.getSavedVars().barStackLabelFontStyle
 end
 
----@type number[]
-l.debugIdList = {}
 --========================================
 --        m
 --========================================
@@ -144,7 +142,6 @@ m.newCooldown = function(background, drawTier)
   ---@type adr.views.Cooldown
   local inst = {}
   inst.id = GetGameTimeMilliseconds()
-  table.insert(l.debugIdList, inst.id)
   inst.background = background
   inst.drawTier = drawTier
   inst.hidden = false
