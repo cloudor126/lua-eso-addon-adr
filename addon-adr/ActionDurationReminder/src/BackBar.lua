@@ -51,8 +51,12 @@ l.nativeLifted = false
 l.buttons = {}
 ---@type Control|nil
 l.container = nil
----@type Control|nil 内层容器(承载克隆按钮，缩放支点=底边中心，保证缩小后居中)
+---@type Control|nil 内层容器(承载克隆技能按钮，缩放支点=底边中心，保证缩小后居中)
 l.inner = nil
+---@type Control|nil 大招独立外层(锚定原生大招位)
+l.ultContainer = nil
+---@type Control|nil 大招独立内层(自中心缩放)
+l.ultInner = nil
 ---@type boolean 行已激活(事件已注册)
 l.active = false
 ---@type boolean 克隆行创建失败闭锁(本会话不再重试)
@@ -157,21 +161,27 @@ l.hideUltimateDecorations = function(button)
   end
 end
 
----测量克隆行原始尺寸(本地像素，模板尺寸与平台间距)
+---测量克隆技能段(3-7)原始尺寸(本地像素，模板尺寸与平台间距)
 ---@type fun(): number, number
 l.measureRowDims = function()
-  local abilityGap, ultGap = l.platformOffsets()
+  local abilityGap = l.platformOffsets()
   local first = l.buttons[3].slot
-  local ult = l.buttons[8].slot
-  local width = first:GetWidth() * 5 + abilityGap * 4 + ultGap + ult:GetWidth()
-  local height = math.max(first:GetHeight(), ult:GetHeight())
+  local width = first:GetWidth() * 5 + abilityGap * 4
+  local height = first:GetHeight()
   return width, height
 end
 
----内层按钮链式布局(动态/静态共用；全部锚在内层容器内)
+---测量克隆大招槽原始尺寸
+---@type fun(): number, number
+l.measureUltDims = function()
+  local ult = l.buttons[8].slot
+  return ult:GetWidth(), ult:GetHeight()
+end
+
+---内层技能按钮链式布局(3-7，锚在技能组内层；大招独立布局不参与链)
 ---@type fun()
 l.layoutButtons = function()
-  local abilityGap, ultGap = l.platformOffsets()
+  local abilityGap = l.platformOffsets()
   local first = l.buttons[3]
   first.slot:ClearAnchors()
   first.slot:SetAnchor(BOTTOMLEFT, l.inner, BOTTOMLEFT, 0, 0)
@@ -180,9 +190,6 @@ l.layoutButtons = function()
     button.slot:ClearAnchors()
     button:ApplyAnchor(l.buttons[slotNum - 1].slot, abilityGap)
   end
-  local ult = l.buttons[8]
-  ult.slot:ClearAnchors()
-  ult:ApplyAnchor(l.buttons[7].slot, ultGap)
 end
 
 ---布局：动态预设——外层双锚横跨原生条(slot3→ult)上方，内层底边贴外层底边，
@@ -194,12 +201,18 @@ l.layoutDynamic = function()
   end
   local _, _, gapY = l.platformOffsets()
   local nativeSlot3 = ZO_ActionBar_GetButton(3).slot
+  local nativeSlot7 = ZO_ActionBar_GetButton(7).slot
   local nativeUlt = ZO_ActionBar_GetButton(8).slot
   local width, height = l.measureRowDims()
   l.inner:SetDimensions(width, height)
   l.container:ClearAnchors()
   l.container:SetAnchor(BOTTOMLEFT, nativeSlot3, TOPLEFT, 0, -gapY)
-  l.container:SetAnchor(BOTTOMRIGHT, nativeUlt, TOPRIGHT, 0, -gapY)
+  l.container:SetAnchor(BOTTOMRIGHT, nativeSlot7, TOPRIGHT, 0, -gapY)
+  -- 大招单独对齐：外层底边中心锚在原生大招顶中，自中心缩放
+  local ultWidth, ultHeight = l.measureUltDims()
+  l.ultInner:SetDimensions(ultWidth, ultHeight)
+  l.ultContainer:ClearAnchors()
+  l.ultContainer:SetAnchor(BOTTOM, nativeUlt, TOP, 0, -gapY)
   l.layoutButtons()
 end
 
@@ -227,7 +240,7 @@ l.layoutStatic = function()
   if not l.inner or not l.container or not l.buttons[3] then
     return
   end
-  local abilityGap, _, gapY = l.platformOffsets()
+  local abilityGap, ultGap, gapY = l.platformOffsets()
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if not weaponSwap then
     d("[ADR] layoutStatic: WeaponSwap not found, falling back to dynamic layout")
@@ -251,6 +264,18 @@ l.layoutStatic = function()
   l.container:ClearAnchors()
   -- 外层底边中心锚到武器切换按钮右侧的行位(底边中心=内层缩放支点，缩小后居中)
   l.container:SetAnchor(BOTTOM, weaponSwap, RIGHT, abilityGap + width / 2, cloneY + height / 2)
+  -- 大招单独对齐：按原生布局参数(技能段+间距)锚到武器切换基准
+  local ultWidth, ultHeight = l.measureUltDims()
+  l.ultInner:SetDimensions(ultWidth, ultHeight)
+  l.ultContainer:SetDimensions(ultWidth, ultHeight)
+  l.ultContainer:ClearAnchors()
+  l.ultContainer:SetAnchor(
+    BOTTOM,
+    weaponSwap,
+    RIGHT,
+    abilityGap + width + ultGap + ultWidth / 2,
+    cloneY + ultHeight / 2
+  )
   l.layoutButtons()
   -- 原生条：主手激活时抬到上行，副手激活时回原位
   nativeButton3.slot:ClearAnchors()
@@ -265,6 +290,7 @@ l.layoutRow = function()
     return
   end
   l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  l.ultInner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
     l.layoutStatic()
   else
@@ -311,9 +337,11 @@ l.syncAll = function()
   l.currentHotbar = hotbar
   if not hotbar then
     l.container:SetHidden(true)
+    l.ultContainer:SetHidden(true)
     return
   end
   l.container:SetHidden(false)
+  l.ultContainer:SetHidden(false)
   l.layoutRow()
   for slotNum = 3, 8 do
     l.syncSlot(slotNum, hotbar)
@@ -375,13 +403,16 @@ l.createRow = function()
   l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", parent, CT_CONTROL)
   l.inner = WINDOW_MANAGER:CreateControl("ADRBackBarRowInner", l.container, CT_CONTROL)
   l.inner:SetAnchor(BOTTOM, l.container, BOTTOM, 0, 0)
+  l.ultContainer = WINDOW_MANAGER:CreateControl("ADRBackBarUlt", parent, CT_CONTROL)
+  l.ultInner = WINDOW_MANAGER:CreateControl("ADRBackBarUltInner", l.ultContainer, CT_CONTROL)
+  l.ultInner:SetAnchor(BOTTOM, l.ultContainer, BOTTOM, 0, 0)
   local hotbar = l.inactiveHotbar() or HOTBAR_CATEGORY_BACKUP
   for slotNum = 3, 8 do
     local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
     local button = ActionButton:New(
       slotNum + CLONE_SLOT_OFFSET,
       ACTION_BUTTON_TYPE_VISIBLE,
-      l.inner,
+      slotNum == 8 and l.ultInner or l.inner,
       template,
       hotbar
     )
@@ -495,6 +526,12 @@ l.activate = function()
       end)
       l.container = nil
     end
+    if l.ultContainer then
+      pcall(function()
+        l.ultContainer:SetHidden(true)
+      end)
+      l.ultContainer = nil
+    end
     return
   end
   l.active = true
@@ -514,6 +551,9 @@ l.deactivate = function()
   l.restoreNativeAnchor()
   if l.container then
     l.container:SetHidden(true)
+  end
+  if l.ultContainer then
+    l.ultContainer:SetHidden(true)
   end
 end
 
@@ -539,6 +579,7 @@ l.onCoreUpdate = function()
     -- Oakensoul 或非武器热栏(攻城等)时隐藏第二行；恢复时全量重同步
     if l.hasOakensoul() or l.inactiveHotbar() == nil then
       l.container:SetHidden(true)
+      l.ultContainer:SetHidden(true)
       l.currentHotbar = nil
       l.restoreNativeAnchor()
     elseif l.container:IsControlHidden() then
@@ -560,11 +601,14 @@ m.getEffectivePreset = function()
   return l.effectivePreset()
 end
 
----菜单滑条直接调用：立即应用第二行缩放
+---菜单滑条直接调用：立即应用第二行缩放(技能组与大招各自居中)
 ---@type fun()
 m.updateScale = function()
   if l.inner then
     l.inner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
+  end
+  if l.ultInner then
+    l.ultInner:SetScale(l.getSavedVars().barShowShiftScalePercent / 100)
   end
 end
 
