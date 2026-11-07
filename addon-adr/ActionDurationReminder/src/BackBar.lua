@@ -1430,6 +1430,42 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     l.syncAll()
     d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
     -- 克隆控件转储：名称/父链/锚数/位置/尺寸/缩放/隐藏，定位游离控件
+    -- 子控件结构转储：定位槽位视觉尺寸不一致的层(边框/FlipCard/Backdrop等)
+    local dumpChildren = function(label, button)
+      local children = { button.slot:GetChildren() }
+      -- 部分实现 GetChildren 返回表；无则退化为仅关键命名子控件
+      if type(children) ~= "table" then
+        children = {}
+      end
+      if #children == 0 then
+        local names = { "FlipCard", "Icon", "Button", "Backdrop", "Frame", "BG", "Status", "Cooldown" }
+        for _, n in ipairs(names) do
+          local c = button.slot:GetNamedChild(n)
+          if c then
+            children[#children + 1] = c
+          end
+        end
+      end
+      for i = 1, #children do
+        local c = children[i]
+        pcall(function()
+          local cname = c:GetName()
+          if cname == "" or cname == nil then
+            cname = "?"
+          end
+          d(string.format(
+            "[ADR] %s.child[%s] w=%.0f h=%.0f l=%.0f t=%.0f hidden=%s",
+            label,
+            cname,
+            c:GetWidth() or -1,
+            c:GetHeight() or -1,
+            c:GetLeft() or -1,
+            c:GetTop() or -1,
+            tostring(c:IsControlHidden())
+          ))
+        end)
+      end
+    end
     local dump = function(label, set)
       for slotNum = 3, 8 do
         local b = set[slotNum]
@@ -1479,6 +1515,13 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     dump("D", l.buttons)
     dump("P", l.staticPrimary)
     dump("B", l.staticBackup)
+    -- 结构对比：大招槽 vs 技能槽的完整子控件结构
+    if l.buttons[3] then
+      dumpChildren("D3", l.buttons[3])
+    end
+    if l.buttons[8] then
+      dumpChildren("D8", l.buttons[8])
+    end
     -- 原生槽尺寸对照(定位克隆与原生大小差异)
     local ns3 = ZO_ActionBar_GetButton(3).slot
     local ns8 = ZO_ActionBar_GetButton(8).slot
