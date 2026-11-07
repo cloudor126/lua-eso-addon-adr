@@ -406,6 +406,8 @@ l.createRow = function()
     button:SetShowBindingText(false)
     -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation，不初始化会 nil 崩溃(FAB 克隆时同样显式调用)
     button:SetupBounceAnimation()
+    -- 换武器翻转动画(半程换内容的回调在上方定义)
+    button:SetupSwapAnimation(onSwapAnimationHalfDone, onSwapAnimationDone)
     l.setupDragDropHandlers(button)
     if slotNum == 8 then
       l.hideUltimateDecorations(button)
@@ -435,6 +437,49 @@ l.applyPlatformStyle = function()
   l.syncAll()
 end
 
+---翻转半程回调：缩到底时换入新武器条内容(同原生 OnSwapAnimationHalfDone)
+---@type fun(_, button: table)
+local function onSwapAnimationHalfDone(_, button)
+  local hotbar = l.inactiveHotbar()
+  if not hotbar then
+    return
+  end
+  l.currentHotbar = hotbar
+  button.slot.hotbarCategory = hotbar
+  button.button.hotbarCategory = hotbar
+  button:HandleSlotChanged(hotbar)
+  l.applyInactiveStyle(button)
+  -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
+  if l.classicMode then
+    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
+  end
+end
+
+---翻转结束回调
+---@type fun(_, button: table)
+local function onSwapAnimationDone(_, button)
+  button.noUpdates = false
+end
+
+---换武器时克隆行同步翻转动画(同原生：FlipCard 缩到底→换内容→展开回原)
+---@type fun()
+l.playSwapAnimation = function()
+  if not l.container or not l.buttons[3] then
+    return
+  end
+  local hotbar = l.inactiveHotbar()
+  if not hotbar then
+    l.syncAll()
+    return
+  end
+  for slotNum = 3, 8 do
+    local button = l.buttons[slotNum]
+    if button and button.hotbarSwapAnimation then
+      button.hotbarSwapAnimation:PlayFromStart()
+    end
+  end
+end
+
 ---@type fun()
 l.registerEvents = function()
   local EM = GetEventManager()
@@ -450,8 +495,13 @@ l.registerEvents = function()
       l.applyInactiveStyle(button)
     end
   end)
-  EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function()
-    l.syncAll()
+  EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
+    if didActiveHotbarChange then
+      -- 换武器：播放翻转动画，内容在半程换入(动画回调内完成)，不同步闪变
+      l.playSwapAnimation()
+    else
+      l.syncAll()
+    end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ALL_HOTBARS_UPDATED, function()
     l.syncAll()
