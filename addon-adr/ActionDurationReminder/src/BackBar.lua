@@ -117,12 +117,13 @@ l.inactiveHotbar = function()
 end
 
 ---平台相关的按钮间距(与原生 KEYBOARD/GAMEPAD_CONSTANTS 对齐)
----@type fun(): number, number, number
+---返回：技能间距, 大招间距, 行间隙, 切手按钮默认锚X, 切手按钮默认锚Y
+---@type fun(): number, number, number, number, number
 l.platformOffsets = function()
   if IsInGamepadPreferredMode() then
-    return 10, 65, 6
+    return 10, 65, 6, 61, 4
   end
-  return 2, 62, ROW_GAP_Y
+  return 2, 62, ROW_GAP_Y, 59, -4
 end
 
 ---是否佩戴 Oakensoul(无副武器条)
@@ -202,7 +203,7 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
----恢复原生3号槽默认锚(仅静态预设拍升过才需要)
+---恢复原生3号槽与切手按钮默认锚(静态预设动过才需要)
 ---@type fun()
 l.restoreNativeAnchor = function()
   if not l.nativeLifted then
@@ -210,11 +211,13 @@ l.restoreNativeAnchor = function()
   end
   l.nativeLifted = false
   local nativeButton3 = ZO_ActionBar_GetButton(3)
-  local abilityGap = l.platformOffsets()
-  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local abilityGap, _, _, swapX, swapY = l.platformOffsets()
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   nativeButton3.slot:ClearAnchors()
   if weaponSwap then
     nativeButton3:ApplyAnchor(weaponSwap, abilityGap)
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
   end
 end
 
@@ -245,15 +248,28 @@ l.layoutStatic = function()
   end
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   local scale = l.getSavedVars().barShowShiftScalePercent / 100
-  -- 克隆行 = 非激活条：原生条在上时克隆行在下，反之在上。
-  -- cloneY 为屏幕偏移，锚点 offset 是本地单位(×scale生效)，故除以 scale
-  local cloneY = (nativeOnTop and 0 or -liftY) / scale
+  -- 切手按钮随原生行上下移动(始终在原生条左侧)，原生条跟随切手(与默认锚同形)。
+  -- 移动后 weaponSwap RIGHT 点即当前原生行的中心线。
+  local _, _, _, swapX, swapY = l.platformOffsets()
+  weaponSwap:ClearAnchors()
+  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY + (nativeOnTop and -liftY or 0))
+  nativeButton3.slot:ClearAnchors()
+  nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, 0)
+  l.nativeLifted = nativeOnTop
+  -- 垂直基准：weaponSwap RIGHT 点 = 当前原生行中心线。
+  -- BOTTOM 锚把克隆槽底边中点对到该线 + offsetY(offset 为本地单位，渲染×scale)：
+  --   克隆在底行(原生拍升)：克隆底边 = 当前行中心线下方半槽高+整行高 → local liftY/s + h/2
+  --   克隆在顶行(原生在原位)：克隆底边 = 原生顶边上方 gapY → local h/2 - liftY/scale
+  local cloneYAbility = nativeOnTop and (liftY / scale + dims.ability / 2)
+    or ((dims.ability / 2 - liftY) / scale)
+  local cloneYUlt = nativeOnTop and (liftY / scale + dims.ult / 2)
+    or ((dims.ult / 2 - liftY) / scale)
   for slotNum = 3, 7 do
     local button = l.buttons[slotNum]
     -- 本地未缩放间距：渲染后为均匀缩放组
     local offsetX = abilityGap + (slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2
     button.slot:ClearAnchors()
-    button.slot:SetAnchor(BOTTOM, weaponSwap, RIGHT, offsetX, cloneY)
+    button.slot:SetAnchor(BOTTOM, weaponSwap, RIGHT, offsetX, cloneYAbility)
   end
   local ult = l.buttons[8]
   ult.slot:ClearAnchors()
@@ -262,13 +278,9 @@ l.layoutStatic = function()
     weaponSwap,
     RIGHT,
     abilityGap + 5 * (dims.ability + abilityGap) + ultGap + dims.ult / 2,
-    cloneY
+    cloneYUlt
   )
   l.applyScale()
-  -- 原生条：主手激活时抬到上行，副手激活时回原位
-  nativeButton3.slot:ClearAnchors()
-  nativeButton3.slot:SetAnchor(LEFT, weaponSwap, RIGHT, abilityGap, nativeOnTop and -liftY or 0)
-  l.nativeLifted = nativeOnTop
 end
 
 ---按预设分发布局；切回动态/关闭时还原原生锚；同步第二行缩放(所有预设生效)
@@ -624,10 +636,14 @@ m.getEffectivePreset = function()
   return l.effectivePreset()
 end
 
----菜单滑条直接调用：立即应用第二行缩放(锚点均与scale无关，仅更新叶子scale)
+---菜单滑条直接调用：立即应用第二行缩放(锚点均与scale无关，仅更新叶子scale)；
+---静态预设的锚点 offset 依赖 scale，需重排
 ---@type fun()
 m.updateScale = function()
   l.applyScale()
+  if l.active and l.container and l.effectivePreset() == "static" then
+    l.layoutStatic()
+  end
 end
 
 ---菜单下拉框直接调用：预设切换后立即重布局
