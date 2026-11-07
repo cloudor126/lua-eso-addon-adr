@@ -385,9 +385,13 @@ l.layoutStatic = function()
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
   end
   l.suppressNativeFlip()
-  -- 隐藏动态单克隆行，两静态行绝对定位：主手恒上、副手恒下(CENTER 锚，已验证)
+  -- 隐藏动态单克隆行：锚到屏幕外(静态路径从不为其布局，无锚则会悬在容器原点；
+  -- 即使被某条刷新链揭开也不可见)，退出静态时 layoutDynamic 会重新锚定
   for slotNum = 3, 8 do
-    l.buttons[slotNum].slot:SetHidden(true)
+    local dButton = l.buttons[slotNum]
+    dButton.slot:ClearAnchors()
+    dButton.slot:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, -2000, -2000)
+    dButton.slot:SetHidden(true)
   end
   local swapW = weaponSwap:GetWidth()
   local swapH = weaponSwap:GetHeight()
@@ -1059,8 +1063,9 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         local b = set[slotNum]
         if b and b.slot then
           local s = b.slot
+          local icon = b.icon
           d(string.format(
-            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s",
+            "[ADR] %s%d parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%q a=%.2f desat=%.2f hidden=%s w=%.0f",
             label,
             slotNum,
             s:GetParent() and s:GetParent():GetName() or "?",
@@ -1070,7 +1075,12 @@ SLASH_COMMANDS["/adrbackbar"] = function()
             s:GetWidth() or -1,
             s:GetHeight() or -1,
             s:GetScale() or -1,
-            tostring(s:IsControlHidden())
+            tostring(s:IsControlHidden()),
+            icon and (icon:GetTexture() or "?") or "nil",
+            icon and (icon:GetAlpha() or -1) or -1,
+            icon and (icon:GetDesaturation() or -1) or -1,
+            icon and tostring(icon:IsControlHidden()) or "?",
+            icon and (icon:GetWidth() or -1) or -1
           ))
         end
       end
