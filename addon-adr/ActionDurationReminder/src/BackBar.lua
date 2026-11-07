@@ -338,6 +338,30 @@ end
 ---克隆按钮拖放处理器：原生 ZO_AbilitySlot_* 的放置路径不带 hotbarCategory，
 ---会把拖入的技能放到当前激活条；拾取路径虽带参数但一并用安全调用重写保持一致。
 ---右键仍走原生 OnSlotClicked(清除菜单已正确读取克隆行的 hotbarCategory)
+---翻转半程回调：缩到底时换入新武器条内容(同原生 OnSwapAnimationHalfDone)
+---@type fun(_, button: table)
+local function onSwapAnimationHalfDone(_, button)
+  local hotbar = l.inactiveHotbar()
+  if not hotbar then
+    return
+  end
+  l.currentHotbar = hotbar
+  button.slot.hotbarCategory = hotbar
+  button.button.hotbarCategory = hotbar
+  button:HandleSlotChanged(hotbar)
+  l.applyInactiveStyle(button)
+  -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
+  if l.classicMode then
+    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
+  end
+end
+
+---翻转结束回调
+---@type fun(_, button: table)
+local function onSwapAnimationDone(_, button)
+  button.noUpdates = false
+end
+
 ---@type fun(button: table)
 l.setupDragDropHandlers = function(button)
   local buttonControl = button.button
@@ -435,30 +459,6 @@ l.applyPlatformStyle = function()
   end
   l.layoutRow()
   l.syncAll()
-end
-
----翻转半程回调：缩到底时换入新武器条内容(同原生 OnSwapAnimationHalfDone)
----@type fun(_, button: table)
-local function onSwapAnimationHalfDone(_, button)
-  local hotbar = l.inactiveHotbar()
-  if not hotbar then
-    return
-  end
-  l.currentHotbar = hotbar
-  button.slot.hotbarCategory = hotbar
-  button.button.hotbarCategory = hotbar
-  button:HandleSlotChanged(hotbar)
-  l.applyInactiveStyle(button)
-  -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
-  if l.classicMode then
-    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
-  end
-end
-
----翻转结束回调
----@type fun(_, button: table)
-local function onSwapAnimationDone(_, button)
-  button.noUpdates = false
 end
 
 ---换武器时克隆行同步翻转动画(同原生：FlipCard 缩到底→换内容→展开回原)
