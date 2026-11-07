@@ -1,9 +1,6 @@
 --========================================
 --        Chat Alert Module
 --========================================
--- To reset welcome prompt for testing, run in game:
---   /script ActionDurationReminder.load("ChatAlert#M").resetWelcomePrompt(); ReloadUI()
---========================================
 --        vars
 --========================================
 ---@type adr.addon.M
@@ -35,7 +32,6 @@ local m = { l = l }
 
 ---ChatAlert模块公开表(addon.register("ChatAlert#M"))
 ---@class adr.chatalert.M
----@field resetWelcomePrompt? fun()
 
 local DS_CHATALERT = "chatalert" -- debug switch for chat alert
 
@@ -87,7 +83,6 @@ local chatAlertSavedVarsDefaults = {
   chatAlertSoundName = "NEW_TIMED_NOTIFICATION",
   chatAlertOnlyInCombat = true,
   chatAlertMaxMessageLength = 100,
-  chatAlertPromptShown = false,
 }
 
 --========================================
@@ -584,59 +579,8 @@ l.openChatAlertFrame = function()
 end
 
 --========================================
---        first-run prompt
+--        first-run prompt (removed: fresh installs discover Chat Alert via settings)
 --========================================
----@type fun()
-l.registerWelcomeDialog = function()
-  ESO_Dialogs["ADR_CHAT_ALERT_WELCOME"] = {
-    title = {
-      text = addon.text("Chat Alert"),
-    },
-    mainText = {
-      text = addon.text(
-        "ADR has a new Chat Alert feature! During combat, group chat messages often go unnoticed in the chat window. Chat Alert will display them as popup alerts on screen so you never miss important callouts.\n\nP.S. Yes, this is from 2026, but I promise it's the good CODE. — @Cloudor"
-      ),
-    },
-    buttons = {
-      [1] = {
-        text = addon.text("Enable"),
-        callback = function(dialog)
-          l.getAccountSavedVars().chatAlertEnabled = true
-          l.getAccountSavedVars().chatAlertPromptShown = true
-          zo_callLater(function()
-            LibAddonMenu2:OpenToPanel("ADRAddonOptions")
-          end, 100)
-        end,
-      },
-      [2] = {
-        text = addon.text("Disable"),
-        callback = function(dialog)
-          l.getAccountSavedVars().chatAlertEnabled = false
-          l.getAccountSavedVars().chatAlertPromptShown = true
-        end,
-      },
-    },
-    -- When dialog is closed without choosing a button, disable the feature
-    finishedCallback = function(dialog)
-      local accountSavedVars = l.getAccountSavedVars()
-      if not accountSavedVars.chatAlertPromptShown then
-        accountSavedVars.chatAlertEnabled = false
-        accountSavedVars.chatAlertPromptShown = true
-      end
-    end,
-  }
-end
-
----@type fun()
-l.showWelcomePrompt = function()
-  -- Always use account-wide storage for welcome prompt
-  local accountSavedVars = l.getAccountSavedVars()
-  if accountSavedVars.chatAlertPromptShown then
-    return
-  end
-  l.registerWelcomeDialog()
-  ZO_Dialogs_ShowDialog("ADR_CHAT_ALERT_WELCOME")
-end
 
 --========================================
 --        start
@@ -646,15 +590,6 @@ l.onStart = function()
   EVENT_MANAGER:RegisterForEvent(addon.name .. "_ChatAlert", EVENT_CHAT_MESSAGE_CHANNEL, l.onChatMessageChannel)
   EVENT_MANAGER:RegisterForEvent(addon.name .. "_ChatAlert", EVENT_PLAYER_COMBAT_STATE, l.onPlayerCombatState)
   l.inCombat = IsUnitInCombat("player")
-  l.showWelcomePrompt()
-end
-
---========================================
---        register
---========================================
--- Public method to reset welcome prompt flag (for testing first-run experience)
-m.resetWelcomePrompt = function()
-  l.getAccountSavedVars().chatAlertPromptShown = false
 end
 
 addon.register("ChatAlert#M", m)

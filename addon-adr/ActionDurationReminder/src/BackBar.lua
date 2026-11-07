@@ -415,23 +415,27 @@ l.layoutStatic = function()
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
   -- 切手按钮落位到当前激活行左侧(瞬时；换武器时由 TranslateAnimation 滑动)，
-  -- 药剂快捷栏钉绝对坐标(不被切手按钮的移动/滑动拖动；仅无伴侣时接管)
+  -- 药剂快捷栏钉绝对坐标(不被切手按钮的移动/滑动拖动；仅无伴侣时接管)。
+  -- 手柄模式跳过：原生永久隐藏切手按钮(GAMEPAD_CONSTANTS.showWeaponSwapButton=false)，
+  -- 且药剂原生位置不同(SetCompanionAnchors 用手柄偏移)，钉键盘位会挪错
   local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  local _, _, gapY2, swapX2, swapY2 = l.platformOffsets()
-  local liftY2 = ZO_ActionBar_GetButton(3).slot:GetHeight() + gapY2
-  local onTop2 = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
-  if l.swapGlideTimeline then
-    l.swapGlideTimeline:Stop()
-  end
-  weaponSwap:ClearAnchors()
-  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX2, swapY2 + (onTop2 and -liftY2 or 0))
   l.quickslotPinned = false
-  if not (DoesUnitExist("companion") and HasActiveCompanion()) then
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    if qs and qs.slot then
-      qs.slot:ClearAnchors()
-      qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
-      l.quickslotPinned = true
+  if not IsInGamepadPreferredMode() then
+    local _, _, gapY2, swapX2, swapY2 = l.platformOffsets()
+    local liftY2 = ZO_ActionBar_GetButton(3).slot:GetHeight() + gapY2
+    local onTop2 = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
+    if l.swapGlideTimeline then
+      l.swapGlideTimeline:Stop()
+    end
+    weaponSwap:ClearAnchors()
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX2, swapY2 + (onTop2 and -liftY2 or 0))
+    if not (DoesUnitExist("companion") and HasActiveCompanion()) then
+      local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+      if qs and qs.slot then
+        qs.slot:ClearAnchors()
+        qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
+        l.quickslotPinned = true
+      end
     end
   end
   -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)，
@@ -800,7 +804,8 @@ l.animateStaticSwap = function()
   local liftY = nativeButton3.slot:GetHeight() + gapY
   local onTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  if weaponSwap then
+  -- 手柄模式切手按钮被原生永久隐藏，不做滑动(仅角色渐变)
+  if weaponSwap and not IsInGamepadPreferredMode() then
     local fromY = onTop and swapY or (swapY - liftY)
     local toY = onTop and (swapY - liftY) or swapY
     l.playSwapGlide(weaponSwap, swapX, fromY, toY)

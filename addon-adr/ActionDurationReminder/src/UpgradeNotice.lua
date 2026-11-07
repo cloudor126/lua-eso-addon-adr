@@ -15,17 +15,11 @@ local DIALOG_NAME = "ADR_BAR_PRESET_NOTICE"
 local ACCOUNT_FLAG = "barPresetNoticeShown"
 
 ---账号级一次性升级提示：3.170 引入技能栏三种风格预设。
----旗标存账号级存档(与"账号级配置"开关无关)，整个账户只弹一次；
----全新安装(从未见过 ChatAlert 欢迎提示的账号)跳过本提示，避免新装连弹两窗
+---旗标存账号级存档(与"账号级配置"开关无关)，整个账户只弹一次
 ---@type fun()
 l.showOnce = function()
   local accountSv = settings.getAccountSavedVars()
   if accountSv[ACCOUNT_FLAG] then
-    return
-  end
-  -- 全新安装判定：旧功能提示旗标(ChatAlert 欢迎窗)从未置位 = 本账号首次使用 ADR
-  if accountSv.chatAlertPromptShown == nil then
-    accountSv[ACCOUNT_FLAG] = true
     return
   end
   -- 展示即置旗(即使关闭回调缺失也不会重复弹出)
