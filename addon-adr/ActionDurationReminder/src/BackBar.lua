@@ -192,7 +192,8 @@ l.showUltNumber = function(button)
   end
   if button.countText then
     button.countText:ClearAnchors()
-    button.countText:SetAnchor(LEFT, button.slot, RIGHT, 2, 0)
+    -- 纵坐标保持模板默认(底边对齐)，仅横坐标移到按钮外
+    button.countText:SetAnchor(BOTTOMLEFT, button.slot, BOTTOMRIGHT, 2, 0)
   end
   if button.RefreshUltimateNumberVisibility then
     button:RefreshUltimateNumberVisibility()
