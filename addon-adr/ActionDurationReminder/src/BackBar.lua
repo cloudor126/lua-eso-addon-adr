@@ -707,7 +707,9 @@ l.playSwapGlide = function(weaponSwap, swapX, fromY, toY)
       l.swapGlideTranslate:SetEasingFunction(ZO_EaseOutQuadratic)
     end
     setAnchor(fromY)
-    l.swapGlideTranslate:SetTranslateOffsets(0, 0, 0, toY - fromY)
+    -- SetTranslateDeltas 自动以控件当前锚定位置为原点做增量平移
+    -- (SetTranslateOffsets 的坐标是锚点偏移绝对值，会造成动画期间跳位)
+    l.swapGlideTranslate:SetTranslateDeltas(0, toY - fromY)
     l.swapGlideTimeline:SetHandler("OnStop", function()
       setAnchor(toY)
     end)
