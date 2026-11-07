@@ -327,6 +327,10 @@ l.suppressNativeFlip = function()
       l.staticSwapSaved[slotNum] = nb.hotbarSwapAnimation
       if not nb.adrEmptyTimeline then
         nb.adrEmptyTimeline = ANIMATION_MANAGER:CreateTimeline()
+        -- 哑 SizeAnimation：原生 ApplySwapAnimationStyle 会对时间线的首/尾动画调
+        -- SetStartAndEndWidth/Height，空时间线返回 nil 会崩(登录时槽位更新即触发)
+        local dummy = nb.adrEmptyTimeline:InsertAnimation(ANIMATION_SIZE, nb.flipCard)
+        dummy:SetDuration(0)
       end
       nb.hotbarSwapAnimation = nb.adrEmptyTimeline
     end
