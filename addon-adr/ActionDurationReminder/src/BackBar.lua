@@ -236,6 +236,47 @@ end
 ---水平 offset 为 0，乘不乘 scale 都精确：每个槽居中于对应原生槽正上方，
 ---第三对第三、第五对第五、大招对大招逐槽成立
 ---@type fun()
+---键位提示偏移调整(动态/经典)：手柄下原生-6内嵌进槽内会压住图标底部像素，
+---改为边外+2(仍挂原生槽位，无需重父)；停用/退出时还原原生偏移。
+---静态模式不走此路径(用 pinKeybinds 的绝对钉扎方案)
+l.keybindOffsetsAdjusted = false
+
+---@type fun()
+l.adjustKeybindOffsets = function()
+  if l.staticEngaged or not IsInGamepadPreferredMode() then
+    return
+  end
+  if l.keybindOffsetsAdjusted then
+    return
+  end
+  l.keybindOffsetsAdjusted = true
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
+    if text then
+      text:ClearAnchors()
+      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, 2)
+    end
+  end
+end
+
+---@type fun()
+l.restoreKeybindOffsets = function()
+  if not l.keybindOffsetsAdjusted then
+    return
+  end
+  l.keybindOffsetsAdjusted = false
+  local textOff = IsInGamepadPreferredMode() and -6 or 1
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
+    if text then
+      text:ClearAnchors()
+      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, textOff)
+    end
+  end
+end
+
 l.layoutDynamic = function()
   if not l.container or not l.buttons[3] then
     return
@@ -244,7 +285,9 @@ l.layoutDynamic = function()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   -- 手柄下解除切手按钮的永久隐藏并锚回平台默认位(动态/经典下切手不随行移动，
   -- 药剂的原生锚链不受拖动；键盘下重新断言默认锚为无害操作)
+  -- 键位提示偏移：手柄原生-6内嵌会压住图标底部像素，调为边外+2；停用时还原
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  l.adjustKeybindOffsets()
   if weaponSwap then
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -427,6 +470,8 @@ l.layoutStatic = function()
   if not l.container or not l.buttons[3] then
     return
   end
+  -- 静态接管键位提示(绝对钉扎)，先还原动态模式的偏移调整
+  l.restoreKeybindOffsets()
   if l.hasOakensoul() or l.inactiveHotbar() == nil then
     l.exitStatic()
     return
@@ -469,6 +514,13 @@ l.layoutStatic = function()
       if qs and qs.slot then
         qs.slot:ClearAnchors()
         qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
+        -- Q 键提示与其他键位提示同基线(槽底边+textOff)，避免偏高遮挡药水按钮
+        local qsText = qs.slot:GetNamedChild("ButtonText")
+        if qsText then
+          local qsOff = IsInGamepadPreferredMode() and 2 or 1
+          qsText:ClearAnchors()
+          qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, qsOff)
+        end
         l.quickslotPinned = true
       end
     end
@@ -1182,6 +1234,7 @@ l.deactivate = function()
   l.active = false
   l.lastAppliedPreset = nil
   l.exitStatic()
+  l.restoreKeybindOffsets()
   -- 手柄下恢复切手按钮的原生行为(永久隐藏)并回默认锚
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if weaponSwap then
