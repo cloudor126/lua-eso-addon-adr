@@ -597,10 +597,8 @@ end
 
 ---换武器时克隆行动画。
 ---动态/经典：翻转(FlipCard缩→换→展，同原生)。
----静态：两行互换位置的滑动编排——原生行滑向顶行、克隆行滑向底行，切手随原生行滑动，
----药剂栏与键位提示保持原位；alpha 在两行交叉期下潜到 0.15，内容在半程(t=0.5)换入；
----结束帧克隆行定格为 TOP 锚形(与 layoutStatic 一致)。
----代际号防连打叠帧。
+---静态：两行瞬间定格到新状态(静态=无位置动画)，仅切手按钮平滑滑移到新位；
+---双排轻微 alpha 下潜(最低 0.3)，内容在半程谷底换入。代际号防连打叠帧。
 ---@type fun()
 l.playSwapAnimation = function()
   if not l.container or not l.buttons[3] then
@@ -620,40 +618,25 @@ l.playSwapAnimation = function()
     end
     return
   end
-  -- 静态编排
+  -- 静态：静态=无位置动画。两行瞬间定格到新状态(同帧)；只有切手按钮从旧位平滑滑移到新位；
+  -- 双排轻微 alpha 下潜(最低 0.3，绝不全隐)，内容在下潜谷底(半程)换入。代际号防连打叠帧
   local nativeButton3 = ZO_ActionBar_GetButton(3)
   local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
   local slotH = nativeButton3.slot:GetHeight()
   local liftY = slotH + gapY
   local nativeOnTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  local scale = l.getSavedVars().barShowShiftScalePercent / 100
-  -- 1. 定格最终态(与事件处理同帧，无闪烁)：克隆行/快捷栏/键位提示/切手
+  -- 1. 两行瞬间定格到新状态：克隆行/快捷栏/键位提示/原生条全部就位
   l.layoutStatic()
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if not weaponSwap then
     return
   end
-  -- 2. 同帧回滑移起点：克隆行回出发行(BOTTOM 锚，行距取负)，切手回未抬升位，快捷栏回默认补偿
-  local rowOff = liftY - dims.ability / 2   -- = H/2 + gapY，行中心到行边缘的距离基准
-  local startCloneOffY = -rowOff / scale
-  for slotNum = 3, 8 do
-    local button = l.buttons[slotNum]
-    local offX = l.staticOffsetX(slotNum, dims, abilityGap, ultGap)
-    button.slot:ClearAnchors()
-    button.slot:SetAnchor(BOTTOM, weaponSwap, RIGHT, offX, startCloneOffY)
-  end
-  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
-  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-  if l.quickslotCompensated and qs and qs.slot then
-    qs.slot:ClearAnchors()
-    qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, 0)
-  end
-  -- 3. 缓动：t 0→1；切手 offsetY = swapY - liftY*t；克隆行 BOTTOM offset 从
-  --    -rowOff 线性插值到 +rowOff(相对各自时刻的切手中心)；alpha 1→0.15→1；
-  --    半程换入两行内容；代际号防连打叠帧
+  -- 2. 切手按钮从旧位平滑滑移到新位(旧位抬升状态与新状态相反)
   l.staticSwapGen = (l.staticSwapGen or 0) + 1
   local gen = l.staticSwapGen
+  local startSwapY = nativeOnTop and swapY or (swapY - liftY)
+  local endSwapY = nativeOnTop and (swapY - liftY) or swapY
+  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, startSwapY)
   local steps = 14
   local i = 0
   local applyAllAlpha = function(a)
@@ -698,21 +681,11 @@ l.playSwapAnimation = function()
     end
     i = i + 1
     local t = i / steps
-    -- 切手与原生链滑移
-    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY - liftY * t)
-    -- 克隆行滑移：BOTTOM offset 从 -rowOff 插值到 +rowOff(本地单位，各自时刻的切手中心为基准)
-    local cloneOffY = ((t * 2 - 1) * rowOff) / scale
-    for slotNum = 3, 8 do
-      local button = l.buttons[slotNum]
-      local offX = l.staticOffsetX(slotNum, dims, abilityGap, ultGap)
-      button.slot:SetAnchor(BOTTOM, weaponSwap, RIGHT, offX, cloneOffY)
-    end
-    -- 药剂栏补偿跟随切手滑动，保持屏幕原位
-    if l.quickslotCompensated and qs and qs.slot then
-      qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, liftY * t)
-    end
-    -- alpha 交叉期下潜：t=0.5 时 0.15
-    local a = 1 - 1.7 * (t <= 0.5 and t or (1 - t))
+    -- 仅切手按钮滑移
+    local y = startSwapY + (endSwapY - startSwapY) * t
+    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, y)
+    -- alpha 下潜：t=0.5 时 0.3
+    local a = 1 - 0.7 * (t <= 0.5 and t or (1 - t))
     applyAllAlpha(a)
     if i == steps / 2 then
       swapContent()
@@ -720,13 +693,6 @@ l.playSwapAnimation = function()
     if i < steps then
       zo_callLater(tick, 30)
     else
-      -- 定格终态：克隆行切换到 TOP 锚形(与 layoutStatic 一致)，alpha 复位
-      for slotNum = 3, 8 do
-        local button = l.buttons[slotNum]
-        local offX = l.staticOffsetX(slotNum, dims, abilityGap, ultGap)
-        button.slot:ClearAnchors()
-        button.slot:SetAnchor(TOP, weaponSwap, RIGHT, offX, rowOff / scale)
-      end
       applyAllAlpha(1)
     end
   end
