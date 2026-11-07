@@ -446,6 +446,8 @@ l.createStaticRows = function()
         button.slot.slotNum = slotNum
         button.button.slotNum = slotNum
         button:SetShowBindingText(false)
+        -- 创建即隐藏：锚定完成前不可见(否则短暂/永久停留在容器原点=左上角)
+        button.slot:SetHidden(true)
         -- ApplyStyle→ResetBounceAnimation 依赖 self.bounceAnimation；
         -- 且 ZO_ActionButton 虚拟模板不带尺寸，不注入平台模板则 FlipCard 0x0 图标不可见
         button:SetupBounceAnimation()
@@ -463,6 +465,14 @@ l.createStaticRows = function()
   end)
   if not ok then
     l.staticRowsFailed = true
+    -- 隐藏已创建的孤儿控件(仅清表引用会让它们永久停在容器原点)
+    for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+      for _, button in pairs(set) do
+        pcall(function()
+          button.slot:SetHidden(true)
+        end)
+      end
+    end
     l.staticPrimary = {}
     l.staticBackup = {}
     d(string.format("[ADR] static rows creation failed: %s (dynamic fallback)", tostring(err)))
