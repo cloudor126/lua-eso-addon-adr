@@ -342,26 +342,19 @@ end
 ---首槽以近零偏移锚到武器切换按钮(上排 TOPLEFT/下排 BOTTOMLEFT)，后续槽链式 LEFT→RIGHT，
 ---大招链式接在技能段后；避免对带 scale 控件使用大偏移 CENTER 锚(原点堆叠/右贴同族问题)
 ---@type fun(set: table, onTop: boolean, dims: table, abilityGap: number, ultGap: number)
-l.layoutStaticRow = function(set, onTop, dims, abilityGap, ultGap)
-  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  local first = set[3]
-  first.slot:ClearAnchors()
-  if onTop then
-    first.slot:SetAnchor(TOPLEFT, weaponSwap, RIGHT, abilityGap, 0)
-  else
-    first.slot:SetAnchor(BOTTOMLEFT, weaponSwap, RIGHT, abilityGap, 0)
-  end
-  l.setCloneSize(first, dims.ability)
-  for slotNum = 4, 7 do
+---静态行绝对定位(已验证正确的 CENTER 锚)：以切手默认位为基准的绝对坐标，
+---每槽 CENTER 锚到 ZO_ActionBar1，槽尺寸显式硬设(不依赖模板注入)
+---@type fun(set: table, centerY: number, dims: table, abilityGap: number, ultGap: number, swapX: number, swapW: number)
+l.layoutStaticRow = function(set, centerY, dims, abilityGap, ultGap, swapX, swapW)
+  for slotNum = 3, 8 do
     local button = set[slotNum]
+    local x = swapX + swapW + abilityGap
+      + (slotNum == 8 and (4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2)
+        or ((slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2))
     button.slot:ClearAnchors()
-    button:ApplyAnchor(set[slotNum - 1].slot, abilityGap)
-    l.setCloneSize(button, dims.ability)
+    button.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, centerY)
+    l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
   end
-  local ult = set[8]
-  ult.slot:ClearAnchors()
-  ult:ApplyAnchor(set[7].slot, ultGap)
-  l.setCloneSize(ult, dims.ult)
 end
 
 l.layoutStatic = function()
@@ -376,7 +369,8 @@ l.layoutStatic = function()
     l.layoutDynamic()
     return
   end
-  local abilityGap, ultGap, gapY = l.platformOffsets()
+  local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   -- 首次应用时确认提示(便于验证静态布局确实生效)
   if not l.staticAppliedNotified then
@@ -391,12 +385,16 @@ l.layoutStatic = function()
     ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
   end
   l.suppressNativeFlip()
-  -- 隐藏动态单克隆行，两静态行链式布局：主手恒上、副手恒下
+  -- 隐藏动态单克隆行，两静态行绝对定位：主手恒上、副手恒下(CENTER 锚，已验证)
   for slotNum = 3, 8 do
     l.buttons[slotNum].slot:SetHidden(true)
   end
-  l.layoutStaticRow(l.staticPrimary, true, dims, abilityGap, ultGap)
-  l.layoutStaticRow(l.staticBackup, false, dims, abilityGap, ultGap)
+  local swapW = weaponSwap:GetWidth()
+  local swapH = weaponSwap:GetHeight()
+  local bottomCenterY = swapY + swapH / 2
+  local topCenterY = bottomCenterY - dims.ability - gapY
+  l.layoutStaticRow(l.staticPrimary, topCenterY, dims, abilityGap, ultGap, swapX, swapW)
+  l.layoutStaticRow(l.staticBackup, bottomCenterY, dims, abilityGap, ultGap, swapX, swapW)
   for slotNum = 3, 8 do
     l.staticPrimary[slotNum].slot:SetHidden(false)
     l.staticBackup[slotNum].slot:SetHidden(false)
