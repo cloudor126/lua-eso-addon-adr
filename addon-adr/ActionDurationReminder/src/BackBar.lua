@@ -441,7 +441,9 @@ l.layoutStatic = function()
     end
     weaponSwap:ClearAnchors()
     weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX2, swapY2 + (onTop2 and -liftY2 or 0))
-    if not IsInGamepadPreferredMode() and not (DoesUnitExist("companion") and HasActiveCompanion()) then
+    -- 药剂快捷栏钉绝对坐标：无伴侣时原生在两平台都把药剂锚在切手左侧
+    -- (SetCompanionAnchors→ApplyAnchor(weaponSwap, 5))，不钉就会被切手拖动
+    if not (DoesUnitExist("companion") and HasActiveCompanion()) then
       local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
       if qs and qs.slot then
         qs.slot:ClearAnchors()
