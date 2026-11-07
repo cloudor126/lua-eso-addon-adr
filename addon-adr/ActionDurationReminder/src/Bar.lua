@@ -224,10 +224,17 @@ l.onCoreUpdate = function()
     end
   end
   -- 4. prepare to show shift and extend
-  -- native双bar激活时，丢弃旧类型的shift控件（切预设后让标签重建到克隆按钮/贴图行上）
-  local nativeActive = backBar.isActive()
+  -- 克隆行可用性(存在、已同步非激活条、非 Oakensoul)；不可用时退回贴图行
+  local nativeUsable = backBar.isRowUsable()
+  -- 混合模式下的控件类型满理：动态/静态全克隆模式贴图控件退场；
+  -- 经典模式两种共存，仅克隆行不可用时退场 native 控件
+  local classicHybrid = backBar.isActive() and backBar.isClassicMode()
   for slotNum, widget in pairs(l.shiftedBarWidgetMap) do
-    if (widget.backdrop ~= nil) == nativeActive then
+    local isTexture = widget.backdrop ~= nil
+    if isTexture and nativeUsable and not classicHybrid then
+      widget:hide()
+      l.shiftedBarWidgetMap[slotNum] = nil
+    elseif not isTexture and not nativeUsable then
       widget:hide()
       l.shiftedBarWidgetMap[slotNum] = nil
     end
@@ -256,6 +263,8 @@ l.onCoreUpdate = function()
     end
   end
   -- 4.1 sort later actions show first
+  -- 经典模式下仅非激活条的动作上克隆槽(槽位语义)；其余(激活条/无分类)走贴图行
+  local nativeVisibleMap = {}
   if #toShowIdList > 0 then
     table.sort(toShowIdList, function(id1, id2)
       return toShowActionMap[id1]:getStartTime() > toShowActionMap[id2]:getStartTime()
@@ -266,7 +275,15 @@ l.onCoreUpdate = function()
       local action = toShowActionMap[id]
       local slotNum = action.slotNum
       local inAppend = false
+      -- 经典混合模式下按动作来源决定控件类型；类型不符的旧控件先消理
+      local wantNative = nativeUsable
+        and (not classicHybrid or action.hotbarCategory == backBar.getHotbar())
       local widget = l.shiftedBarWidgetMap[slotNum]
+      if widget and (widget.backdrop ~= nil) ~= wantNative then
+        widget:hide()
+        l.shiftedBarWidgetMap[slotNum] = nil
+        widget = nil
+      end
       if inAppend or (widget and widget.visible) then
         appendIndex = appendIndex + 1
         widget = l.appendedBarWidgetMap[appendIndex]
@@ -275,8 +292,11 @@ l.onCoreUpdate = function()
           l.appendedBarWidgetMap[appendIndex] = widget
         end
       elseif not widget then
-        widget = views.newWidget(slotNum, true, nil, nativeActive and backBar.getSlotControl(slotNum) or nil)
+        widget = views.newWidget(slotNum, true, nil, wantNative and backBar.getSlotControl(slotNum) or nil)
         l.shiftedBarWidgetMap[slotNum] = widget
+      end
+      if wantNative then
+        nativeVisibleMap[slotNum] = true
       end
       widget:updateWithAction(action, now)
       if widget.backdrop then
@@ -284,8 +304,12 @@ l.onCoreUpdate = function()
       end
     end
   end
+  -- 经典模式按可见集控制克隆槽；全克隆模式恒全部显示
+  if backBar.isActive() then
+    backBar.setSlotsVisible(classicHybrid and nativeVisibleMap or nil)
+  end
   -- 4.2 show fully (texture fallback when the native clone row failed to activate)
-  if not nativeActive and backBar.getEffectivePreset() ~= "classic" then
+  if not nativeUsable and backBar.getEffectivePreset() ~= "classic" then
     local withOakensoul = GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING1)):find("oakensoul")
       or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find("oakensoul")
     if not withOakensoul then

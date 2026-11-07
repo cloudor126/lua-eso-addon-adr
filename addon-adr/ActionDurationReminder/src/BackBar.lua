@@ -61,6 +61,10 @@ l.currentHotbar = nil
 l.lastAppliedPreset = nil
 ---@type boolean 静态布局首次应用提示(每会话一次)
 l.staticAppliedNotified = false
+---@type boolean 经典模式：克隆行仅显示有计时的槽(可见性由 Bar 模块每帧驱动)
+l.classicMode = false
+---@type table<number, boolean>|nil 经典模式下各槽可见集(事件同步后重应用)
+l.classicVisibleMap = nil
 
 ---冲突检测(会话级)：FAB 自带完整双bar，存在时硬回退①；
 ---BUI/Azurah 只会整体移动/换肤动作条，本模块锚点为相对锚可跟随，仅警告不降级；每次会话提示一次
@@ -268,6 +272,10 @@ l.syncSlot = function(slotNum, hotbar)
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
   l.applyInactiveStyle(button)
+  -- HandleSlotChanged→SetEnabled(true) 会重新显示槽位，经典模式下重应用可见性
+  if l.classicMode then
+    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[slotNum] == true))
+  end
 end
 
 ---同步整行(换武器/全量刷新)
@@ -466,7 +474,9 @@ l.activate = function()
   end
   l.active = true
   l.lastAppliedPreset = l.effectivePreset()
-  l.suppressSystemBackRow()
+  if l.lastAppliedPreset ~= "classic" then
+    l.suppressSystemBackRow()
+  end
   l.registerEvents()
 end
 
@@ -485,13 +495,16 @@ end
 ---@type fun()
 l.onCoreUpdate = function()
   local sv = l.getSavedVars()
-  local want = sv.barEnabled and l.effectivePreset() ~= "classic"
+  -- FAB 存在时任何预设都不激活克隆行(回退贴图经典)；否则所有预设激活，
+  -- classic 仅作为可见性模式(每槽有计时才显示，由 Bar 模块每帧传入可见集)
+  local want = sv.barEnabled and _G.FancyActionBar == nil
   if want and not l.active then
     l.activate()
   elseif not want and l.active then
     l.deactivate()
   end
   if l.active and l.container then
+    l.classicMode = l.effectivePreset() == "classic"
     -- 预设切换(动态↔静态)时重新布局：activate/deactivate 分支覆盖不到已激活状态下的切换
     local effective = l.effectivePreset()
     if effective ~= l.lastAppliedPreset then
@@ -534,8 +547,43 @@ end
 ---@type fun()
 m.updateLayout = function()
   if l.active and l.container then
+    l.classicMode = l.effectivePreset() == "classic"
     l.lastAppliedPreset = l.effectivePreset()
     l.syncAll()
+  end
+end
+
+---克隆行当前是否可用于承载标签(存在、已同步到非激活条、非 Oakensoul)
+---@type fun(): boolean
+m.isRowUsable = function()
+  return l.active and l.container ~= nil and l.currentHotbar ~= nil and not l.hasOakensoul()
+end
+
+---是否处于经典可见性模式
+---@type fun(): boolean
+m.isClassicMode = function()
+  return l.classicMode
+end
+
+---当前克隆行对应的非激活条
+---@type fun(): number|nil
+m.getHotbar = function()
+  return l.currentHotbar
+end
+
+---设置各克隆槽可见性(仅经典模式生效；非经典或传 nil 时全部显示)
+---@type fun(visibleMap: table<number, boolean>|nil)
+m.setSlotsVisible = function(visibleMap)
+  if not l.container then
+    return
+  end
+  l.classicVisibleMap = visibleMap
+  for slotNum = 3, 8 do
+    local button = l.buttons[slotNum]
+    if button then
+      local visible = not l.classicMode or (visibleMap ~= nil and visibleMap[slotNum] == true)
+      button.slot:SetHidden(not visible)
+    end
   end
 end
 
