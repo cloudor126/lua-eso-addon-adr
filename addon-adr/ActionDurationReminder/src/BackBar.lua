@@ -161,21 +161,27 @@ l.hideUltimateDecorations = function(button)
   end
 end
 
----测量克隆技能段(3-7)原始尺寸(本地像素，模板尺寸与平台间距)
+---平台原生模板尺寸(与 actionbutton.xml 的 Keyboard/Gamepad 模板一致)；
+---不用 GetWidth 测量：ESO 返回的是已含 scale 的屏幕值，缩放后会越量越小
+local PLATFORM_DIMS = {
+  keyboard = { ability = 50, ult = 50 },
+  gamepad = { ability = 64, ult = 70 },
+}
+
+---测量克隆技能段(3-7)原始尺寸(本地像素，平台常量)
 ---@type fun(): number, number
 l.measureRowDims = function()
   local abilityGap = l.platformOffsets()
-  local first = l.buttons[3].slot
-  local width = first:GetWidth() * 5 + abilityGap * 4
-  local height = first:GetHeight()
-  return width, height
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  local width = dims.ability * 5 + abilityGap * 4
+  return width, dims.ability
 end
 
 ---测量克隆大招槽原始尺寸
 ---@type fun(): number, number
 l.measureUltDims = function()
-  local ult = l.buttons[8].slot
-  return ult:GetWidth(), ult:GetHeight()
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  return dims.ult, dims.ult
 end
 
 ---内层技能按钮链式布局(3-7 锚在技能组内层；大招锚在独立内层)
@@ -203,14 +209,13 @@ l.layoutDynamic = function()
     return
   end
   local _, _, gapY = l.platformOffsets()
-  local nativeSlot3 = ZO_ActionBar_GetButton(3).slot
-  local nativeSlot7 = ZO_ActionBar_GetButton(7).slot
+  local nativeSlot5 = ZO_ActionBar_GetButton(5).slot
   local nativeUlt = ZO_ActionBar_GetButton(8).slot
   local width, height = l.measureRowDims()
   l.inner:SetDimensions(width, height)
   l.container:ClearAnchors()
-  l.container:SetAnchor(BOTTOMLEFT, nativeSlot3, TOPLEFT, 0, -gapY)
-  l.container:SetAnchor(BOTTOMRIGHT, nativeSlot7, TOPRIGHT, 0, -gapY)
+  -- 技能组底边中心直接锚在原生中槽(slot5)顶中：中槽中线在任何缩放下精确对齐
+  l.container:SetAnchor(BOTTOM, nativeSlot5, TOP, 0, -gapY)
   -- 大招单独对齐：外层底边中心锚在原生大招顶中，自中心缩放
   local ultWidth, ultHeight = l.measureUltDims()
   l.ultInner:SetDimensions(ultWidth, ultHeight)
