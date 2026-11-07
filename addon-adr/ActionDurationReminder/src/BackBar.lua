@@ -47,7 +47,16 @@ local backBarSavedVarsDefaults = {
 ---@type boolean 静态预设下原生条是否被拍升(退出/切回动态时需还原)
 l.nativeLifted = false
 
----@type table<number, table> slotNum(3..8) -> ActionButton克隆
+---@type boolean 静态双克隆行已接管(原生槽隐藏中)
+l.staticEngaged = false
+---@type boolean 静态克隆行创建失败闭锁(本会话不再重试)
+l.staticRowsFailed = false
+---@type table<number, table> 静态主手行 slotNum(3..8) -> 克隆(恒绑定 PRIMARY)
+l.staticPrimary = {}
+---@type table<number, table> 静态副手行 slotNum(3..8) -> 克隆(恒绑定 BACKUP)
+l.staticBackup = {}
+
+---@type table<number, table> slotNum(3..8) -> ActionButton克隆(动态/经典用)
 l.buttons = {}
 ---@type Control|nil 纯显隐用分组容器(不参与定位/缩放，锚点语义零风险)
 l.container = nil
@@ -172,11 +181,23 @@ l.measureRowDims = function()
   return width, dims.ability
 end
 
----应用克隆槽缩放(叶子控件自身缩放，同FAB的 backUlt.slot:SetScale 模式；
----中间容器永不缩放——scaled容器锚点语义不可靠，是右贴偏移的根源)
+---激活行样式：全亮(静态双克隆中逻辑上对应原生条的那一行不吃比例/暗化)
+---@type fun(button: table)
+l.applyActiveStyle = function(button)
+  if button.icon then
+    button.icon:SetAlpha(1)
+    button.icon:SetDesaturation(0)
+  end
+end
+
+---应用克隆槽缩放：动态/经典=统一比例；静态=激活行100%、非激活行用比例
 ---@type fun()
 l.applyScale = function()
   local s = l.getSavedVars().barShowShiftScalePercent / 100
+  if l.staticEngaged then
+    l.applyStaticRoles()
+    return
+  end
   for slotNum = 3, 8 do
     local button = l.buttons[slotNum]
     if button then
@@ -203,59 +224,8 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
----静态预设：药剂快捷栏锚到切手默认位的绝对坐标(ZO_ActionBar1 空间)，
----切手按钮滑移动画期间不再被拖动。仅无激活伴侣时接管；有伴侣时原生把它
----锚在伴侣大招槽上，不动它
----@type fun()
-l.compensateQuickslot = function()
-  l.quickslotCompensated = false
-  if DoesUnitExist("companion") and HasActiveCompanion() then
-    return
-  end
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  if not weaponSwap then
-    return
-  end
-  local _, _, _, swapX, swapY = l.platformOffsets()
-  local swapH = weaponSwap:GetHeight()
-  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-  if qs and qs.slot then
-    qs.slot:ClearAnchors()
-    qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX - 5, swapY + swapH / 2)
-    l.quickslotCompensated = true
-  end
-end
-
----恢复原生3号槽与切手按钮默认锚(静态预设动过才需要)，并还原快捷栏补偿
----@type fun()
-l.restoreNativeAnchor = function()
-  if not l.nativeLifted then
-    return
-  end
-  l.nativeLifted = false
-  local nativeButton3 = ZO_ActionBar_GetButton(3)
-  local abilityGap, _, _, swapX, swapY = l.platformOffsets()
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  nativeButton3.slot:ClearAnchors()
-  if weaponSwap then
-    nativeButton3:ApplyAnchor(weaponSwap, abilityGap)
-    weaponSwap:ClearAnchors()
-    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
-  end
-  if l.quickslotCompensated then
-    l.quickslotCompensated = false
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    if qs and qs.slot and weaponSwap then
-      qs.slot:ClearAnchors()
-      qs.slot:SetAnchor(RIGHT, weaponSwap, LEFT, -5, 0)
-    end
-  end
-  l.unpinKeybinds()
-  l.restoreNativeFlip()
-end
-
----按键提示(ButtonText)固定/还原：静态抬升原生条时，1-5/T 键提示钉在原始屏幕位置，
----不随原生条上下移动；还原时恢复原生锚形(TOP→slot.BOTTOM, offsetY 键盘1/手柄-6)
+---按键提示(ButtonText)固定/还原：静态下原生槽被隐藏，键提示重父到 ZO_ActionBar1
+---并钉在原始屏幕位置；退出静态时还原父级与原生锚形(TOP→slot.BOTTOM)
 l.keybindsPinned = false
 
 ---@type fun()
@@ -282,6 +252,8 @@ l.pinKeybinds = function()
             or ((slotNum - 3) * (dims.ability + abilityGap)))
         + w / 2
       local y = swapY + swapH / 2 + w / 2 + textOff
+      -- 重父到 ZO_ActionBar1：静态下原生槽被隐藏，子控件需独立父级才能保持可见
+      text:SetParent(ZO_ActionBar1)
       text:ClearAnchors()
       text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, x, y)
     end
@@ -307,38 +279,7 @@ l.unpinKeybinds = function()
 end
 
 ---静态下用淡入淡出时间线替换原生按钮的翻转时间线：原生代码在换武器时无条件
----PlayFromStart hotbarSwapAnimation，替换后原生条同步获得交叉淡化而非翻转；
----还原时放回原时间线
-l.staticSwapSaved = {}
-
----@type fun()
-l.suppressNativeFlip = function()
-  for slotNum = 3, 8 do
-    local nb = ZO_ActionBar_GetButton(slotNum)
-    if nb and nb.hotbarSwapAnimation and not l.staticSwapSaved[slotNum] then
-      l.staticSwapSaved[slotNum] = nb.hotbarSwapAnimation
-      if not nb.adrSwapFade then
-        -- 空时间线：原生代码换武器时仍会 PlayFromStart，但无任何动画动作，
-        -- 表现完全由静态编排(切手缓动+双排alpha下潜)接管
-        nb.adrSwapFade = ANIMATION_MANAGER:CreateTimeline()
-      end
-      nb.hotbarSwapAnimation = nb.adrSwapFade
-    end
-  end
-end
-
----@type fun()
-l.restoreNativeFlip = function()
-  for slotNum = 3, 8 do
-    local nb = ZO_ActionBar_GetButton(slotNum)
-    if nb and l.staticSwapSaved[slotNum] then
-      nb.hotbarSwapAnimation = l.staticSwapSaved[slotNum]
-      l.staticSwapSaved[slotNum] = nil
-    end
-  end
-end
-
----静态克隆槽 X 偏移(切手基准，本地单位)：技能 3-7 链式，大招在技能段+原生大招间距处
+---静态克隆槽 X 偏移(切手基准，屏幕单位)：技能 3-7 链式，大招在技能段+原生大招间距处
 ---@type fun(slotNum: number, dims: table, abilityGap: number, ultGap: number): number
 l.staticOffsetX = function(slotNum, dims, abilityGap, ultGap)
   if slotNum == 8 then
@@ -347,67 +288,147 @@ l.staticOffsetX = function(slotNum, dims, abilityGap, ultGap)
   return abilityGap + (slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2
 end
 
----静态预设：主手条固定在上，副手条固定在下。
----原生条渲染当前激活条：主手激活时原生条抬到上行，克隆行(副手)占原生条原位；
----副手激活时原生条留在原位，克隆行(主手)在上。均以武器切换按钮为锚基准(同FAB)。
----克隆槽用未缩放本地间距的锚点 offset(引擎×scale后即均匀缩放组)，槽各自 SetScale
+---静态预设：双克隆行。主手行(P)恒在上、副手行(B)恒在下，位置永不变化；
+---仅隐藏原生6个技能按钮(切手/药剂/伴侣等全部不动)；键位数字钉在原位；
+---激活行 100% 尺寸全亮(不吃比例/暗化)，非激活行用比例+暗化；换武器仅互换明暗/尺寸角色，
+---内容永不重刷(两行各自恒绑定自己的武器集)
 ---@type fun()
 l.layoutStatic = function()
   if not l.container or not l.buttons[3] then
     return
   end
-  local abilityGap, ultGap, gapY = l.platformOffsets()
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  if not weaponSwap then
-    d("[ADR] layoutStatic: WeaponSwap not found, falling back to dynamic layout")
+  if l.hasOakensoul() or l.inactiveHotbar() == nil then
+    l.exitStatic()
+    return
+  end
+  if not l.createStaticRows() then
     l.layoutDynamic()
     return
   end
-  local nativeButton3 = ZO_ActionBar_GetButton(3)
-  local liftY = nativeButton3.slot:GetHeight() + gapY
-  local active = GetActiveHotbarCategory()
-  local nativeOnTop = active == HOTBAR_CATEGORY_PRIMARY
+  local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
+  local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   -- 首次应用时确认提示(便于验证静态布局确实生效)
   if not l.staticAppliedNotified then
     l.staticAppliedNotified = true
     d(string.format("[ADR] %s", addon.text("ADR static double bar applied")))
   end
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  local scale = l.getSavedVars().barShowShiftScalePercent / 100
-  -- 静态定位基准全部换算到 ZO_ActionBar1 绝对坐标(切手默认位)：
-  -- 切手按钮滑移动画期间不被任何控件跟随，其他控件也不再依赖它
-  local _, _, _, swapX, swapY = l.platformOffsets()
-  local swapW, swapH = weaponSwap:GetWidth(), weaponSwap:GetHeight()
-  local swapCenterY = swapY + swapH / 2
-  -- 切手按钮：抬升状态偏移 -liftY
-  weaponSwap:ClearAnchors()
-  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY + (nativeOnTop and -liftY or 0))
-  -- 原生3号槽(整条原生链跟随)：LEFT 锚到切手默认右侧的绝对位
-  nativeButton3.slot:ClearAnchors()
-  nativeButton3.slot:SetAnchor(LEFT, ZO_ActionBar1, TOPLEFT, swapX + swapW + abilityGap, swapCenterY + (nativeOnTop and -liftY or 0))
-  l.nativeLifted = nativeOnTop
-  l.compensateQuickslot()
-  l.suppressNativeFlip()
-  -- 克隆行常量行距锚定(绝对坐标)：行间隙 = gapY 恒定(不随缩放变化)。
-  --   克隆在下(原生抬升)：TOP 锚，克隆顶 = 原生底 + gapY = swapCenterY - H/2
-  --   克隆在上(原生在原位)：BOTTOM 锚，克隆底 = 原生顶 - gapY = swapCenterY - H/2 - gapY
-  --   x 同理换算；offset 均为克隆槽本地单位(/scale)，且切手滑移期间完全静止
-  local rowTopY = swapCenterY - dims.ability / 2
-  local cloneAnchorType = nativeOnTop and TOP or BOTTOM
-  local cloneOffY = (nativeOnTop and rowTopY or (rowTopY - gapY)) / scale
+  local swapW = weaponSwap:GetWidth()
+  local swapH = weaponSwap:GetHeight()
+  local bottomCenterY = swapY + swapH / 2
+  local topCenterY = bottomCenterY - dims.ability - gapY
+  -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
+  l.pinKeybinds()
+  -- 隐藏原生6个技能按钮(仅此6个；切手/药剂/伴侣大招不动)
   for slotNum = 3, 8 do
-    local button = l.buttons[slotNum]
-    local offsetX = (swapX + swapW + l.staticOffsetX(slotNum, dims, abilityGap, ultGap)) / scale
-    button.slot:ClearAnchors()
-    button.slot:SetAnchor(cloneAnchorType, ZO_ActionBar1, TOPLEFT, offsetX, cloneOffY)
+    ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
   end
-  l.applyScale()
-  -- 主手激活(原生条抬升)时钉住键位提示；副手时原生条已在原位，解除钉住
-  if nativeOnTop then
-    l.pinKeybinds()
-  else
-    l.unpinKeybinds()
+  -- 隐藏动态单克隆行，展示两静态行；位置为绝对坐标(锚点 offset 为屏幕单位，
+  -- 不随槽自身 scale 变化)
+  for slotNum = 3, 8 do
+    l.buttons[slotNum].slot:SetHidden(true)
+    local x = swapX + swapW + abilityGap
+      + (slotNum == 8 and (4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2)
+        or ((slotNum - 3) * (dims.ability + abilityGap) + dims.ability / 2))
+    local pButton = l.staticPrimary[slotNum]
+    pButton.slot:ClearAnchors()
+    pButton.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, topCenterY)
+    pButton.slot:SetHidden(false)
+    local bButton = l.staticBackup[slotNum]
+    bButton.slot:ClearAnchors()
+    bButton.slot:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, x, bottomCenterY)
+    bButton.slot:SetHidden(false)
   end
+  l.staticEngaged = true
+  l.applyStaticRoles()
+end
+
+---退出静态：恢复原生槽显示、还原键位数字、隐藏两静态行
+---@type fun()
+l.exitStatic = function()
+  if not l.staticEngaged then
+    return
+  end
+  l.staticEngaged = false
+  for slotNum = 3, 8 do
+    ZO_ActionBar_GetButton(slotNum).slot:SetHidden(false)
+    l.staticPrimary[slotNum].slot:SetHidden(true)
+    l.staticBackup[slotNum].slot:SetHidden(true)
+    l.buttons[slotNum].slot:SetHidden(false)
+  end
+  l.unpinKeybinds()
+end
+
+---静态角色应用：激活行 100%+全亮，非激活行 比例+暗化；换武器仅调此函数
+---@type fun()
+l.applyStaticRoles = function()
+  if not l.staticEngaged then
+    return
+  end
+  local s = l.getSavedVars().barShowShiftScalePercent / 100
+  local active = GetActiveHotbarCategory()
+  local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+  local inactiveSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticBackup or l.staticPrimary
+  for slotNum = 3, 8 do
+    local aButton = activeSet[slotNum]
+    aButton.slot:SetScale(1)
+    l.applyActiveStyle(aButton)
+    local iButton = inactiveSet[slotNum]
+    iButton.slot:SetScale(s)
+    l.applyInactiveStyle(iButton)
+  end
+end
+
+---创建静态双克隆行(幂等，失败闭锁)
+---@type fun(): boolean
+l.createStaticRows = function()
+  if l.staticPrimary[3] then
+    return true
+  end
+  if l.staticRowsFailed or not l.container then
+    return false
+  end
+  local ok, err = pcall(function()
+    for slotNum = 3, 8 do
+      local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
+      local pButton = ActionButton:New(
+        slotNum + 60,
+        ACTION_BUTTON_TYPE_VISIBLE,
+        l.container,
+        template,
+        HOTBAR_CATEGORY_PRIMARY
+      )
+      local bButton = ActionButton:New(
+        slotNum + 80,
+        ACTION_BUTTON_TYPE_VISIBLE,
+        l.container,
+        template,
+        HOTBAR_CATEGORY_BACKUP
+      )
+      for _, button in ipairs({ pButton, bButton }) do
+        button.slot.slotNum = slotNum
+        button.button.slotNum = slotNum
+        button:SetShowBindingText(false)
+        button:SetupBounceAnimation()
+        l.setupDragDropHandlers(button, function()
+          return button.slot.hotbarCategory
+        end)
+        if slotNum == 8 then
+          l.hideUltimateDecorations(button)
+        end
+      end
+      l.staticPrimary[slotNum] = pButton
+      l.staticBackup[slotNum] = bButton
+    end
+  end)
+  if not ok then
+    l.staticRowsFailed = true
+    l.staticPrimary = {}
+    l.staticBackup = {}
+    d(string.format("[ADR] static rows creation failed: %s (dynamic fallback)", tostring(err)))
+    return false
+  end
+  return true
 end
 
 ---按预设分发布局；切回动态/关闭时还原原生锚；同步第二行缩放(所有预设生效)
@@ -419,7 +440,7 @@ l.layoutRow = function()
   if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
     l.layoutStatic()
   else
-    l.restoreNativeAnchor()
+    l.exitStatic()
     l.layoutDynamic()
   end
 end
@@ -438,17 +459,26 @@ end
 ---同步单个克隆槽位(原生刷新链：图标/actionId/状态/不可用发暗)
 ---@type fun(slotNum: number, hotbar: number)
 l.syncSlot = function(slotNum, hotbar)
-  local button = l.buttons[slotNum]
+  l.syncButton(l.buttons[slotNum], hotbar)
+end
+
+---同步克隆按钮(静态双克隆/动态单克隆共用)
+---@type fun(button: table|nil, hotbar: number)
+l.syncButton = function(button, hotbar)
   if not button then
     return
   end
   button.slot.hotbarCategory = hotbar
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
-  l.applyInactiveStyle(button)
+  if l.staticEngaged then
+    l.applyStaticRoles()
+  else
+    l.applyInactiveStyle(button)
+  end
   -- HandleSlotChanged→SetEnabled(true) 会重新显示槽位，经典模式下重应用可见性
-  if l.classicMode then
-    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[slotNum] == true))
+  if not l.staticEngaged and l.classicMode then
+    button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
   end
 end
 
@@ -502,17 +532,20 @@ local function onSwapAnimationDone(_, button)
 end
 
 ---@type fun(button: table)
-l.setupDragDropHandlers = function(button)
+l.setupDragDropHandlers = function(button, getCategory)
   local buttonControl = button.button
   if not buttonControl then
     return
+  end
+  if not getCategory then
+    getCategory = l.inactiveHotbar
   end
 
   buttonControl:SetHandler("OnReceiveDrag", function()
     if GetCursorContentType() == MOUSE_CONTENT_EMPTY then
       return
     end
-    local hotbar = l.inactiveHotbar()
+    local hotbar = getCategory()
     if hotbar then
       CallSecureProtected("PlaceInActionBar", button.slot.slotNum, hotbar)
     end
@@ -522,7 +555,7 @@ l.setupDragDropHandlers = function(button)
     if GetCursorContentType() ~= MOUSE_CONTENT_EMPTY or ZO_ActionBar_AreActionBarsLocked() then
       return false
     end
-    local hotbar = l.inactiveHotbar()
+    local hotbar = getCategory()
     if not hotbar or not IsSlotUsed(button.slot.slotNum, hotbar) then
       return false
     end
@@ -532,7 +565,7 @@ l.setupDragDropHandlers = function(button)
 
   buttonControl:SetHandler("OnClicked", function(_, mouseButton)
     if mouseButton == MOUSE_BUTTON_INDEX_LEFT and GetCursorContentType() ~= MOUSE_CONTENT_EMPTY then
-      local hotbar = l.inactiveHotbar()
+      local hotbar = getCategory()
       if hotbar then
         CallSecureProtected("PlaceInActionBar", button.slot.slotNum, hotbar)
       end
@@ -588,14 +621,21 @@ l.applyPlatformStyle = function()
   if not l.container then
     return
   end
-  for slotNum = 3, 8 do
-    local button = l.buttons[slotNum]
-    local base = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
-    button:ApplyStyle(ZO_GetPlatformTemplate(base))
-    if slotNum == 8 then
-      l.hideUltimateDecorations(button)
+  local function styleSet(set)
+    for slotNum = 3, 8 do
+      local button = set[slotNum]
+      if button then
+        local base = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
+        button:ApplyStyle(ZO_GetPlatformTemplate(base))
+        if slotNum == 8 then
+          l.hideUltimateDecorations(button)
+        end
+      end
     end
   end
+  styleSet(l.buttons)
+  styleSet(l.staticPrimary)
+  styleSet(l.staticBackup)
   l.layoutRow()
   l.syncAll()
 end
@@ -623,103 +663,47 @@ l.playSwapAnimation = function()
     end
     return
   end
-  -- 静态：静态=无位置动画。两行瞬间定格到新状态(同帧)；只有切手按钮从旧位平滑滑移到新位；
-  -- 双排轻微 alpha 下潜(最低 0.3，绝不全隐)，内容在下潜谷底(半程)换入。代际号防连打叠帧
-  local nativeButton3 = ZO_ActionBar_GetButton(3)
-  local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
-  local slotH = nativeButton3.slot:GetHeight()
-  local liftY = slotH + gapY
-  local nativeOnTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
-  -- 1. 两行瞬间定格到新状态：克隆行/快捷栏/键位提示/原生条全部就位
-  l.layoutStatic()
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  if not weaponSwap then
-    return
-  end
-  -- 2. 切手按钮从旧位平滑滑移到新位(旧位抬升状态与新状态相反)
-  l.staticSwapGen = (l.staticSwapGen or 0) + 1
-  local gen = l.staticSwapGen
-  local startSwapY = nativeOnTop and swapY or (swapY - liftY)
-  local endSwapY = nativeOnTop and (swapY - liftY) or swapY
-  weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, startSwapY)
-  local steps = 14
-  local i = 0
-  local applyAllAlpha = function(a)
-    for slotNum = 3, 8 do
-      local button = l.buttons[slotNum]
-      if button then
-        button.slot:SetAlpha(a)
-      end
-      local nb = ZO_ActionBar_GetButton(slotNum)
-      if nb then
-        nb.slot:SetAlpha(a)
-      end
-    end
-  end
-  local swapContent = function()
-    local hb = l.inactiveHotbar()
-    if not hb then
-      return
-    end
-    l.currentHotbar = hb
-    for slotNum = 3, 8 do
-      local button = l.buttons[slotNum]
-      if button then
-        button.slot.hotbarCategory = hb
-        button.button.hotbarCategory = hb
-        button:HandleSlotChanged(hb)
-        l.applyInactiveStyle(button)
-      end
-      -- 原生条内容同步换入(原生翻转时间线已被替换)，并补齐原生结束回调职责
-      local nb = ZO_ActionBar_GetButton(slotNum)
-      if nb then
-        nb:SetShowCooldown(false)
-        nb:HandleSlotChanged(GetActiveHotbarCategory())
-        nb.noUpdates = false
-      end
-    end
-  end
-  local tick
-  tick = function()
-    if gen ~= l.staticSwapGen then
-      return
-    end
-    i = i + 1
-    local t = i / steps
-    -- 仅切手按钮滑移
-    local y = startSwapY + (endSwapY - startSwapY) * t
-    weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, y)
-    -- alpha 下潜：t=0.5 时 0.3
-    local a = 1 - 0.7 * (t <= 0.5 and t or (1 - t))
-    applyAllAlpha(a)
-    if i == steps / 2 then
-      swapContent()
-    end
-    if i < steps then
-      zo_callLater(tick, 30)
-    else
-      applyAllAlpha(1)
-    end
-  end
-  zo_callLater(tick, 30)
+  -- 静态：事件路由已直接 applyStaticRoles，此处不会进入；保险起见同样瞬时处理
+  l.applyStaticRoles()
 end
 
 ---@type fun()
 l.registerEvents = function()
   local EM = GetEventManager()
   EM:RegisterForEvent(EVENT_NAME, EVENT_HOTBAR_SLOT_UPDATED, function(_, slotNum, hotbarCategory)
-    if l.buttons[slotNum] and hotbarCategory == l.currentHotbar then
+    if l.staticEngaged then
+      -- 静态：按恒定分类路由到对应克隆行
+      if hotbarCategory == HOTBAR_CATEGORY_PRIMARY then
+        l.syncButton(l.staticPrimary[slotNum], hotbarCategory)
+      elseif hotbarCategory == HOTBAR_CATEGORY_BACKUP then
+        l.syncButton(l.staticBackup[slotNum], hotbarCategory)
+      end
+    elseif l.buttons[slotNum] and hotbarCategory == l.currentHotbar then
       l.syncSlot(slotNum, hotbarCategory)
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_HOTBAR_SLOT_STATE_UPDATED, function(_, slotNum, hotbarCategory)
-    local button = l.buttons[slotNum]
-    if button and hotbarCategory == l.currentHotbar then
-      button:UpdateState()
-      l.applyInactiveStyle(button)
+    if l.staticEngaged then
+      local button = hotbarCategory == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary[slotNum]
+        or l.staticBackup[slotNum]
+      if button then
+        button:UpdateState()
+        l.applyStaticRoles()
+      end
+    else
+      local button = l.buttons[slotNum]
+      if button and hotbarCategory == l.currentHotbar then
+        button:UpdateState()
+        l.applyInactiveStyle(button)
+      end
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
+    if l.staticEngaged then
+      -- 静态：位置/内容均不变，仅激活角色(明暗/尺寸)互换
+      l.applyStaticRoles()
+      return
+    end
     if didActiveHotbarChange then
       -- 换武器：播放翻转动画，内容在半程换入(动画回调内完成)，不同步闪变
       l.playSwapAnimation()
@@ -799,7 +783,7 @@ l.deactivate = function()
   l.unregisterEvents()
   l.active = false
   l.lastAppliedPreset = nil
-  l.restoreNativeAnchor()
+  l.exitStatic()
   if l.container then
     l.container:SetHidden(true)
   end
@@ -824,13 +808,18 @@ l.onCoreUpdate = function()
       l.lastAppliedPreset = effective
       l.syncAll()
     end
-    -- Oakensoul 或非武器热栏(攻城等)时隐藏第二行；恢复时全量重同步
+    -- Oakensoul 或非武器热栏(攻城等)时隐藏克隆行并交还原生条；恢复时全量重同步
     if l.hasOakensoul() or l.inactiveHotbar() == nil then
+      l.exitStatic()
       l.container:SetHidden(true)
       l.currentHotbar = nil
-      l.restoreNativeAnchor()
     elseif l.container:IsControlHidden() then
       l.syncAll()
+    elseif l.staticEngaged then
+      -- 原生代码可能在事件中重新显示原生槽，逐帧确保隐藏(幂等)
+      for slotNum = 3, 8 do
+        ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
+      end
     end
   end
 end
@@ -904,13 +893,44 @@ end
 
 ---@type fun(slotNum: number): Control|nil
 m.getSlotControl = function(slotNum)
+  -- 静态：非激活行(标签/冷却线载体)是静态非激活集；动态/经典：动态单克隆集
+  if l.staticEngaged then
+    local active = GetActiveHotbarCategory()
+    local inactiveSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticBackup or l.staticPrimary
+    local button = inactiveSet[slotNum]
+    return button and button.slot or nil
+  end
   local button = l.buttons[slotNum]
   return button and button.slot or nil
 end
 
----菜单滑条直接调用：立即重新应用非激活暗化
+---主条(激活条)槽控件：静态下为静态激活集(原生槽已隐藏)；否则为原生槽。
+---供 Bar 模块把主条计时标签重定向到激活克隆行
+---@type fun(slotNum: number): Control|nil
+m.getActiveSlotControl = function(slotNum)
+  if l.staticEngaged then
+    local active = GetActiveHotbarCategory()
+    local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+    local button = activeSet[slotNum]
+    return button and button.slot or nil
+  end
+  local nb = ZO_ActionBar_GetButton(slotNum)
+  return nb and nb.slot or nil
+end
+
+---静态双克隆行是否接管(原生槽隐藏中)
+---@type fun(): boolean
+m.isStaticNativeHidden = function()
+  return l.staticEngaged
+end
+
+---菜单滑条直接调用：立即重新应用暗化(静态=角色化，激活行全亮)
 ---@type fun()
 m.updateStyle = function()
+  if l.staticEngaged then
+    l.applyStaticRoles()
+    return
+  end
   for slotNum = 3, 8 do
     local button = l.buttons[slotNum]
     if button then
@@ -952,7 +972,7 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     buttonCount,
     tostring(l.lastAppliedPreset),
     tostring(l.currentHotbar),
-    tostring(l.nativeLifted),
+    tostring(l.staticEngaged),
     tostring(weaponSwap ~= nil),
     tostring(GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY)
   ))

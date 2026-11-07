@@ -199,8 +199,15 @@ l.onCoreUpdate = function()
   local showedActionMap = {}
   local hotbarCategory = GetActiveHotbarCategory()
   -- 1. show in action bar widgets
+  -- 静态双克隆行接管时，主条(激活条)计时标签重定向到激活克隆行(原生槽已隐藏)
+  local staticEngaged = backBar.isStaticNativeHidden()
   for slotNum = 3, 8 do
     local widget = l.mainBarWidgetMap[slotNum]
+    if widget and widget.nativeMode ~= staticEngaged then
+      widget:hide()
+      widget = nil
+      l.mainBarWidgetMap[slotNum] = nil
+    end
     local abilityId = GetSlotBoundId(slotNum, hotbarCategory)
     if GetSlotType(slotNum, hotbarCategory) == ACTION_TYPE_CRAFTED_ABILITY then
       abilityId = GetAbilityIdForCraftedAbilityId(abilityId)
@@ -222,7 +229,7 @@ l.onCoreUpdate = function()
       showedActionMap[action.ability.id] = action
       showedActionMap[abilityId] = action
       if not widget then
-        widget = views.newWidget(slotNum, false)
+        widget = views.newWidget(slotNum, false, nil, staticEngaged and backBar.getActiveSlotControl(slotNum) or nil)
         l.mainBarWidgetMap[slotNum] = widget
       end
       widget:updateWithAction(action, now)
