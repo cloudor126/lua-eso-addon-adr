@@ -418,13 +418,15 @@ l.layoutStatic = function()
   end
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
-  -- 切手按钮落位到当前激活行左侧(瞬时；换武器时由 TranslateAnimation 滑动)，
-  -- 药剂快捷栏钉绝对坐标(不被切手按钮的移动/滑动拖动；仅无伴侣时接管)。
-  -- 手柄模式跳过：原生永久隐藏切手按钮(GAMEPAD_CONSTANTS.showWeaponSwapButton=false)，
-  -- 且药剂原生位置不同(SetCompanionAnchors 用手柄偏移)，钉键盘位会挪错
+  -- 切手按钮：解除原生永久隐藏(手柄下默认隐藏)并落位到当前激活行左侧(瞬时；
+  -- 换武器时由 TranslateAnimation 滑动)。药剂快捷栏钉绝对坐标仅键盘模式
+  -- (手柄下药剂原生位置不同，不接管)
   local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
   l.quickslotPinned = false
-  if not IsInGamepadPreferredMode() then
+  if weaponSwap then
+    if ZO_WeaponSwap_SetPermanentlyHidden then
+      ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, false)
+    end
     local _, _, gapY2, swapX2, swapY2 = l.platformOffsets()
     local liftY2 = ZO_ActionBar_GetButton(3).slot:GetHeight() + gapY2
     local onTop2 = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
@@ -433,7 +435,7 @@ l.layoutStatic = function()
     end
     weaponSwap:ClearAnchors()
     weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX2, swapY2 + (onTop2 and -liftY2 or 0))
-    if not (DoesUnitExist("companion") and HasActiveCompanion()) then
+    if not IsInGamepadPreferredMode() and not (DoesUnitExist("companion") and HasActiveCompanion()) then
       local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
       if qs and qs.slot then
         qs.slot:ClearAnchors()
@@ -486,6 +488,10 @@ l.exitStatic = function()
     local _, _, _, swapX, swapY = l.platformOffsets()
     weaponSwap:ClearAnchors()
     weaponSwap:SetAnchor(TOPLEFT, ZO_ActionBar1, TOPLEFT, swapX, swapY)
+    -- 手柄下恢复原生行为(切手按钮永久隐藏)；键盘保持可见
+    if IsInGamepadPreferredMode() and ZO_WeaponSwap_SetPermanentlyHidden then
+      ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, true)
+    end
     if l.quickslotPinned then
       l.quickslotPinned = false
       local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
@@ -808,8 +814,7 @@ l.animateStaticSwap = function()
   local liftY = nativeButton3.slot:GetHeight() + gapY
   local onTop = GetActiveHotbarCategory() == HOTBAR_CATEGORY_PRIMARY
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  -- 手柄模式切手按钮被原生永久隐藏，不做滑动(仅角色渐变)
-  if weaponSwap and not IsInGamepadPreferredMode() then
+  if weaponSwap then
     local fromY = onTop and swapY or (swapY - liftY)
     local toY = onTop and (swapY - liftY) or swapY
     l.playSwapGlide(weaponSwap, swapX, fromY, toY)
