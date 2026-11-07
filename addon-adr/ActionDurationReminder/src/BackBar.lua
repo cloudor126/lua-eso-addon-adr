@@ -1503,6 +1503,24 @@ SLASH_COMMANDS["/adrbackbar"] = function()
       ns8:GetScale() or -1,
       tostring(IsInGamepadPreferredMode())
     ))
+    -- 药剂快捷栏与 Q 标签状态(定位切手后 Q 复位的凶手)
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    if qs and qs.slot then
+      local qsText = qs.slot:GetNamedChild("ButtonText")
+      d(string.format(
+        "[ADR] QS parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f | Q parent=%s anchors=%d l=%.0f t=%.0f",
+        qs.slot:GetParent() and qs.slot:GetParent():GetName() or "?",
+        qs.slot:GetNumAnchors(),
+        qs.slot:GetLeft() or -1,
+        qs.slot:GetTop() or -1,
+        qs.slot:GetWidth() or -1,
+        qs.slot:GetHeight() or -1,
+        qsText and (qsText:GetParent() and qsText:GetParent():GetName() or "?") or "nil",
+        qsText and qsText:GetNumAnchors() or -1,
+        qsText and (qsText:GetLeft() or -1) or -1,
+        qsText and (qsText:GetTop() or -1) or -1
+      ))
+    end
   else
     d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
   end
