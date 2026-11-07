@@ -15,6 +15,7 @@ i18n/en.lua
 i18n/$(language).lua
 
 src/Settings.lua
+src/UpgradeNotice.lua
 src/Models.lua
 src/Core.lua
 src/Views.lua
