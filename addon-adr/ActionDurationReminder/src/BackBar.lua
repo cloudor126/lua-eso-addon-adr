@@ -489,15 +489,25 @@ l.setCloneSize = function(button, w)
   if flipCard then
     flipCard:SetDimensions(fcSize, fcSize)
   end
-  -- Icon/TimerOverlay 继承 FlipCardControl(TOPLEFT+BOTTOMRIGHT 锚定填充)，
-  -- FlipCard 改尺寸后自动跟随，不需要也不应该显式 SetDimensions(会破坏填充锚)
+  -- Icon/TimerOverlay：显式重锚到 FlipCard 填充(TOPLEFT+BOTTOMRIGHT)。
+  -- ult 模板的 Icon override 继承链在运行时不可靠(模板链 ability→ult 的
+  -- override 不会清除中间模板注入的显式 Dimensions，导致图标不跟随 FlipCard)，
+  -- 清锚后重设填充锚保证 Icon 恒等于 FlipCard 尺寸
+  local fillChildren = { "Icon", "TimerOverlay", "CooldownIcon" }
+  for i = 1, #fillChildren do
+    local child = button.slot:GetNamedChild(fillChildren[i])
+    if child and flipCard then
+      child:ClearAnchors()
+      child:SetAnchor(TOPLEFT, flipCard, TOPLEFT, 0, 0)
+      child:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 0, 0)
+    end
+  end
   -- Button(边框贴图)：模板默认 ult=70/ability=64，需跟随统一尺寸
   local buttonChild = button.slot:GetNamedChild("Button")
   if buttonChild then
     buttonChild:SetDimensions(w, w)
   end
-  -- Backdrop(边框背景)：改为填满 slot(与原生技能槽一致)，
-  -- 之前的 FlipCard±4(=69px)比技能槽视觉(64px)大几像素
+  -- Backdrop(边框背景)：填满 slot(64px，与原生技能槽一致)
   local backdrop = button.slot:GetNamedChild("Backdrop")
   if backdrop then
     backdrop:ClearAnchors()
