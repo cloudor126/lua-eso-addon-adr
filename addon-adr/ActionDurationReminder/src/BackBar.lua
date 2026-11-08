@@ -454,9 +454,10 @@ l.pinKeybinds = function()
         + w / 2
       local y = swapY + swapH / 2 + w / 2 + textOff
       -- 重父到 ZO_ActionBar1：静态下原生槽被隐藏，子控件需独立父级才能保持可见。
-      -- 重父后 GetNamedChild 查不到(不再是子控件)，必须保存引用供还原使用
+      -- 重父后 GetNamedChild 查不到(不再是子控件)，必须保存引用供还原使用；
+      -- x,y 一并存——ATC 守卫检测到锚被模板重放篡改时精确恢复
       l.pinnedKeybindTexts = l.pinnedKeybindTexts or {}
-      l.pinnedKeybindTexts[slotNum] = { text = text, slot = nb.slot }
+      l.pinnedKeybindTexts[slotNum] = { text = text, slot = nb.slot, x = x, y = y }
       text:SetParent(ZO_ActionBar1)
       text:ClearAnchors()
       text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, x, y)
@@ -1505,6 +1506,25 @@ l.wrapApplyTemplate = function()
         l.guardQuickslotKeybind()
       end
     end
+    -- 1-5/T 钉扎标签监视：模板按名字查找可找到重父后的标签并重放 parent-相对锚
+    -- (叠堆到条中下方)；同帧检测+恢复，首次篡改打印一次真凶(ctrl+调用栈)
+    if l.keybindsPinned and l.pinnedKeybindTexts then
+      for slotNum, entry in pairs(l.pinnedKeybindTexts) do
+        local text = entry.text
+        if text and text:GetParent() == ZO_ActionBar1 then
+          local _, _, relTo = text:GetAnchor(0)
+          if relTo ~= ZO_ActionBar1 then
+            text:ClearAnchors()
+            text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, entry.x, entry.y)
+            if not l.kbTamperLogged then
+              l.kbTamperLogged = true
+              d(string.format("[ADR] KB tamper via ctrl=%s tmpl=%s", ctrl and ctrl.GetName and ctrl:GetName() or "?", tostring(tmpl)))
+              d(debug.traceback())
+            end
+          end
+        end
+      end
+    end
   end
   -- 精准钩：药水槽 ApplyStyle 是已证实的篡改链
   -- (HandleSlotChanged→ApplyStyle→ApplyTemplateToControl)，钩后同帧重钉
@@ -2219,6 +2239,24 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     oneLine("D8", l.buttons[8])
     oneLine("N3", ZO_ActionBar_GetButton(3))
     oneLine("N8", ZO_ActionBar_GetButton(8))
+    -- 1-5/T 键位提示状态(定位叠堆篡改)：重父后从 ZO_ActionBar1 递归查找
+    do
+      for slotNum = 3, 8 do
+        local text = l.pinnedKeybindTexts and l.pinnedKeybindTexts[slotNum]
+          and l.pinnedKeybindTexts[slotNum].text
+          or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("ActionButton" .. slotNum .. "ButtonText"))
+        if text then
+          local _, pt, rel, relPt = text:GetAnchor(0)
+          d(string.format("[ADR] KB%d parent=%s pt=%s relTo=%s relPt=%s l=%.0f t=%.0f",
+            slotNum,
+            text:GetParent() and text:GetParent():GetName() or "?",
+            tostring(pt),
+            rel and rel.GetName and rel:GetName() or "nil",
+            tostring(relPt),
+            text:GetLeft() or -1, text:GetTop() or -1))
+        end
+      end
+    end
     -- Q 键提示状态：父级/锚/坐标(定位重父后位置异常)
     do
       local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
