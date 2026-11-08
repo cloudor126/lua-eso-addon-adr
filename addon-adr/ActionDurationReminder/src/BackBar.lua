@@ -1441,8 +1441,9 @@ end
 l.qsKeybindPinned = false
 l.pinnedQsLabel = nil -- 重父后 GetNamedChild 查不到，保存引用
 
--- 临时诊断+同帧自愈：包装 ApplyTemplateToControl，调用前后对比 Q 标签锚。
--- 若被改：立即重钉(零闪烁) + 打印是哪个控件的应用链干的 + 调用栈(定位后移除日志)
+-- ApplyTemplateToControl 包装(常驻，无日志)：模板控件查找是全局名字注册表，
+-- 重父后的标签仍会被找到并重放 parent-相对模板锚(药水槽 ApplyStyle 链已证实)。
+-- 每次调用后校验我们的钉扎控件，被篡改同帧重钉(零闪烁)
 l.atcWrapped = false
 l.wrapApplyTemplate = function()
   if l.atcWrapped then
@@ -1458,12 +1459,19 @@ l.wrapApplyTemplate = function()
     if label2 and l.qsKeybindPinned then
       local after = select(3, label2:GetAnchor(0))
       if after ~= before or label2:GetParent() ~= ZO_ActionBar1 then
-        d(string.format("[ADR] ATC tamper via ctrl=%s tmpl=%s",
-          ctrl and ctrl.GetName and ctrl:GetName() or "?", tostring(tmpl)))
-        d(debug.traceback())
         l.guardQuickslotKeybind()
       end
     end
+  end
+  -- 精准钩：药水槽 ApplyStyle 是已证实的篡改链
+  -- (HandleSlotChanged→ApplyStyle→ApplyTemplateToControl)，钩后同帧重钉
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if qs and qs.ApplyStyle then
+    ZO_PostHook(qs, "ApplyStyle", function()
+      if l.qsKeybindPinned then
+        l.guardQuickslotKeybind()
+      end
+    end)
   end
 end
 
