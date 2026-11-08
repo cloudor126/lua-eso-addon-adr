@@ -1271,11 +1271,8 @@ local function onSwapAnimationHalfDone(_, button)
   -- 翻转展开阶段会偏大。同原生 reapply 的修法：缩回目标值后重设动画参数
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
-  if button.ApplySwapAnimationStyle then
-    pcall(function()
-      button:ApplySwapAnimationStyle()
-    end)
-  end
+  -- 动画后半程起止值用本地尺寸直写(原生读 GetDimensions 含 scale，会双重缩小)
+  l.applySwapAnimStyleLocal(button, (button.slot.slotNum == 8 and dims.ult or dims.ability) - 3)
   l.applyInactiveStyle(button)
   -- Q 键提示锚的重断言已改为 PostHook 原生药剂栏按钮(见 registerEvents)，
   -- 不再在此处追赶原生刷新时机
@@ -1825,6 +1822,27 @@ end
 ---静态：两行瞬间定格到新状态(静态=无位置动画)，仅切手按钮平滑滑移到新位；
 ---双排轻微 alpha 下潜(最低 0.3)，内容在半程谷底换入。代际号防连打叠帧。
 ---@type fun()
+---克隆翻转动画起止值(本地尺寸直写)：原生 ApplySwapAnimationStyle 读
+---GetDimensions()——返回【含 scale 的屏幕值】，写进动画后被当本地尺寸再乘
+---一次 scale → 缩小了又缩小(Shift Bar scale ≠100% 时切手动画双重缩小)。
+---我们已知目标本地尺寸(setCloneSize 设的 w-3)，直接写入免读值
+---@param button table
+---@param size number FlipCard 本地尺寸(=槽宽-3)
+l.applySwapAnimStyleLocal = function(button, size)
+  local tl = button.hotbarSwapAnimation
+  if not tl then
+    return
+  end
+  pcall(function()
+    local first = tl:GetFirstAnimation()
+    local last = tl:GetLastAnimation()
+    first:SetStartAndEndWidth(size, size)
+    first:SetStartAndEndHeight(size, 0)
+    last:SetStartAndEndWidth(size, size)
+    last:SetStartAndEndHeight(0, size)
+  end)
+end
+
 l.playSwapAnimation = function()
   if not l.container or not l.buttons[3] then
     return
@@ -1837,9 +1855,12 @@ l.playSwapAnimation = function()
   if l.getSavedVars().barPreset ~= "static" then
     -- 动画期间抑制其他事件源的内容更新(否则半程前就被 syncAll/syncSlot 换掉)
     l.swapInProgress = true
+    local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
     for slotNum = 3, 8 do
       local button = l.buttons[slotNum]
       if button and button.hotbarSwapAnimation then
+        -- 先写本地起止值再播：上次 ApplyStyle 链读的是含 scale 的屏幕值
+        l.applySwapAnimStyleLocal(button, (slotNum == 8 and dims.ult or dims.ability) - 3)
         button.hotbarSwapAnimation:PlayFromStart()
       end
     end
