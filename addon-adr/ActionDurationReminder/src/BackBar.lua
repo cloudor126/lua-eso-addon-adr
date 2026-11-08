@@ -2087,6 +2087,26 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     oneLine("D8", l.buttons[8])
     oneLine("N3", ZO_ActionBar_GetButton(3))
     oneLine("N8", ZO_ActionBar_GetButton(8))
+    -- Q 键提示状态：父级/锚/坐标(定位重父后位置异常)
+    do
+      local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+      if qs and qs.slot then
+        local qsText = qs.slot:GetNamedChild("ButtonText")
+          or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("QuickslotButtonButtonText"))
+        if qsText then
+          local a0 = qsText:GetNumAnchors() > 0 and select(5, qsText:GetAnchor(0)) or "?"
+          local rel = qsText:GetNumAnchors() > 0 and select(2, qsText:GetAnchor(0)) or nil
+          d(string.format(
+            "[ADR] Q label parent=%s relTo=%s l=%.0f t=%.0f w=%.0f off=%s",
+            qsText:GetParent() and qsText:GetParent():GetName() or "?",
+            rel and rel.GetName and rel:GetName() or "nil",
+            qsText:GetLeft() or -1, qsText:GetTop() or -1,
+            qsText:GetWidth() or -1, tostring(a0)))
+        else
+          d("[ADR] Q label not found")
+        end
+      end
+    end
     -- 激活光效诊断：对比三个数据源(激活条查询/各自条查询/玩家 buff 表)，
     -- 验证非激活条查询是否陈旧、以及 buff 同名链接假设
     local active = GetActiveHotbarCategory()
