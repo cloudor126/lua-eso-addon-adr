@@ -1433,6 +1433,21 @@ local function onSwapAnimationDone(_, button)
   l.syncSlot(button.slot.slotNum, button.slot.hotbarCategory)
   -- Q 标签在动态模式下不动(原生条原封不动，Q 用原生锚即可——动它反而与原生刷新拉锯)
   l.reassertUltKeybinds()
+  -- 切手声音确定性修复：原生在切手中(g=true)只启动无声 loop，burst+声音被跳过；
+  -- g 复位时机不定导致声音时有时无。动画结束 50ms 后(g 已复位)补调原生
+  -- UpdateUltimateMeter：新条满且无 loop → 原生 burst+声音；已有 loop(持续辉光中)
+  -- → 不重复；不满 → 确保熄灭。零双重播放(状态判定全在原生内部)
+  zo_callLater(function()
+    if not l.active or l.staticEngaged then
+      return
+    end
+    local nb = ZO_ActionBar_GetButton(8)
+    if nb then
+      pcall(function()
+        nb:UpdateUltimateMeter()
+      end)
+    end
+  end, 50)
 end
 
 ---@type fun(button: table, getCategory?: fun(): number|nil)
