@@ -1094,22 +1094,13 @@ l.updateUltGlow = function(button, isActive, playSound)
   if not glow or not loop then
     return
   end
-  -- 从游戏获取真实 max(原生用 UpdateCurrentUltimateMax，我们直接查)
+  -- 用原生方法获取 ult 消耗(GetAbilityCost 不存在，UpdateCurrentUltimateMax 是正道)
   local ult = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
   local max = 0
-  local actionId = GetSlotBoundId(8, button.slot.hotbarCategory)
-  if actionId and actionId > 0 then
-    local _, _, _, _, _, _, _, _, _, cost = GetAbilityAbilityAndDescription(actionId)
-    -- GetAbilityAbilityAndDescription 不一定给 cost，用 GetAbilityCost
-    max = GetAbilityCost(actionId) or 0
-    if max == 0 then
-      -- 兼容：用原生方法
-      pcall(function()
-        button:UpdateCurrentUltimateMax()
-      end)
-      max = button.currentUltimateMax or 0
-    end
-  end
+  pcall(function()
+    button:UpdateCurrentUltimateMax()
+  end)
+  max = button.currentUltimateMax or 0
   local isReady = isActive and max > 0 and ult >= max
   if isReady then
     glow:SetHidden(false)
