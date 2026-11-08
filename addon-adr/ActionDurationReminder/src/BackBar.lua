@@ -489,6 +489,17 @@ l.setCloneSize = function(button, w)
   if flipCard then
     flipCard:SetDimensions(fcSize, fcSize)
   end
+  -- Icon：ult 模板=67(ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE)，ability 模板=61(ZO_GAMEPAD_ACTION_BUTTON_SIZE)。
+  -- 不改 Icon 的话原生 ult 图标比技能图标大 6px
+  local icon = button.icon or button.slot:GetNamedChild("Icon")
+  if icon then
+    icon:SetDimensions(fcSize, fcSize)
+  end
+  -- TimerOverlay 同理(ult 模板=67)
+  local timerOverlay = button.slot:GetNamedChild("TimerOverlay")
+  if timerOverlay then
+    timerOverlay:SetDimensions(fcSize, fcSize)
+  end
   -- Button(边框贴图)：模板默认 ult=70/ability=64，需跟随统一尺寸
   local buttonChild = button.slot:GetNamedChild("Button")
   if buttonChild then
@@ -1437,16 +1448,6 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
-    if didActiveHotbarChange then
-      -- 动画窗口内多次重放缩尺(原生动画可能持续改尺寸)，每100ms直到动画结束(400ms)
-      for delay = 0, 450, 100 do
-        zo_callLater(function()
-          if l.nativeUltResized and l.reapplyNativeUlt then
-            l.reapplyNativeUlt()
-          end
-        end, delay)
-      end
-    end
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
       l.animateStaticSwap()
