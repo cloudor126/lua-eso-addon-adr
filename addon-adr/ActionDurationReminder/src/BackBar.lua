@@ -333,6 +333,8 @@ l.layoutDynamic = function()
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   l.adjustKeybindOffsets()
   l.reassertUltKeybinds()
+  -- 手柄+手柄键位：Q 提示重父钉到槽底边外(与其他键位同基线)，切手/原生刷新均不影响
+  l.pinQuickslotKeybind()
   if weaponSwap then
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -612,8 +614,8 @@ l.layoutStatic = function()
       if qs and qs.slot then
         qs.slot:ClearAnchors()
         qs.slot:SetAnchor(RIGHT, ZO_ActionBar1, TOPLEFT, swapX2 - 5, swapY2 + weaponSwap:GetHeight() / 2)
-        -- Q 键提示与其他键位提示同基线
-        l.reassertQAnchor()
+        -- Q 键提示重父钉到槽底边外(与其他键位同基线，切手/原生刷新均不影响)
+        l.pinQuickslotKeybind()
         l.quickslotPinned = true
       end
     end
@@ -710,6 +712,7 @@ l.exitStatic = function()
     l.buttons[slotNum].slot:SetHidden(false)
   end
   l.unpinKeybinds()
+  l.unpinQuickslotKeybind()
 end
 
 ---静态角色应用：激活行 100%+全亮，非激活行 比例+暗化；换武器仅调此函数
@@ -1091,8 +1094,7 @@ l.animateStaticSwap = function()
   if not l.staticEngaged then
     return
   end
-  -- 切手后重新断言 Q 键锚
-  l.reassertQAnchor()
+  -- Q 提示已重父钉扎(pinQuickslotKeybind)，切手/原生刷新均不会重置，无需重断言
   local _, _, gapY, swapX, swapY = l.platformOffsets()
   local nativeButton3 = ZO_ActionBar_GetButton(3)
   local liftY = l.rowSeparation()
@@ -1413,6 +1415,60 @@ end
 ---重断言 Q 标签锚(静态/动态通用)：原生 keybind refresh 或 ApplyStyle
 ---可能在任何时刻覆盖我们的自定义锚，每次布局/切手后重新断言
 ---@type fun()
+---Q 键提示钉扎(重父方案，同 pinKeybinds 原理)：手柄+手柄键位时把 Q 提示
+---重父到 ZO_ActionBar1 并锚到槽底边外+2(与其他键位同基线；原生 -6 是内嵌设计)。
+---重父后不再是 qs.slot 子控件，原生模板刷新/切手链重置不了锚；相对锚仍引用
+---qs.slot 故位置跟随药水槽。键盘模式不动(原生即正确)。
+l.qsKeybindPinned = false
+
+---@type fun()
+l.pinQuickslotKeybind = function()
+  local want = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
+  if not want then
+    -- 条件不满足但已钉：还原(平台/键位模式切回键盘时由全量重布局路过这里)
+    if l.qsKeybindPinned then
+      l.unpinQuickslotKeybind()
+    end
+    return
+  end
+  if l.qsKeybindPinned then
+    return
+  end
+  if DoesUnitExist("companion") and HasActiveCompanion() then
+    return
+  end
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if qs and qs.slot then
+    local qsText = qs.slot:GetNamedChild("ButtonText")
+    if qsText then
+      qsText:SetParent(ZO_ActionBar1)
+      qsText:ClearAnchors()
+      qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, 2)
+      l.qsKeybindPinned = true
+    end
+  end
+end
+
+---@type fun()
+l.unpinQuickslotKeybind = function()
+  if not l.qsKeybindPinned then
+    return
+  end
+  l.qsKeybindPinned = false
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if qs and qs.slot then
+    local qsText = qs.slot:GetNamedChild("ButtonText")
+    if qsText then
+      qsText:SetParent(qs.slot)
+      qsText:ClearAnchors()
+      -- 重放平台模板恢复原生锚(内嵌 -6)
+      pcall(function()
+        qs:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
+      end)
+    end
+  end
+end
+
 l.reassertQAnchor = function()
   if DoesUnitExist("companion") and HasActiveCompanion() then
     return
@@ -1779,6 +1835,8 @@ l.deactivate = function()
   l.lastAppliedPreset = nil
   l.exitStatic()
   l.restoreKeybindOffsets()
+  -- Q 提示还原原生(重父回药水槽+重放模板锚)
+  l.unpinQuickslotKeybind()
   -- 还原原生 slot8 尺寸(手柄 70/67)
   l.restoreNativeUlt()
   -- 手柄下恢复切手按钮的原生行为(永久隐藏)并回默认锚
