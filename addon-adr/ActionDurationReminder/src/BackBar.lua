@@ -1107,6 +1107,11 @@ local function onSwapAnimationHalfDone(_, button)
     end)
   end
   l.applyInactiveStyle(button)
+  -- 原生条同期的 HandleSlotChanged(原生翻转半程)会重置 Q 键提示锚(变高)，
+  -- 动态模式下不能只靠 onSwapAnimationDone 收尾——动画后半程全程错位。
+  -- 此处立即重断言 + 150ms 兜底覆盖原生链略晚于我们的时序
+  l.reassertQAnchor()
+  zo_callLater(l.reassertQAnchor, 150)
   -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
   if l.classicMode then
     button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
