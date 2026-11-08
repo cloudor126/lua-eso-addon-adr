@@ -1812,28 +1812,19 @@ l.onCoreUpdate = function()
         ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
       end
     end
-    -- 技能激活光效：引擎对非激活条的槽位状态不维护(查询返回过期值，dump 证实)，
-    -- 公开 API 无通用真源(FAB 同样因此不在副条渲染光效)。策略：
-    -- 激活条克隆→轮询 UpdateActivationHighlight(激活条查询实时正确)；
-    -- 非激活条克隆→主动熄灭(宁无光效，不卡死光效)
-    local activeCat = GetActiveHotbarCategory()
+    -- 技能激活光效轮询：克隆不在原生按钮注册表，到期/变化不会有人调它们的
+    -- UpdateActivationHighlight——心跳补上。已知取舍：引擎对非激活条的槽位
+    -- 状态不维护(dump 证实)，光效若在非激活期间自然到期，克隆会保留辉光
+    -- 直到下次切手(引擎刷新)——而光效本就催玩家尽早使用，及时使用时切手
+    -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
     local sets = l.staticEngaged and { l.staticPrimary, l.staticBackup } or { l.buttons }
     for si = 1, #sets do
       for slotNum = 3, 8 do
         local b = sets[si][slotNum]
         if b and b.hasAction then
-          if b.slot.hotbarCategory == activeCat then
-            pcall(function()
-              b:UpdateActivationHighlight()
-            end)
-          elseif b.activationHighlight and not b.activationHighlight:IsControlHidden() then
-            b.activationHighlight:SetHidden(true)
-            if b.activationHighlight.animation then
-              pcall(function()
-                b.activationHighlight.animation:GetTimeline():Stop()
-              end)
-            end
-          end
+          pcall(function()
+            b:UpdateActivationHighlight()
+          end)
         end
       end
     end
