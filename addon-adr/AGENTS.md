@@ -146,3 +146,116 @@ Action found)
 Language files in `i18n/` use `put(key, translation)` pattern. Files are named
 by language code (en, zh, de, fr, es, ja, pt, ru). The manifest loads
 `$(language).lua` dynamically based on client language.
+
+## ESO UI Interop Lessons (BackBar & beyond)
+
+Hard-won during v3.170 double-bar development. Read before touching anything
+that overrides or fights the native action bar UI. The meta-rule:
+**every fix must name its blast radius; undocumented overrides WILL produce
+follow-up bugs.**
+
+### The state-ownership contract
+
+Every place we override native UI state needs a written contract, or it WILL
+break later (each of these caused real incident chains):
+
+- WHAT we change (anchors, dims, visibility, template)
+- WHEN the native system re-applies it (template replay comes via BOTH a Lua
+  path (`ApplyTemplateToControl`, hookable) AND a C-internal path (invisible
+  to Lua hooks); swap/platform/keybind chains re-apply at unpredictable times)
+- WHEN we re-assert (same frame via PostHook, or heartbeat guard as backstop)
+- WHEN we stand down (leaving a preset/platform must DISARM - see the
+  `exitStatic` disarm of `nativeUltResized`, which was causing our own armed
+  reapply hook to tamper the re-parented 1-5/T labels in static)
+
+Latched one-shot guards (`if adjusted then return end`) assume "set once,
+stays" — in ESO that assumption is false. Either pair them with a re-assert
+after every known replay path, or use a full-match heartbeat guard
+(verify anchor == exactly ours: single anchor + correct relativeTo + correct
+relativePoint; comparing only relativeTo misses tampering that keeps the
+parent but changes the point).
+
+### Proven-stable patterns (prefer these over fighting)
+
+1. **Re-parent** (`SetParent` out of the native subtree): the native template
+   replay finds controls by GLOBAL NAME REGISTRY, so re-anchoring is never
+   enough — it will find and re-anchor your control wherever it lives.
+   Re-parenting to our own container/`ZO_ActionBar1` removes it from the
+   replay's subtree... note name-lookup can STILL reach it via C paths; keep
+   the heartbeat guard. After re-parenting, `GetNamedChild` no longer finds
+   the control — always store the reference (see `pinnedKeybindTexts`,
+   `pinnedQsLabel`, `pinnedUltLk/Rk`).
+2. **Template selection over pixel transcription**: "make native slot X look
+   like slot Y" = `ApplyStyle(ZO_GetPlatformTemplate("ZO_Y_Template"))` —
+   platform-adaptive, zero literals. Hand-coded pixels (`SetDimensions(61)`,
+   ±4 anchors) must each be reversed on every transition — historically
+   produced mixed keyboard/gamepad residue states. ONE caveat: applying a
+   template resets EVERYTHING that template defines (including ButtonText
+   anchors other code had adjusted) — audit all consumers after the
+   application site (the `setNativeKeybindOffset` re-assert after
+   `applyNativeAbilityStyle` exists for exactly this).
+3. **Platform-aware arming**: any native-mutation machinery (resize hooks,
+   template re-application) must early-return on the platform where it does
+   not apply, and disarm when leaving that platform. An armed hook in the
+   wrong preset/platform is a time bomb.
+
+### ESO API facts (verified against esoui source, not guessed)
+
+- `ActionSlotHasActivationHighlight(slot, hotbar)` returns STALE values for
+  the inactive hotbar (engine only maintains active-bar slot state; swap
+  refreshes it). No public API gives live truth for inactive bars; FAB does
+  not render clone highlights at all. We poll `UpdateActivationHighlight`
+  and accept stale-until-swap (glow prompts usage; unused-glow stuck is the
+  accepted rare case).
+- `ApplySwapAnimationStyle` reads the CURRENT FlipCard dims to set the SIZE
+  animation's start/end. It runs inside `ApplyStyle` BEFORE any PostHook
+  shrink — always re-call it after resizing FlipCard, or the flip animation
+  interpolates to the old template size.
+- `PlayUltimateReadyAnimations`: while `g_activeWeaponSwapInProgress` the
+  burst (and its OnPlay sound) is skipped — only the silent loop starts; and
+  since the loop is LOOP_INDEFINITELY, later burst attempts are blocked while
+  it plays. Deterministic swap-to-ready sound = call `nb:UpdateUltimateMeter()`
+  ~50ms after the swap animation completes and let native decide.
+- `EVENT_KEYBIND_DISPLAY_MODE_CHANGED` (NOT `EVENT_INTERFACE_SETTING_CHANGED`)
+  fires for the Keybind Display Mode setting (it lives in the Gameplay panel
+  but is stored as SETTING_TYPE_GAMEPAD > GAMEPAD_SETTING_KEYBIND_DISPLAY_MODE).
+  Full label-refresh chain: keybindingutils.lua registers labels for
+  KEYBINDING_SET/CLEARED/LOADED, GAMEPAD_PREFERRED_MODE_CHANGED,
+  INPUT_TYPE_CHANGED, KEYBIND_DISPLAY_MODE_CHANGED.
+- Weapon-swap fires EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED **multiple
+  times** per swap (first didActiveHotbarChange=true, rest false). Any
+  per-swap logic must gate on the parameter (the 7x stacked sound bug).
+- `ZO_Keybindings_ShouldShowGamepadKeybind()` is the correct gamepad-keybind
+  visibility check (gamepad UI mode alone is NOT enough — there is a separate
+  keybind display setting).
+- `GetAbilityCost` does not exist; use `GetSlotAbilityCost(slot, mechanic,
+  hotbar)` (what native `UpdateCurrentUltimateMax` uses).
+- Lua 5.1: no `\x` escapes in string literals; `#` on holey tables (keys
+  3-8) returns an implementation-defined border — can be 8! Never use `#`/
+  numeric-for on non-sequential tables; iterate explicit key ranges or
+  `ipairs` over a wrapper.
+- Destruction-staff ability icons follow the CURRENT weapon (game bug), even
+  the abilityId readback changes; memory keyed by hotbar:slot with texture
+  capture-while-active is the workaround (abilityId comparison is useless).
+- `ZO_PostHook` on a method that our own hook chain re-invokes WILL recurse
+  (ApplyStyle → our hook → ApplySwapAnimationStyle → our hook → ...) —
+  re-entrancy latch required.
+
+### Debugging methodology (enforced by the maintainer, for good reason)
+
+1. NEVER patch from theory. Read the esoui source (local dump at
+   `C:\Users\Cloudor\Downloads\eso-ui-src\`, full repo via zread/GitHub
+   `esoui/esoui`) or demand a dump first.
+2. `/adrbackbar` prints one-line-per-slot sizes (D3/D8/N3/N8), keybind label
+   states (KB3-8, Q), and activation-highlight queries. Extend it rather than
+   adding chat spam.
+3. For "who changed this state" questions, wrap the suspect global
+   (`PlaySound`, `ApplyTemplateToControl`) with a before/after comparator +
+   `debug.traceback()` — one reproduction identifies the culprit chain. The
+   C-internal path will NOT show; that's itself diagnostic evidence.
+4. A "state that needs constant re-assertion" is a design smell — the correct
+   fix is usually structural (re-parent / template selection / disarm), not
+   another re-assertion site.
+5. Each fix commit must state its blast radius in the message; if you touched
+   a template application site, enumerate every consumer of the state that
+   template resets.
