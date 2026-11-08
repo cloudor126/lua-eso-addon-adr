@@ -507,12 +507,14 @@ l.setCloneSize = function(button, w)
   if buttonChild then
     buttonChild:SetDimensions(w, w)
   end
-  -- Backdrop(边框背景)：填满 slot(64px，与原生技能槽一致)
+  -- Backdrop(边框背景)：锚到 FlipCard±4(视觉69px)。
+  -- 锚到 FlipCard 而非 slot 的好处：翻转动画(SIZE 动画在 FlipCard 上)时
+  -- 边框自动跟随缩窄/展开，与原生条翻转视觉一致(锚 slot 则边框不翻转)
   local backdrop = button.slot:GetNamedChild("Backdrop")
-  if backdrop then
+  if backdrop and flipCard then
     backdrop:ClearAnchors()
-    backdrop:SetAnchor(TOPLEFT, button.slot, TOPLEFT, 0, 0)
-    backdrop:SetAnchor(BOTTOMRIGHT, button.slot, BOTTOMRIGHT, 0, 0)
+    backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
+    backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
   end
   -- Frame(ult 独有装饰框)：已隐藏但一并重锚保险
   local frame = button.slot:GetNamedChild("Frame")
