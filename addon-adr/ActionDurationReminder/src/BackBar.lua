@@ -336,31 +336,7 @@ l.layoutDynamic = function()
   l.adjustKeybindOffsets()
   l.reassertQAnchor()
   -- 手柄下也显示 D8 的肩键提示(固定绝对坐标，与原生底行位置一致)
-  if IsInGamepadPreferredMode() then
-    local abilityGap, ultGap = l.platformOffsets()
-    local swapW = weaponSwap and weaponSwap:GetWidth() or 56
-    local swapH = weaponSwap and weaponSwap:GetHeight() or 70
-    local dims = PLATFORM_DIMS.gamepad
-    local ultX = swapX + swapW + abilityGap
-      + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
-    local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
-    local dUlt = l.buttons[8]
-    if dUlt then
-      local showKb = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
-      local lk = dUlt.slot:GetNamedChild("LeftKeybind")
-      local rk = dUlt.slot:GetNamedChild("RightKeybind")
-      if lk then
-        lk:ClearAnchors()
-        lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
-        lk:SetHidden(not showKb)
-      end
-      if rk then
-        rk:ClearAnchors()
-        rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
-        rk:SetHidden(not showKb)
-      end
-    end
-  end
+  l.reassertUltKeybinds()
   if weaponSwap then
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -1306,6 +1282,41 @@ l.updateUltGlow = function(button, isActive, playSound)
   end
 end
 
+---重断言 D8 肩键锚(同 reassertQAnchor 的思路)：ApplyStyle/平台切换会重置锚到模板原生位
+---调用点：layoutDynamic / applyPlatformStyle / onSwapAnimationDone
+---@type fun()
+l.reassertUltKeybinds = function()
+  if not (l.buttons[8] and l.buttons[8].slot) then
+    return
+  end
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local _, _, _, swapX, swapY = l.platformOffsets()
+  local abilityGap, ultGap = l.platformOffsets()
+  local swapW = weaponSwap and weaponSwap:GetWidth() or 56
+  local swapH = weaponSwap and weaponSwap:GetHeight() or 70
+  local dims = PLATFORM_DIMS.gamepad
+  local ultX = swapX + swapW + abilityGap
+    + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
+  local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
+  local showKb = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
+  local dUlt = l.buttons[8]
+  local lk = dUlt.slot:GetNamedChild("LeftKeybind")
+  local rk = dUlt.slot:GetNamedChild("RightKeybind")
+  if lk then
+    lk:ClearAnchors()
+    lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
+    lk:SetHidden(not showKb)
+  end
+  if rk then
+    rk:ClearAnchors()
+    rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
+    rk:SetHidden(not showKb)
+  end
+end
+
+---重断言 Q 标签锚(静态/动态通用)：原生 keybind refresh 或 ApplyStyle
+---可能在任何时刻覆盖我们的自定义锚，每次布局/切手后重新断言
+---@type fun()
 l.reassertQAnchor = function()
   if DoesUnitExist("companion") and HasActiveCompanion() then
     return
@@ -1332,8 +1343,9 @@ local function onSwapAnimationDone(_, button)
     l.currentHotbar = button.slot.hotbarCategory
   end
   l.syncSlot(button.slot.slotNum, button.slot.hotbarCategory)
-  -- Q 标签同理(keybind refresh 覆盖)
+  -- Q 标签同理(keybind refresh 覆盖)；D8 肩键同理(ApplyStyle 覆盖)
   l.reassertQAnchor()
+  l.reassertUltKeybinds()
 end
 
 ---@type fun(button: table, getCategory?: fun(): number|nil)
@@ -1441,6 +1453,8 @@ l.applyPlatformStyle = function()
   styleSet(l.buttons)
   styleSet(l.staticPrimary)
   styleSet(l.staticBackup)
+  -- ApplyStyle 会重置 D8 肩键锚到模板原生位，平台切换后重新钉回
+  l.reassertUltKeybinds()
   l.layoutRow()
   l.syncAll()
 end
