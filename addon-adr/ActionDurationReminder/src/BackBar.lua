@@ -1987,17 +1987,25 @@ l.onCoreUpdate = function()
     -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
     -- Q 键提示钉扎自愈(锚被模板重放篡改时立即重钉) + 激活光效轮询
     l.guardQuickslotKeybind()
-    -- staticPair() 返回模块级单例集合表(避免每 100ms 分配临时表)
-    local sets = l.staticEngaged and l.staticPair() or l.buttons
-    for si = 1, #sets do
+    -- 注意不能用 #l.buttons：键为 3-8，# 对带洞表返回值未定义(可能返回 8
+    -- 导致越界索引 nil)，必须分支遍历
+    local function pollActivationHighlights(set)
       for slotNum = 3, 8 do
-        local b = sets[si][slotNum]
+        local b = set[slotNum]
         if b and b.hasAction then
           pcall(function()
             b:UpdateActivationHighlight()
           end)
         end
       end
+    end
+    if l.staticEngaged then
+      local pair = l.staticPair()
+      for si = 1, #pair do
+        pollActivationHighlights(pair[si])
+      end
+    else
+      pollActivationHighlights(l.buttons)
     end
   end
 end
