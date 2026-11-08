@@ -2094,14 +2094,15 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         local qsText = qs.slot:GetNamedChild("ButtonText")
           or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("QuickslotButtonButtonText"))
         if qsText then
-          local a0 = qsText:GetNumAnchors() > 0 and select(5, qsText:GetAnchor(0)) or "?"
-          local rel = qsText:GetNumAnchors() > 0 and select(2, qsText:GetAnchor(0)) or nil
+          local _, pt, rel, relPt, ox = qsText:GetAnchor(0)
           d(string.format(
-            "[ADR] Q label parent=%s relTo=%s l=%.0f t=%.0f w=%.0f off=%s",
+            "[ADR] Q label parent=%s pt=%s relTo=%s relPt=%s l=%.0f t=%.0f w=%.0f off=%s",
             qsText:GetParent() and qsText:GetParent():GetName() or "?",
+            tostring(pt),
             rel and rel.GetName and rel:GetName() or "nil",
+            tostring(relPt),
             qsText:GetLeft() or -1, qsText:GetTop() or -1,
-            qsText:GetWidth() or -1, tostring(a0)))
+            qsText:GetWidth() or -1, tostring(ox)))
         else
           d("[ADR] Q label not found")
         end
