@@ -75,8 +75,6 @@ l.createFailed = false
 l.currentHotbar = nil
 ---@type string|nil 上次已应用布局的预设(切换预设时触发重布局)
 l.lastAppliedPreset = nil
----@type boolean 静态布局首次应用提示(每会话一次)
-l.staticAppliedNotified = false
 ---@type boolean 经典模式：克隆行仅显示有计时的槽(可见性由 Bar 模块每帧驱动)
 l.classicMode = false
 ---@type table<number, boolean>|nil 经典模式下各槽可见集(事件同步后重应用)
@@ -560,11 +558,6 @@ l.layoutStatic = function()
   local abilityGap, ultGap, gapY, swapX, swapY = l.platformOffsets()
   local weaponSwap = ZO_ActionBar1:GetNamedChild("WeaponSwap")
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  -- 首次应用时确认提示(便于验证静态布局确实生效)
-  if not l.staticAppliedNotified then
-    l.staticAppliedNotified = true
-    d(string.format("[ADR] %s", addon.text("ADR static double bar applied")))
-  end
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
   -- 手柄 ult 肩键提示(Left/RightKeybind)：重锚到绝对坐标(底行 slot8 位置)，

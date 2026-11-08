@@ -13,7 +13,6 @@ put("Dynamic Double Bar", "Динамическая двойная панель"
 put("Static Double Bar", "Статическая двойная панель")
 put("ADR double bar disabled: FancyActionBar+ detected", "Двойная панель ADR отключена: обнаружен FancyActionBar+. Отключите FAB, если хотите двойную панель ADR.")
 put("ADR static bar warning: a bar-mover addon was detected", "Предупреждение статической панели ADR: обнаружен аддон-перемещатель панели (Bandits/Azurah); панели могут сместиться. Если что-то выглядит неправильно, вернитесь к динамической двойной панели.")
-put("ADR static double bar applied", "Статическая двойная панель применена: родная панель поднимается на верхний ряд, пока активен основной набор оружия.")
 put("Shift Bar", "Сдвигающаяся Панель")
 put("Shift Bar Icon Opacity", "Непрозрачность значков сдвигающейся панели")
 put("Opacity of the shift bar icons; 100 keeps them fully bright", "Непрозрачность значков неактивной панели оружия; 100 = полностью яркие")
