@@ -469,7 +469,18 @@ mCooldown.drawRemain = function(self, remain)
   local duration = self.duration
   local savedVars = l.getSavedVars()
   local shrink = 1
-  local width, height = self.background:GetDimensions()
+  -- 锚定目标动态解析：手柄模式用 FlipCard(冷却线随翻转动画缩展，与手柄边框
+  -- 同行为——Backdrop±4 锚 FlipCard)；键盘模式用原 background(键盘边框锚槽不
+  -- 翻转，线保持固定)。绘制时解析=平台切换后下一拍(≤40ms)自动适应，零钩子。
+  -- 贴图行(背景为自建 backdrop，无 FlipCard 子控件)不受影响
+  local anchorTarget = self.background
+  if IsInGamepadPreferredMode() and anchorTarget.GetNamedChild then
+    local fc = anchorTarget:GetNamedChild("FlipCard")
+    if fc then
+      anchorTarget = fc
+    end
+  end
+  local width, height = anchorTarget:GetDimensions()
   if Azurah then
     local scale = Azurah:CheckModified("ZO_ActionBar1")
     if scale and scale ~= 1 then
@@ -492,7 +503,7 @@ mCooldown.drawRemain = function(self, remain)
       self.topRight = self:createPart()
     end
     local length = width / 2 * math.min(1, remain * 8 / duration - 7)
-    self.topRight:SetAnchor(TOPRIGHT, self.background, TOPRIGHT, -shrink, shrink)
+    self.topRight:SetAnchor(TOPRIGHT, anchorTarget, TOPRIGHT, -shrink, shrink)
     self.topRight:SetDimensions(length, savedVars.barCooldownThickness)
     self.topRight:SetHidden(false)
   else
@@ -506,7 +517,7 @@ mCooldown.drawRemain = function(self, remain)
       self.right = self:createPart()
     end
     local length = height * math.min(1, (remain * 8 / duration - 5) / 2)
-    self.right:SetAnchor(BOTTOMRIGHT, self.background, BOTTOMRIGHT, -shrink, -shrink)
+    self.right:SetAnchor(BOTTOMRIGHT, anchorTarget, BOTTOMRIGHT, -shrink, -shrink)
     self.right:SetDimensions(savedVars.barCooldownThickness, length)
     self.right:SetHidden(false)
   else
@@ -520,7 +531,7 @@ mCooldown.drawRemain = function(self, remain)
       self.bottom = self:createPart()
     end
     local length = width * math.min(1, (remain * 8 / duration - 3) / 2)
-    self.bottom:SetAnchor(BOTTOMLEFT, self.background, BOTTOMLEFT, shrink, -shrink)
+    self.bottom:SetAnchor(BOTTOMLEFT, anchorTarget, BOTTOMLEFT, shrink, -shrink)
     self.bottom:SetDimensions(length, savedVars.barCooldownThickness)
     self.bottom:SetHidden(false)
   else
@@ -534,7 +545,7 @@ mCooldown.drawRemain = function(self, remain)
       self.left = self:createPart()
     end
     local length = height * math.min(1, (remain * 8 / duration - 1) / 2)
-    self.left:SetAnchor(TOPLEFT, self.background, TOPLEFT, shrink, shrink)
+    self.left:SetAnchor(TOPLEFT, anchorTarget, TOPLEFT, shrink, shrink)
     self.left:SetDimensions(savedVars.barCooldownThickness, length)
     self.left:SetHidden(false)
   else
@@ -548,7 +559,7 @@ mCooldown.drawRemain = function(self, remain)
       self.topLeft = self:createPart()
     end
     local length = width / 2 * math.min(1, remain * 8 / duration)
-    self.topLeft:SetAnchor(TOPRIGHT, self.background, TOP, 0, shrink)
+    self.topLeft:SetAnchor(TOPRIGHT, anchorTarget, TOP, 0, shrink)
     self.topLeft:SetDimensions(length, savedVars.barCooldownThickness)
     self.topLeft:SetHidden(false)
   else
