@@ -1595,11 +1595,6 @@ l.wrapApplyTemplate = function()
           if not ok then
             text:ClearAnchors()
             text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, entry.x, entry.y)
-            if not l.kbTamperLogged then
-              l.kbTamperLogged = true
-              d(string.format("[ADR] KB tamper via ctrl=%s tmpl=%s", ctrl and ctrl.GetName and ctrl:GetName() or "?", tostring(tmpl)))
-              d(debug.traceback())
-            end
           end
         end
       end
