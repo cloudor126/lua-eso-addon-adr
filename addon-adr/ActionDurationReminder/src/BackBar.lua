@@ -832,6 +832,54 @@ end
 
 ---同步克隆按钮(静态双克隆/动态单克隆共用)
 ---@type fun(button: table|nil, hotbar: number)
+---毁灭杖图标记忆：毁灭杖技能图标跟当前武器走(游戏 bug)，切手后非激活条的
+---图标会变成新武器形态。条激活时抓取图标存档；条非激活时若技能未变，
+---用记忆纹理覆盖克隆行，保持切手前的正确形态。
+---特征：纹理路径含 'ability_destructionstaff_'
+l.destaffMemory = {} -- key: hotbar..":"..slotNum → { tex, abilityId }
+
+---抓取当前激活条全部槽位的毁灭杖图标(激活条图标跟随当前武器，是正确的)
+---@type fun()
+l.captureActiveDestaff = function()
+  local active = GetActiveHotbarCategory()
+  for slotNum = 3, 8 do
+    local tex = GetSlotTexture(slotNum, active)
+    if tex and tex ~= "" and tex:find("ability_destructionstaff_", 1, true) then
+      l.destaffMemory[active .. ":" .. slotNum] =
+        { tex = tex, abilityId = GetSlotBoundId(slotNum, active) }
+    end
+  end
+end
+
+---@type fun(button: table, slotNum: number, hotbar: number)
+l.applyDestaffMemory = function(button, slotNum, hotbar)
+  if not (button and button.icon) then
+    return
+  end
+  local key = hotbar .. ":" .. slotNum
+  local abilityId = GetSlotBoundId(slotNum, hotbar)
+  local tex = GetSlotTexture(slotNum, hotbar)
+  if not (tex and tex ~= "") then
+    return
+  end
+  if GetActiveHotbarCategory() == hotbar then
+    -- 激活条：图标跟随当前武器，是正确的——存档(仅毁灭杖需要)
+    if tex:find("ability_destructionstaff_", 1, true) then
+      l.destaffMemory[key] = { tex = tex, abilityId = abilityId }
+    end
+  else
+    -- 非激活条：图标可能已变成当前(另一把)武器形态——若记忆里存有同技能的旧图则覆盖
+    local mem = l.destaffMemory[key]
+    if mem
+      and mem.abilityId == abilityId
+      and tex:find("ability_destructionstaff_", 1, true)
+      and mem.tex ~= tex
+    then
+      button.icon:SetTexture(mem.tex)
+    end
+  end
+end
+
 l.syncButton = function(button, hotbar)
   if not button then
     return
@@ -847,6 +895,8 @@ l.syncButton = function(button, hotbar)
       button.icon:SetHidden(false)
     end
   end
+  -- 毁灭杖图标记忆(抓取/覆盖)
+  l.applyDestaffMemory(button, button.slot.slotNum, hotbar)
   if l.staticEngaged then
     l.applyStaticRoles()
   else
@@ -1050,6 +1100,8 @@ l.syncAll = function(relayout)
   if not l.container or l.swapInProgress then
     return
   end
+  -- 抓取激活条毁灭杖图标(激活时是正确形态；切手后就来不及了)
+  l.captureActiveDestaff()
   local hotbar = l.inactiveHotbar()
   l.currentHotbar = hotbar
   if not hotbar then
@@ -1087,6 +1139,8 @@ local function onSwapAnimationHalfDone(_, button)
   button.slot.hotbarCategory = hotbar
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
+  -- 毁灭杖图标：翻转半程直接设了新(可能错误武器形态的)图标，立即用记忆覆盖防闪变
+  l.applyDestaffMemory(button, button.slot.slotNum, hotbar)
   -- HandleSlotChanged→ApplyStyle 会把 FlipCard 重置到模板值(ult=67)且
   -- ApplySwapAnimationStyle 读到 67 设入动画后半程起止值——克隆 ult 在
   -- 翻转展开阶段会偏大。同原生 reapply 的修法：缩回目标值后重设动画参数
