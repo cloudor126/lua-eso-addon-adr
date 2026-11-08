@@ -1102,6 +1102,16 @@ local function onSwapAnimationHalfDone(_, button)
   button.slot.hotbarCategory = hotbar
   button.button.hotbarCategory = hotbar
   button:HandleSlotChanged(hotbar)
+  -- HandleSlotChanged→ApplyStyle 会把 FlipCard 重置到模板值(ult=67)且
+  -- ApplySwapAnimationStyle 读到 67 设入动画后半程起止值——克隆 ult 在
+  -- 翻转展开阶段会偏大。同原生 reapply 的修法：缩回目标值后重设动画参数
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
+  if button.ApplySwapAnimationStyle then
+    pcall(function()
+      button:ApplySwapAnimationStyle()
+    end)
+  end
   l.applyInactiveStyle(button)
   -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
   if l.classicMode then
