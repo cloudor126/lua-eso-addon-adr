@@ -531,15 +531,19 @@ l.layoutStatic = function()
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
   -- 手柄 ult 肩键提示(Left/RightKeybind)：重锚到绝对坐标(底行 slot8 位置)，
-  -- 两行的肩键提示都在同一位置，不随角色互换跳位
+  -- 两行的肩键提示都在同一位置，不随角色互换跳位。
+  -- X 用与 layoutStaticRow 完全相同的公式；Y 用与 pinKeybinds 相同的基线
   if IsInGamepadPreferredMode() then
+    local abilityGap, ultGap = l.platformOffsets()
     local _, _, _, swapX, swapY = l.platformOffsets()
     local swapW = weaponSwap and weaponSwap:GetWidth() or 56
+    local swapH = weaponSwap and weaponSwap:GetHeight() or 70
     local dims = PLATFORM_DIMS.gamepad
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    local qsW = (qs and qs.slot and qs.slot:GetWidth()) or 64
-    local ultX = swapX + swapW + qsW + 5 + 4 * (dims.ability + 10) + dims.ability + 65 + dims.ult / 2
-    local ultY = swapY + (weaponSwap and weaponSwap:GetHeight() or 70) / 2 + dims.ult / 2 + 20
+    -- 与 layoutStaticRow 相同的 slot8 X 公式
+    local ultX = swapX + swapW + abilityGap
+      + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
+    -- 与 pinKeybinds 相同的 Y 基线(槽底边 + textOff)
+    local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
     for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
       local ultButton = set[8]
       if ultButton then
@@ -547,11 +551,11 @@ l.layoutStatic = function()
         local rk = ultButton.slot:GetNamedChild("RightKeybind")
         if lk then
           lk:ClearAnchors()
-          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY)
+          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 12)
         end
         if rk then
           rk:ClearAnchors()
-          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY)
+          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 12)
         end
       end
     end
@@ -989,14 +993,23 @@ l.animateStaticSwap = function()
     l.playSwapGlide(weaponSwap, swapX, fromY, toY)
   end
   l.animateStaticRoles()
-  -- 换手后如果新激活 ult 已攒满，播放音效+光效(原生同款行为)
-  zo_callLater(function()
-    if l.staticEngaged then
-      local active = GetActiveHotbarCategory()
-      local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
-      l.updateUltGlow(activeSet[8], true, true)
-    end
-  end, 350)
+  -- 换手后如果新激活 ult 已攒满，立即播音效(原生行为：切手瞬间响)，
+  -- 光效稍后启动(与角色渐变同步)
+  local activeCat = GetActiveHotbarCategory()
+  local newActiveSet = activeCat == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+  local ultPower = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
+  pcall(function()
+    newActiveSet[8]:UpdateCurrentUltimateMax()
+  end)
+  local ultMax = newActiveSet[8].currentUltimateMax or 0
+  if ultMax > 0 and ultPower >= ultMax then
+    PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
+    zo_callLater(function()
+      if l.staticEngaged then
+        l.updateUltGlow(newActiveSet[8], true, false)
+      end
+    end, 300)
+  end
 end
 
 ---同步整行(换武器/全量刷新)。relayout=false 时仅刷数据不重排锚点
