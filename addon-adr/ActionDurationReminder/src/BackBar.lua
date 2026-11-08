@@ -795,6 +795,8 @@ l.setRoleInstant = function(button, isActive, s, dimAlpha, desat)
   elseif button.countText then
     button.countText:SetHidden(true)
   end
+  -- 终极攒满光效(仅激活行 slot8)
+  l.updateUltGlow(button, isActive)
 end
 
 ---懒创建角色渐变时间线(创建失败退化为瞬时切换，不影响按钮本身)
@@ -853,6 +855,8 @@ l.animateStaticRoles = function()
       elseif button.countText then
         button.countText:SetHidden(true)
       end
+      -- 终极攒满光效(仅激活行 slot8)
+      l.updateUltGlow(button, isActive)
       if button.adrRoleTimeline then
         -- 已在目标值上则跳过重播(高频事件防抖；目标变化时从当前实时值平滑重定)
         local curScale = button.slot:GetScale()
@@ -1043,6 +1047,61 @@ end
 ---重断言 Q 标签锚(静态/动态通用)：原生 keybind refresh 或 ApplyStyle
 ---可能在任何时刻覆盖我们的自定义锚，每次布局/切手后重新断言
 ---@type fun()
+---终极攒满光效(激活行 slot8)：用原生同款 ReadyBurst→ReadyLoop 序列
+---(coolDown_completeEFX.dds ADD 混合，TextureAnimation 逐帧播放)
+---非激活行不显示。通过 EVENT_POWER_UPDATE 驱动
+l.ultGlowTimelines = {}
+
+---@type fun(button: table, isActive: boolean)
+l.updateUltGlow = function(button, isActive)
+  if button.slot.slotNum ~= 8 then
+    return
+  end
+  local glow = button.slot:GetNamedChild("ReadyBurst")
+  local loop = button.slot:GetNamedChild("ReadyLoop")
+  if not glow or not loop then
+    return
+  end
+  local ult = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
+  local max = button.currentUltimateMax or 0
+  local isReady = isActive and max > 0 and ult >= max
+  if isReady then
+    glow:SetHidden(false)
+    loop:SetHidden(false)
+    -- 懒创建时间线(原生虚拟时间线 UltimateReadyBurst/Loop，同款帧动画)
+    if not l.ultGlowTimelines[button] then
+      local ok = pcall(function()
+        local burstTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyBurst", glow)
+        local loopTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyLoop", loop)
+        burstTL:SetHandler("OnStop", function(tl)
+          if tl:GetProgress() >= 1.0 then
+            glow:SetHidden(true)
+            loopTL:PlayFromStart()
+          end
+        end)
+        l.ultGlowTimelines[button] = { burst = burstTL, loop = loopTL }
+      end)
+      if not ok then
+        l.ultGlowTimelines[button] = false
+        d("[ADR] ult glow animation unavailable")
+        return
+      end
+    end
+    local tls = l.ultGlowTimelines[button]
+    if tls and not tls.burst:IsPlaying() and not tls.loop:IsPlaying() then
+      tls.burst:PlayFromStart()
+    end
+  else
+    glow:SetHidden(true)
+    loop:SetHidden(true)
+    local tls = l.ultGlowTimelines[button]
+    if tls then
+      tls.burst:Stop()
+      tls.loop:Stop()
+    end
+  end
+end
+
 l.reassertQAnchor = function()
   if DoesUnitExist("companion") and HasActiveCompanion() then
     return
@@ -1254,6 +1313,17 @@ l.registerEvents = function()
   EM:RegisterForEvent(EVENT_NAME, EVENT_PLAYER_ACTIVATED, function()
     l.syncAll()
   end)
+  -- 终极能量变化时更新攒满光效
+  EM:RegisterForEvent(EVENT_NAME .. "UltGlow", EVENT_POWER_UPDATE, function(_, unitTag, _, powerType)
+    if unitTag ~= "player" or powerType ~= COMBAT_MECHANIC_FLAGS_ULTIMATE then
+      return
+    end
+    if l.staticEngaged then
+      local active = GetActiveHotbarCategory()
+      local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+      l.updateUltGlow(activeSet[8], true)
+    end
+  end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function()
     -- 换装高频事件：仅刷数据(可用状态/计数)，不重排锚点
     l.syncAll(false)
@@ -1275,6 +1345,7 @@ l.unregisterEvents = function()
   for i = 1, #events do
     EM:UnregisterForEvent(EVENT_NAME, events[i])
   end
+  EM:UnregisterForEvent(EVENT_NAME .. "UltGlow", EVENT_POWER_UPDATE)
 end
 
 ---系统 back row(原生迷你副条)与克隆行会重复显示，激活时关闭该系统设置(不恢复，同FAB做法)
