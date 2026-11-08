@@ -199,6 +199,24 @@ l.showUltRoleDecorations = function(button)
   -- ReadyBurst/ReadyLoop 由 updateUltGlow 管理
 end
 
+---刷新所有 ult 肩键可见性(设置变更时调用)：动态刷 D8，静态刷激活行+藏非激活行
+---@type fun()
+l.refreshUltKeybinds = function()
+  if l.staticEngaged then
+    local active = GetActiveHotbarCategory()
+    local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+    local inactiveSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticBackup or l.staticPrimary
+    if activeSet[8] then
+      l.showUltRoleDecorations(activeSet[8])
+    end
+    if inactiveSet[8] then
+      l.hideUltRoleDecorations(inactiveSet[8])
+    end
+  elseif l.buttons[8] then
+    l.showUltRoleDecorations(l.buttons[8])
+  end
+end
+
 ---平台原生模板尺寸(与 actionbutton.xml 的 Keyboard/Gamepad 模板一致)；
 ---不用 GetWidth 测量：ESO 返回的是已含 scale 的屏幕值，缩放后会越量越小
 local PLATFORM_DIMS = {
@@ -1526,6 +1544,12 @@ l.registerEvents = function()
     l.syncAll(false)
   end)
   EM:AddFilterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_WORN)
+  -- Keybind Display Mode 等设置变化时刷新肩键可见性(无需切预设)
+  EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED, function(_, settingType)
+    if settingType == SETTING_TYPE_UI then
+      l.refreshUltKeybinds()
+    end
+  end)
 end
 
 ---@type fun()
@@ -1543,6 +1567,7 @@ l.unregisterEvents = function()
     EM:UnregisterForEvent(EVENT_NAME, events[i])
   end
   EM:UnregisterForEvent(EVENT_NAME .. "UltGlow", EVENT_POWER_UPDATE)
+  EM:UnregisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED)
 end
 
 ---系统 back row(原生迷你副条)与克隆行会重复显示，激活时关闭该系统设置(不恢复，同FAB做法)
