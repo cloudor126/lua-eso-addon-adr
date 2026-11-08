@@ -428,6 +428,31 @@ end
 l.keybindsPinned = false
 
 ---@type fun()
+---1-5/T 钉扎标签心跳守卫：模板锚重放可经由 C 内部路径(ATC 包装不可见)，
+---且篡改后的锚 relTo 仍是 ZO_ActionBar1(仅 relPt/偏移变)，必须完整匹配校验。
+---被篡改则用存储的 x/y 精确恢复，最多滞后一个心跳(100ms)
+---@type fun()
+l.guardPinnedKeybinds = function()
+  if not (l.keybindsPinned and l.pinnedKeybindTexts) then
+    return
+  end
+  for _, entry in pairs(l.pinnedKeybindTexts) do
+    local text = entry.text
+    if text and text:GetParent() == ZO_ActionBar1 then
+      local ok = false
+      if text:GetNumAnchors() == 1 then
+        local _, _, relTo, relPt = text:GetAnchor(0)
+        ok = relTo == ZO_ActionBar1 and relPt == TOPLEFT
+      end
+      if not ok then
+        text:ClearAnchors()
+        text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, entry.x, entry.y)
+      end
+    end
+  end
+end
+
+---@type fun()
 l.pinKeybinds = function()
   if l.keybindsPinned then
     return
@@ -1512,8 +1537,14 @@ l.wrapApplyTemplate = function()
       for slotNum, entry in pairs(l.pinnedKeybindTexts) do
         local text = entry.text
         if text and text:GetParent() == ZO_ActionBar1 then
-          local _, _, relTo = text:GetAnchor(0)
-          if relTo ~= ZO_ActionBar1 then
+          -- 完整匹配：篡改后 relTo 仍可能是 ZO_ActionBar1(仅 relPt 变)，
+          -- 必须校验 relPt==TOPLEFT 且单锚
+          local ok = false
+          if text:GetNumAnchors() == 1 then
+            local _, _, relTo, relPt = text:GetAnchor(0)
+            ok = relTo == ZO_ActionBar1 and relPt == TOPLEFT
+          end
+          if not ok then
             text:ClearAnchors()
             text:SetAnchor(TOP, ZO_ActionBar1, TOPLEFT, entry.x, entry.y)
             if not l.kbTamperLogged then
@@ -2032,8 +2063,9 @@ l.onCoreUpdate = function()
     -- 状态不维护(dump 证实)，光效若在非激活期间自然到期，克隆会保留辉光
     -- 直到下次切手(引擎刷新)——而光效本就催玩家尽早使用，及时使用时切手
     -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
-    -- Q 键提示钉扎自愈(锚被模板重放篡改时立即重钉) + 激活光效轮询
+    -- Q 键提示钉扎自愈 + 1-5/T 钉扎自愈(模板锚重放可走 C 路径，需完整匹配校验)
     l.guardQuickslotKeybind()
+    l.guardPinnedKeybinds()
     -- 注意不能用 #l.buttons：键为 3-8，# 对带洞表返回值未定义(可能返回 8
     -- 导致越界索引 nil)，必须分支遍历
     local function pollActivationHighlights(set)
