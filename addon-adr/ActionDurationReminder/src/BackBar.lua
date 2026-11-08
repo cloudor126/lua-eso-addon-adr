@@ -1105,17 +1105,28 @@ l.resizeNativeUlt = function()
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
     l.hideUltimateDecorations(nb)
     l.nativeUltResized = true
-    -- PostHook 原生 ApplyStyle：原生翻转动画中 HandleSlotChanged→ApplyStyle 会重设
-    -- 模板值(70px+装饰+肩键)，钩在原生代码之后立刻覆盖，消除窗口期闪烁
+    -- PostHook 原生方法：原生翻转动画中会重设模板值(70px+装饰+肩键)，
+    -- 钩在原生代码之后立刻覆盖；但保留 ReadyBurst/ReadyLoop(攒满光效是原生自然行为)
     if not l.nativeUltHooked then
       local hooked = nb
       local function reapply()
         if l.nativeUltResized then
           local d = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
           l.setCloneSize({ slot = hooked.slot, icon = hooked.icon }, d.ult)
-          l.hideUltimateDecorations(hooked)
+          -- 只藏非光效装饰(保留 ReadyBurst/ReadyLoop 供原生攒满动画)
+          local hide = {
+            "UltimateBar", "LeadingEdge", "FillAnimationLeft", "FillAnimationRight",
+            "Decoration", "Frame", "LeftKeybind", "RightKeybind",
+          }
+          for i = 1, #hide do
+            local child = hooked.slot:GetNamedChild(hide[i])
+            if child then
+              child:SetHidden(true)
+            end
+          end
         end
       end
+      l.reapplyNativeUlt = reapply
       if hooked.ApplyStyle then
         ZO_PostHook(hooked, "ApplyStyle", reapply)
       end
@@ -1426,8 +1437,16 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
-    -- 原生翻转动画的 ApplyStyle 会重置 slot8 尺寸到 70/67，切手后重新缩小
-    zo_callLater(l.resizeNativeUlt, 450)
+    if didActiveHotbarChange then
+      -- 动画窗口内多次重放缩尺(原生动画可能持续改尺寸)，每100ms直到动画结束(400ms)
+      for delay = 0, 450, 100 do
+        zo_callLater(function()
+          if l.nativeUltResized and l.reapplyNativeUlt then
+            l.reapplyNativeUlt()
+          end
+        end, delay)
+      end
+    end
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
       l.animateStaticSwap()
