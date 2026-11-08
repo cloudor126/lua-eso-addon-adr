@@ -9,6 +9,8 @@
 - The Bar settings menu is reorganized into second-level groups: Shift Bar, Time Labels, Stack Labels, Cooldown Line, Progress Bar; the three standalone toggles stay on top.
 - The double-bar presets automatically turn off the game's mini "Back Row" setting while active (not restored on switch-back; never touched for Classic), hide the second row with Oakensoul or non-weapon hotbars, and fall back safely with a chat notice while FancyActionBar+ is detected; Bandits/Azurah get a one-time misalignment warning instead of a forced fallback. New diagnostic command: /adrbackbar.
 
+3.169
+
 ### Bug Fixes
 - Fixed the ability blacklist not hiding the Nothing Wasted window (Necromancer's hidden stack buff, id 263461): its dedicated event path bypassed the keyword filter, so blacklisted ids kept showing the low-priority 12s timer on siphon slots. Blacklisting 263461 now removes the window immediately; add the skill name (e.g. "Detonating Siphon") to the blacklist as well to remove every timer from a slot.
 
