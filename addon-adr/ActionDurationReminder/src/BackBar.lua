@@ -332,8 +332,6 @@ l.layoutDynamic = function()
   -- Q 标签同样需要断言(动态模式下未被 adjustKeybindOffsets 覆盖)
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   l.adjustKeybindOffsets()
-  l.reassertQAnchor()
-  -- 手柄下也显示 D8 的肩键提示(固定绝对坐标，与原生底行位置一致)
   l.reassertUltKeybinds()
   if weaponSwap then
     if l.swapGlideTimeline then
@@ -1338,8 +1336,7 @@ local function onSwapAnimationDone(_, button)
     l.currentHotbar = button.slot.hotbarCategory
   end
   l.syncSlot(button.slot.slotNum, button.slot.hotbarCategory)
-  -- Q 标签同理(keybind refresh 覆盖)；D8 肩键同理(ApplyStyle 覆盖)
-  l.reassertQAnchor()
+  -- Q 标签在动态模式下不动(原生条原封不动，Q 用原生锚即可——动它反而与原生刷新拉锯)
   l.reassertUltKeybinds()
 end
 
@@ -1496,25 +1493,6 @@ end
 ---@type fun()
 l.registerEvents = function()
   local EM = GetEventManager()
-  -- PostHook 原生药剂栏按钮：原生 ApplyStyle/HandleSlotChanged(换手/平台切换等
-  -- 任何时候)会重置 Q 键提示锚到模板值(内嵌槽位内，视觉上"变高")。
-  -- 钩在原生之后立即重断言，无论刷新时机——根治追赶式补丁覆盖不住的窗口
-  if not l.qsHooked then
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    if qs then
-      if qs.ApplyStyle then
-        ZO_PostHook(qs, "ApplyStyle", function()
-          l.reassertQAnchor()
-        end)
-      end
-      if qs.HandleSlotChanged then
-        ZO_PostHook(qs, "HandleSlotChanged", function()
-          l.reassertQAnchor()
-        end)
-      end
-      l.qsHooked = true
-    end
-  end
   EM:RegisterForEvent(EVENT_NAME, EVENT_HOTBAR_SLOT_UPDATED, function(_, slotNum, hotbarCategory)
     if l.staticEngaged then
       -- 静态：按恒定分类路由到对应克隆行
