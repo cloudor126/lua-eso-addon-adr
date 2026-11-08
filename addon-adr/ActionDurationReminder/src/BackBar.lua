@@ -1100,11 +1100,8 @@ local function onSwapAnimationHalfDone(_, button)
     end)
   end
   l.applyInactiveStyle(button)
-  -- 原生条同期的 HandleSlotChanged(原生翻转半程)会重置 Q 键提示锚(变高)，
-  -- 动态模式下不能只靠 onSwapAnimationDone 收尾——动画后半程全程错位。
-  -- 此处立即重断言 + 150ms 兜底覆盖原生链略晚于我们的时序
-  l.reassertQAnchor()
-  zo_callLater(l.reassertQAnchor, 150)
+  -- Q 键提示锚的重断言已改为 PostHook 原生药剂栏按钮(见 registerEvents)，
+  -- 不再在此处追赶原生刷新时机
   -- 经典模式下重应用可见性(HandleSlotChanged 会重新显示槽位)
   if l.classicMode then
     button.slot:SetHidden(not (l.classicVisibleMap and l.classicVisibleMap[button.slot.slotNum] == true))
@@ -1499,6 +1496,25 @@ end
 ---@type fun()
 l.registerEvents = function()
   local EM = GetEventManager()
+  -- PostHook 原生药剂栏按钮：原生 ApplyStyle/HandleSlotChanged(换手/平台切换等
+  -- 任何时候)会重置 Q 键提示锚到模板值(内嵌槽位内，视觉上"变高")。
+  -- 钩在原生之后立即重断言，无论刷新时机——根治追赶式补丁覆盖不住的窗口
+  if not l.qsHooked then
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    if qs then
+      if qs.ApplyStyle then
+        ZO_PostHook(qs, "ApplyStyle", function()
+          l.reassertQAnchor()
+        end)
+      end
+      if qs.HandleSlotChanged then
+        ZO_PostHook(qs, "HandleSlotChanged", function()
+          l.reassertQAnchor()
+        end)
+      end
+      l.qsHooked = true
+    end
+  end
   EM:RegisterForEvent(EVENT_NAME, EVENT_HOTBAR_SLOT_UPDATED, function(_, slotNum, hotbarCategory)
     if l.staticEngaged then
       -- 静态：按恒定分类路由到对应克隆行
