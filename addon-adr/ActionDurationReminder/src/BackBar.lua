@@ -1563,13 +1563,21 @@ l.applyPlatformStyle = function()
   styleSet(l.buttons)
   styleSet(l.staticPrimary)
   styleSet(l.staticBackup)
-  -- ApplyStyle 会重置 D8 肩键锚到模板原生位，平台切换后重新钉回。
-  -- 延迟 200ms：ZO_PlatformStyle 有多个处理器按序执行，
-  -- 后续原生处理器的 ApplyStyle 会再次重置锚，必须等全部跑完
+  -- 平台切换 = 全量重布局(与切预设同路径)：旧平台的钉扎/锚点全部作废。
+  -- 先 unpin(静态键位标签重父回原生槽，解除 keybindsPinned 早退守卫)，
+  -- 再 layoutRow 走 layoutStatic/layoutDynamic 正规链路用新平台坐标重建。
+  -- 延迟 200ms：ZO_PlatformStyle 多处理器按序执行，等原生处理器全部跑完
   zo_callLater(function()
-    if l.active then
-      l.reassertUltKeybinds()
+    if not l.active then
+      return
     end
+    if l.keybindsPinned then
+      l.unpinKeybinds()
+    end
+    l.exitStatic()
+    l.layoutRow()
+    l.syncAll()
+    l.reassertUltKeybinds()
   end, 200)
   l.layoutRow()
   l.syncAll()
@@ -1686,15 +1694,23 @@ l.registerEvents = function()
   -- 设置存储在 SETTING_TYPE_GAMEPAD。延迟 200ms 等原生 label 更新链跑完
   EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_KEYBIND_DISPLAY_MODE_CHANGED, function()
     zo_callLater(function()
-      if l.active then
-        l.refreshUltKeybinds()
-        l.reassertUltKeybinds()
-        -- 原生 slot8 的肩键被原生 label 系统的 OnUltimateChanged→HideKeys(false)
-        -- 显示出来(我们只藏克隆行的)；reapplyNativeUlt 会重缩尺寸+藏原生肩键，
-        -- 原生条可见时(动态)不能出现两组肩键
-        if l.nativeUltResized and l.reapplyNativeUlt then
-          l.reapplyNativeUlt()
-        end
+      if not l.active then
+        return
+      end
+      -- 键位显示模式切换 = 全量重布局(与平台切换/切预设同路径)：
+      -- 游戏对键位控件的显示/隐藏/锚重置在这个事件链里零散发生，
+      -- 零敲碎打补不完(静态 3/7、动态键盘提示不全均为此因)，
+      -- 统一走 unpin→exitStatic→layoutRow 正规链路重建
+      if l.keybindsPinned then
+        l.unpinKeybinds()
+      end
+      l.exitStatic()
+      l.layoutRow()
+      l.syncAll()
+      l.reassertUltKeybinds()
+      l.refreshUltKeybinds()
+      if l.nativeUltResized and l.reapplyNativeUlt then
+        l.reapplyNativeUlt()
       end
     end, 200)
   end)
