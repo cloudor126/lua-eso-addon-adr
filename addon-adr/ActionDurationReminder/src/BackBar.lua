@@ -1530,15 +1530,6 @@ l.registerEvents = function()
     if didActiveHotbarChange then
       -- 换武器：播放翻转动画，内容在半程换入(动画回调内完成)，不同步闪变
       l.playSwapAnimation()
-      -- 原生在切手中抑制大招就绪音效(PlayUltimateReadyAnimations 检查
-      -- g_activeWeaponSwapInProgress 跳过带音效的 burst、只播无声 loop)，
-      -- 静态模式由我们直接播——动态同样补齐，音量/时机与静态一致。
-      -- GetSlotAbilityCost 是原生 UpdateCurrentUltimateMax 的同款 API
-      local ultCost = GetSlotAbilityCost(8, COMBAT_MECHANIC_FLAGS_ULTIMATE, GetActiveHotbarCategory())
-      local ultPower = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
-      if ultCost and ultCost > 0 and ultPower >= ultCost then
-        PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
-      end
     else
       l.syncAll()
     end
@@ -1830,7 +1821,39 @@ end)
 -- 菜单项由 Bar 模块以二级子菜单(Double Bar)形式挂在 Bar 组内，紧随预设下拉框
 
 --诊断命令：/adrbackbar 输出第二行引擎的实时状态并强制重布局
-SLASH_COMMANDS["/adrbackbar"] = function()
+---声音追踪诊断：包装全局 PlaySound，命中 ult-ready 音效时打印调用栈。
+---用法 /adrbackbar sound 开关；用于定位动态双条里那声偏小的 ult-ready 到底谁播的
+l.soundTraceOn = false
+l.soundTraceOrig = nil
+
+l.toggleSoundTrace = function()
+  if l.soundTraceOn then
+    if l.soundTraceOrig then
+      PlaySound = l.soundTraceOrig
+      l.soundTraceOrig = nil
+    end
+    l.soundTraceOn = false
+    d("[ADR] sound trace OFF")
+    return
+  end
+  l.soundTraceOrig = PlaySound
+  local target = SOUNDS.ABILITY_ULTIMATE_READY
+  PlaySound = function(soundName)
+    if soundName == target then
+      d("[ADR] ULT_READY sound played, traceback:")
+      d(debug.traceback())
+    end
+    return l.soundTraceOrig(soundName)
+  end
+  l.soundTraceOn = true
+  d("[ADR] sound trace ON — 切一次手，看聊天框的调用栈")
+end
+
+SLASH_COMMANDS["/adrbackbar"] = function(arg)
+  if arg == "sound" then
+    l.toggleSoundTrace()
+    return
+  end
   local sv = l.getSavedVars()
   local buttonCount = 0
   for _ in pairs(l.buttons) do
