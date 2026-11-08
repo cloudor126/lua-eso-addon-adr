@@ -5,10 +5,13 @@
 - Gamepad shoulder-button hints (LB/RB) now show on the clone ultimate slot in the Dynamic and Static presets, pinned at a fixed position on the same baseline as the other keybind hints - they no longer move with weapon swaps or the Shift Bar scale slider, and they follow the game's Keybind Display Mode setting live.
 - Destruction Staff skill icons on the back bar are now remembered per weapon set: the game re-renders destaff icons from the currently held weapon (a game bug), so the clone rows keep the correct icon variant from when that bar was last active.
 - Skill activation highlights (proc glows such as Fatecarver's Crux shine) now render on the clone rows and end correctly when the effect expires.
+- The cooldown line now follows the weapon-swap flip animation in gamepad mode (matching the gamepad border, which flips with the card); in keyboard mode it stays fixed, matching the keyboard border.
+- Shift Bar Scale slider granularity improved from 10% to 5% steps.
 
 ### Bug Fixes
 - Keybind hints (1-5, T, Q, shoulder buttons) no longer drift, stack at the bar center, or go missing: all pinned hints are re-parented out of the native template replay path and verified by a self-healing check, surviving weapon swaps, platform switches, and the Keybind Display Mode setting.
-- Switching between keyboard and gamepad UI (and between keybind display modes) now triggers a full relayout: no more missing hints, drifting potion slot, or native bar stuck at the wrong platform's sizes until /reloadui.
+- Switching between keyboard and gamepad UI (and between keybind display modes) now triggers a full relayout: no more missing hints, drifting potion slot, or native bar stuck at the wrong platform's sizes until /reloadui; switching back to keyboard also heals the native bar's icons back to keyboard sizes (the game's own chain sometimes left gamepad-sized icons inside keyboard-sized frames).
+- With Shift Bar scale below 100%, the clone row's flip animation used to shrink "on top of" the scale setting (the native animation reads scale-included screen sizes and applied them as local sizes); animation values are now written as local sizes directly, so the flip scales exactly with your setting. The Static preset's shoulder hints likewise no longer slide in from the side during the role-swap animation.
 - The native ultimate slot in gamepad mode is now styled by the ability-slot template itself (64px, no golden frame, no duplicate shoulder hints) and stays correct through weapon-swap flip animations and platform switches; keyboard mode is untouched.
 - Fixed the Static preset playing the ultimate-ready sound up to 7 times per weapon swap (the swap event fires multiple times; the sound now plays exactly once, only on not-ready-to-ready transitions).
 - Numerous resource fixes: ultimate glow and role-swap animations are stopped when leaving the Static preset, and the periodic clone checks no longer allocate garbage.
