@@ -489,31 +489,22 @@ l.setCloneSize = function(button, w)
   if flipCard then
     flipCard:SetDimensions(fcSize, fcSize)
   end
-  -- Icon：ult 模板=67(ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE)，ability 模板=61(ZO_GAMEPAD_ACTION_BUTTON_SIZE)。
-  -- 不改 Icon 的话原生 ult 图标比技能图标大 6px
-  local icon = button.icon or button.slot:GetNamedChild("Icon")
-  if icon then
-    icon:SetDimensions(fcSize, fcSize)
-  end
-  -- TimerOverlay 同理(ult 模板=67)
-  local timerOverlay = button.slot:GetNamedChild("TimerOverlay")
-  if timerOverlay then
-    timerOverlay:SetDimensions(fcSize, fcSize)
-  end
+  -- Icon/TimerOverlay 继承 FlipCardControl(TOPLEFT+BOTTOMRIGHT 锚定填充)，
+  -- FlipCard 改尺寸后自动跟随，不需要也不应该显式 SetDimensions(会破坏填充锚)
   -- Button(边框贴图)：模板默认 ult=70/ability=64，需跟随统一尺寸
   local buttonChild = button.slot:GetNamedChild("Button")
   if buttonChild then
     buttonChild:SetDimensions(w, w)
   end
-  -- Backdrop(边框背景)：ult 模板锚在 FlipCard ±12(视觉≈85px)，
-  -- 技能模板锚在 ±4(视觉≈69px)——重锚到统一的 ±4
+  -- Backdrop(边框背景)：改为填满 slot(与原生技能槽一致)，
+  -- 之前的 FlipCard±4(=69px)比技能槽视觉(64px)大几像素
   local backdrop = button.slot:GetNamedChild("Backdrop")
   if backdrop then
     backdrop:ClearAnchors()
-    backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
-    backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
+    backdrop:SetAnchor(TOPLEFT, button.slot, TOPLEFT, 0, 0)
+    backdrop:SetAnchor(BOTTOMRIGHT, button.slot, BOTTOMRIGHT, 0, 0)
   end
-  -- Frame(ult 独有装饰框，同样锚 ±12)：已隐藏但一并重锚保险
+  -- Frame(ult 独有装饰框)：已隐藏但一并重锚保险
   local frame = button.slot:GetNamedChild("Frame")
   if frame and flipCard then
     frame:ClearAnchors()
@@ -832,6 +823,9 @@ end
 ---同步单个克隆槽位(原生刷新链：图标/actionId/状态/不可用发暗)
 ---@type fun(slotNum: number, hotbar: number)
 l.syncSlot = function(slotNum, hotbar)
+  if l.swapInProgress then
+    return
+  end
   l.syncButton(l.buttons[slotNum], hotbar)
 end
 
@@ -1052,7 +1046,7 @@ end
 ---(换装等高频事件避免锚点风暴: too many anchors processed)
 ---@type fun(relayout?: boolean)
 l.syncAll = function(relayout)
-  if not l.container then
+  if not l.container or l.swapInProgress then
     return
   end
   local hotbar = l.inactiveHotbar()
@@ -1273,9 +1267,16 @@ end
 
 local function onSwapAnimationDone(_, button)
   button.noUpdates = false
+  -- 解锁内容更新抑制(所有按钮动画完毕；最后一个回调时 swapInProgress 已被600ms兜底清)
+  l.swapInProgress = false
   -- 翻转动画后原生 ApplyStyle 可能重置了 Backdrop/Frame 锚和尺寸，补上
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
+  -- 确保内容与 hotbar 同步(动画期间被抑制的更新在此补齐)
+  if button.slot.hotbarCategory ~= l.currentHotbar then
+    l.currentHotbar = button.slot.hotbarCategory
+  end
+  l.syncSlot(button.slot.slotNum, button.slot.hotbarCategory)
   -- Q 标签同理(keybind refresh 覆盖)
   l.reassertQAnchor()
 end
@@ -1404,12 +1405,18 @@ l.playSwapAnimation = function()
     return
   end
   if l.getSavedVars().barPreset ~= "static" then
+    -- 动画期间抑制其他事件源的内容更新(否则半程前就被 syncAll/syncSlot 换掉)
+    l.swapInProgress = true
     for slotNum = 3, 8 do
       local button = l.buttons[slotNum]
       if button and button.hotbarSwapAnimation then
         button.hotbarSwapAnimation:PlayFromStart()
       end
     end
+    -- 保险：如果动画被外部 Stop 导致 onSwapAnimationDone 不触发，600ms 后解锁
+    zo_callLater(function()
+      l.swapInProgress = false
+    end, 600)
     return
   end
   -- 静态：事件路由已直接 applyStaticRoles，此处不会进入；保险起见同样瞬时处理
