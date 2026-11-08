@@ -1812,6 +1812,21 @@ l.onCoreUpdate = function()
         ZO_ActionBar_GetButton(slotNum).slot:SetHidden(true)
       end
     end
+    -- 技能激活光效(ActivationHighlight)到期轮询：光效结束的唯一路径是
+    -- UpdateState→UpdateActivationHighlight，而原生刷新链只作用于注册在
+    -- actionbar 的原生按钮，克隆不在其列；到期也不触发 SLOT_STATE 事件。
+    -- 内部有 showHighlight~=isShowing 守卫，无变化时仅一次轻量 API 查询
+    local sets = l.staticEngaged and { l.staticPrimary, l.staticBackup } or { l.buttons }
+    for si = 1, #sets do
+      for slotNum = 3, 8 do
+        local b = sets[si][slotNum]
+        if b and b.hasAction then
+          pcall(function()
+            b:UpdateActivationHighlight()
+          end)
+        end
+      end
+    end
   end
 end
 
