@@ -186,11 +186,14 @@ end
 ---显示激活 ult 的装饰(手柄键提示)
 ---@type fun(button: table)
 l.showUltRoleDecorations = function(button)
+  -- 手柄 UI 且键位提示设置为手柄样式时才显示肩键图标(原生同源逻辑：
+  -- actionbutton.lua 用 IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind())
+  local showGamepad = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
   local keybinds = { "LeftKeybind", "RightKeybind" }
   for i = 1, #keybinds do
     local child = button.slot:GetNamedChild(keybinds[i])
     if child then
-      child:SetHidden(IsInGamepadPreferredMode() == false)
+      child:SetHidden(not showGamepad)
     end
   end
   -- ReadyBurst/ReadyLoop 由 updateUltGlow 管理
@@ -325,17 +328,18 @@ l.layoutDynamic = function()
     local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
     local dUlt = l.buttons[8]
     if dUlt then
+      local showKb = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
       local lk = dUlt.slot:GetNamedChild("LeftKeybind")
       local rk = dUlt.slot:GetNamedChild("RightKeybind")
       if lk then
         lk:ClearAnchors()
         lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
-        lk:SetHidden(false)
+        lk:SetHidden(not showKb)
       end
       if rk then
         rk:ClearAnchors()
         rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
-        rk:SetHidden(false)
+        rk:SetHidden(not showKb)
       end
     end
   end
@@ -1141,6 +1145,13 @@ l.resizeNativeUlt = function()
               child:SetHidden(true)
             end
           end
+          -- 关键：重设动画起止尺寸。ApplySwapAnimationStyle 从当前 FlipCard 读值，
+          -- 但原生调用链里它在 ApplyStyle 之后、PostHook 之前执行，读到的还是模板值 67。
+          -- 此处 FlipCard 已被我们改为 61，重调即让动画起止也变成 61，
+          -- 动画全程插值 61→0→61，不再回弹到 67
+          if hooked.ApplySwapAnimationStyle then
+            hooked:ApplySwapAnimationStyle()
+          end
         end
       end
       l.reapplyNativeUlt = reapply
@@ -1152,6 +1163,9 @@ l.resizeNativeUlt = function()
       end
       if hooked.UpdateUltimateMeter then
         ZO_PostHook(hooked, "UpdateUltimateMeter", reapply)
+      end
+      if hooked.ApplySwapAnimationStyle then
+        ZO_PostHook(hooked, "ApplySwapAnimationStyle", reapply)
       end
       l.nativeUltHooked = true
     end
@@ -1467,15 +1481,6 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
-    if didActiveHotbarChange then
-      -- 原生翻转动画是时间线插值(SIZE 动画逐帧改尺寸)，PostHook 只在方法调用时
-      -- 触发一次，动画后续帧会覆盖回去；动画结束(400ms)后补一次重缩
-      zo_callLater(function()
-        if l.nativeUltResized and l.reapplyNativeUlt then
-          l.reapplyNativeUlt()
-        end
-      end, 500)
-    end
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
       l.animateStaticSwap()
