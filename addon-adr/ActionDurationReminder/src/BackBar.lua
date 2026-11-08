@@ -530,6 +530,32 @@ l.layoutStatic = function()
   end
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
+  -- 手柄 ult 肩键提示(Left/RightKeybind)：重锚到绝对坐标(底行 slot8 位置)，
+  -- 两行的肩键提示都在同一位置，不随角色互换跳位
+  if IsInGamepadPreferredMode() then
+    local _, _, _, swapX, swapY = l.platformOffsets()
+    local swapW = weaponSwap and weaponSwap:GetWidth() or 56
+    local dims = PLATFORM_DIMS.gamepad
+    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+    local qsW = (qs and qs.slot and qs.slot:GetWidth()) or 64
+    local ultX = swapX + swapW + qsW + 5 + 4 * (dims.ability + 10) + dims.ability + 65 + dims.ult / 2
+    local ultY = swapY + (weaponSwap and weaponSwap:GetHeight() or 70) / 2 + dims.ult / 2 + 20
+    for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+      local ultButton = set[8]
+      if ultButton then
+        local lk = ultButton.slot:GetNamedChild("LeftKeybind")
+        local rk = ultButton.slot:GetNamedChild("RightKeybind")
+        if lk then
+          lk:ClearAnchors()
+          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY)
+        end
+        if rk then
+          rk:ClearAnchors()
+          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY)
+        end
+      end
+    end
+  end
   -- 切手按钮：解除原生永久隐藏(手柄下默认隐藏)并落位到当前激活行左侧(瞬时；
   -- 换武器时由 TranslateAnimation 滑动)。药剂快捷栏钉绝对坐标仅键盘模式
   -- (手柄下药剂原生位置不同，不接管)
@@ -1110,11 +1136,6 @@ l.updateUltGlow = function(button, isActive, playSound)
       local ok = pcall(function()
         local burstTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyBurst", glow)
         local loopTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyLoop", loop)
-        burstTL:SetHandler("OnPlay", function()
-          if playSound then
-            PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
-          end
-        end)
         burstTL:SetHandler("OnStop", function(tl)
           if tl:GetProgress() >= 1.0 then
             glow:SetHidden(true)
@@ -1128,6 +1149,10 @@ l.updateUltGlow = function(button, isActive, playSound)
         d("[ADR] ult glow animation unavailable")
         return
       end
+    end
+    -- 音效直接在调用点播(不放在时间线闭包里——闭包捕获首次创建时的参数不会更新)
+    if playSound then
+      PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
     end
     local tls = l.ultGlowTimelines[button]
     if tls and not tls.burst:IsPlaying() and not tls.loop:IsPlaying() then
