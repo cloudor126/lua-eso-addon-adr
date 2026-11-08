@@ -711,6 +711,10 @@ l.exitStatic = function()
     return
   end
   l.staticEngaged = false
+  -- 解除原生 ult 缩放机制武装：静态隐藏原生条本就用不到它；且武装着的
+  -- reapply 会对 3-8 重放模板，按名字全局查找会篡改静态下已重父的
+  -- 1-5/T 键位标签锚(叠到条中下方)。重入动态时由 layoutDynamic 重新武装
+  l.nativeUltResized = false
   l.restoreNativeFlip()
   if l.swapGlideTimeline then
     l.swapGlideTimeline:Stop()
