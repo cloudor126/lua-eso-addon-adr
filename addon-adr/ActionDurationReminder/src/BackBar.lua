@@ -1530,6 +1530,15 @@ l.registerEvents = function()
     if didActiveHotbarChange then
       -- 换武器：播放翻转动画，内容在半程换入(动画回调内完成)，不同步闪变
       l.playSwapAnimation()
+      -- 原生在切手中抑制大招就绪音效(PlayUltimateReadyAnimations 检查
+      -- g_activeWeaponSwapInProgress 跳过带音效的 burst、只播无声 loop)，
+      -- 静态模式由我们直接播——动态同样补齐，音量/时机与静态一致。
+      -- GetSlotAbilityCost 是原生 UpdateCurrentUltimateMax 的同款 API
+      local ultCost = GetSlotAbilityCost(8, COMBAT_MECHANIC_FLAGS_ULTIMATE, GetActiveHotbarCategory())
+      local ultPower = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
+      if ultCost and ultCost > 0 and ultPower >= ultCost then
+        PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
+      end
     else
       l.syncAll()
     end
