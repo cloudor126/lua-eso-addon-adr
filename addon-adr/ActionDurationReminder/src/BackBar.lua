@@ -1104,17 +1104,25 @@ l.animateStaticSwap = function()
     l.playSwapGlide(weaponSwap, swapX, fromY, toY)
   end
   l.animateStaticRoles()
-  -- 换手后如果新激活 ult 已攒满，立即播音效(原生行为：切手瞬间响)，
-  -- 光效稍后启动(与角色渐变同步)
+  -- 换手后如果新激活 ult 已攒满，立即播音效——但仅限【未满→满】转换：
+  -- 满→满时旧条已在持续辉光，原生语义不重复响(与动态预设/纯原生一致)。
+  -- 光效稍后启动(与角色渐变同步)，不受转换类型限制(激活行该亮就亮)
   local activeCat = GetActiveHotbarCategory()
   local newActiveSet = activeCat == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+  local oldHotbar = activeCat == HOTBAR_CATEGORY_PRIMARY and HOTBAR_CATEGORY_BACKUP or HOTBAR_CATEGORY_PRIMARY
   local ultPower = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
   pcall(function()
     newActiveSet[8]:UpdateCurrentUltimateMax()
   end)
   local ultMax = newActiveSet[8].currentUltimateMax or 0
-  if ultMax > 0 and ultPower >= ultMax then
-    PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
+  -- 旧激活条的消耗(GetSlotAbilityCost 是原生 UpdateCurrentUltimateMax 同款 API)
+  local oldMax = GetSlotAbilityCost(8, COMBAT_MECHANIC_FLAGS_ULTIMATE, oldHotbar) or 0
+  local isNewlyReady = ultMax > 0 and ultPower >= ultMax
+  local wasReady = oldMax > 0 and ultPower >= oldMax
+  if isNewlyReady then
+    if not wasReady then
+      PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
+    end
     zo_callLater(function()
       if l.staticEngaged then
         l.updateUltGlow(newActiveSet[8], true, false)
