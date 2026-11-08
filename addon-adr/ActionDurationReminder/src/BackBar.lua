@@ -1274,7 +1274,12 @@ l.hideNativeUltDecorations = function(button)
 end
 
 l.resizeNativeUlt = function()
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  -- 仅手柄：键盘模式原生 ult 本就是 50/47(与技能槽一致)，无需缩放；
+  -- 更不能在此隐藏装饰(键盘的 UltimateBar 是原生充能条，藏了会丢功能)
+  if not IsInGamepadPreferredMode() then
+    return
+  end
+  local dims = PLATFORM_DIMS.gamepad
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
@@ -1322,8 +1327,12 @@ l.restoreNativeUlt = function()
   if not l.nativeUltResized then
     return
   end
-  l.nativeUltResized = false
-  -- 手柄原生前值：slot 70, FlipCard 67
+  l.nativeUltResized = false -- 同时解除 reapply PostHook 武装(空操作)
+  -- 手柄原生前值：slot 70, FlipCard 67。键盘模式不设——键盘模板(50/47)
+  -- 由原生平台 ApplyStyle 自行应用，手动设 70 反而会错
+  if not IsInGamepadPreferredMode() then
+    return
+  end
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
     nb.slot:SetDimensions(70, 70)
@@ -1705,6 +1714,12 @@ end
 l.applyPlatformStyle = function()
   if not l.container then
     return
+  end
+  -- 切到键盘：解除原生 ult 缩放武装(reapply PostHook 变空操作)，
+  -- 键盘模板(50/47)由原生平台链自行应用；切到手柄：由 layoutDynamic 的
+  -- resizeNativeUlt 重新武装。防止切换瞬间 PostHook 用旧平台尺寸回写
+  if not IsInGamepadPreferredMode() and l.nativeUltResized then
+    l.nativeUltResized = false
   end
   local function styleSet(set)
     for slotNum = 3, 8 do
