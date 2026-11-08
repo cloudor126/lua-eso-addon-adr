@@ -1453,8 +1453,14 @@ l.applyPlatformStyle = function()
   styleSet(l.buttons)
   styleSet(l.staticPrimary)
   styleSet(l.staticBackup)
-  -- ApplyStyle 会重置 D8 肩键锚到模板原生位，平台切换后重新钉回
-  l.reassertUltKeybinds()
+  -- ApplyStyle 会重置 D8 肩键锚到模板原生位，平台切换后重新钉回。
+  -- 延迟 200ms：ZO_PlatformStyle 有多个处理器按序执行，
+  -- 后续原生处理器的 ApplyStyle 会再次重置锚，必须等全部跑完
+  zo_callLater(function()
+    if l.active then
+      l.reassertUltKeybinds()
+    end
+  end, 200)
   l.layoutRow()
   l.syncAll()
 end
@@ -1560,9 +1566,15 @@ l.registerEvents = function()
   EM:AddFilterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_WORN)
   -- Keybind Display Mode 等设置变化时刷新肩键可见性(无需切预设)。
   -- 不按 settingType 过滤：Keybind Display 在 Gameplay 分区(SETTING_TYPE_GAMEPLAY)，
-  -- 而刷新本身幂等廉价，任何设置变化都跑一遍也无妨
+  -- 而刷新本身幂等廉价。延迟 200ms：原生 keybind 系统在同一事件的后续处理中
+  -- 会重放模板锚，立即断言会被覆盖，必须等原生全部跑完再钉
   EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED, function()
-    l.refreshUltKeybinds()
+    zo_callLater(function()
+      if l.active then
+        l.refreshUltKeybinds()
+        l.reassertUltKeybinds()
+      end
+    end, 200)
   end)
 end
 
