@@ -659,6 +659,29 @@ l.exitStatic = function()
   if l.swapGlideTimeline then
     l.swapGlideTimeline:Stop()
   end
+  -- 停止终极攒满光效时间线(LOOP_INDEFINITELY 循环不主动停会永远播放)
+  -- 并隐藏其纹理；角色渐变时间线同理(插值对已隐藏控件无意义且浪费调度)
+  for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+    for slotNum = 3, 8 do
+      local button = set[slotNum]
+      if button then
+        local tls = l.ultGlowTimelines[button]
+        if tls then
+          tls.burst:Stop()
+          tls.loop:Stop()
+        end
+        for _, texName in ipairs({ "ReadyBurst", "ReadyLoop" }) do
+          local tex = button.slot and button.slot:GetNamedChild(texName)
+          if tex then
+            tex:SetHidden(true)
+          end
+        end
+        if button.adrRoleTimeline then
+          button.adrRoleTimeline:Stop()
+        end
+      end
+    end
+  end
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if weaponSwap then
     local _, _, _, swapX, swapY = l.platformOffsets()
