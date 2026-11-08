@@ -1130,8 +1130,10 @@ l.resizeNativeUlt = function()
     -- 钩在原生代码之后立刻覆盖；但保留 ReadyBurst/ReadyLoop(攒满光效是原生自然行为)
     if not l.nativeUltHooked then
       local hooked = nb
+      local inReapply = false -- 防重入：reapply→ApplySwapAnimationStyle→本钩子→reapply 无限递归
       local function reapply()
-        if l.nativeUltResized then
+        if l.nativeUltResized and not inReapply then
+          inReapply = true
           local d = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
           l.setCloneSize({ slot = hooked.slot, icon = hooked.icon }, d.ult)
           -- 只藏非光效装饰(保留 ReadyBurst/ReadyLoop 供原生攒满动画)
@@ -1145,13 +1147,15 @@ l.resizeNativeUlt = function()
               child:SetHidden(true)
             end
           end
-          -- 关键：重设动画起止尺寸。ApplySwapAnimationStyle 从当前 FlipCard 读值，
-          -- 但原生调用链里它在 ApplyStyle 之后、PostHook 之前执行，读到的还是模板值 67。
-          -- 此处 FlipCard 已被我们改为 61，重调即让动画起止也变成 61，
-          -- 动画全程插值 61→0→61，不再回弹到 67
+          -- 关键：重设动画起止尺寸(FlipCard 已是我们的 61，原生链里它在
+          -- ApplyStyle 内部读到的还是模板 67)。不 PostHook 本方法——
+          -- 防重入闸已阻断递归，且其他三个钩子入口已覆盖所有重设时机
           if hooked.ApplySwapAnimationStyle then
-            hooked:ApplySwapAnimationStyle()
+            pcall(function()
+              hooked:ApplySwapAnimationStyle()
+            end)
           end
+          inReapply = false
         end
       end
       l.reapplyNativeUlt = reapply
@@ -1163,9 +1167,6 @@ l.resizeNativeUlt = function()
       end
       if hooked.UpdateUltimateMeter then
         ZO_PostHook(hooked, "UpdateUltimateMeter", reapply)
-      end
-      if hooked.ApplySwapAnimationStyle then
-        ZO_PostHook(hooked, "ApplySwapAnimationStyle", reapply)
       end
       l.nativeUltHooked = true
     end
