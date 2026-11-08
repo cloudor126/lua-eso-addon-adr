@@ -1572,6 +1572,12 @@ l.registerEvents = function()
       if l.active then
         l.refreshUltKeybinds()
         l.reassertUltKeybinds()
+        -- 原生 slot8 的肩键被原生 label 系统的 OnUltimateChanged→HideKeys(false)
+        -- 显示出来(我们只藏克隆行的)；reapplyNativeUlt 会重缩尺寸+藏原生肩键，
+        -- 原生条可见时(动态)不能出现两组肩键
+        if l.nativeUltResized and l.reapplyNativeUlt then
+          l.reapplyNativeUlt()
+        end
       end
     end, 200)
   end)
