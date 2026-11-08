@@ -187,6 +187,9 @@ l.fullRelayout = function()
   l.syncAll()
   l.reassertUltKeybinds()
   l.refreshUltKeybinds()
+  -- 平台自适应的原生条模板重放：修复切换链的“容器新/子控件旧”混合残留
+  -- (键盘侧尤其需要——resizeNativeUlt 手柄专属，键盘无人重放子控件)
+  l.applyNativeAbilityStyle()
   if l.nativeUltResized and l.reapplyNativeUlt then
     l.reapplyNativeUlt()
   end
@@ -1346,6 +1349,11 @@ end
 ---ApplyStyle 内部调 ApplySwapAnimationStyle，翻转动画尺寸同源正确
 ---@type fun()
 l.applyNativeAbilityStyle = function()
+  -- 平台自适应：键盘变体的技能/ult 模板尺寸完全一致(50/47)，重放即自愈
+  -- “容器键盘/子控件手柄”的混合残留(切回键盘时原生链只更新槽容器)；
+  -- 而 ult 专属处理(藏装饰/Backdrop重锚/键位偏移+2)仅手柄需要——键盘的
+  -- UltimateBar 是原生充能条，藏了会丢功能
+  local isGamepad = IsInGamepadPreferredMode()
   local ultBtn
   for slotNum = 3, 8 do
     local nb = ZO_ActionBar_GetButton(slotNum)
@@ -1353,7 +1361,7 @@ l.applyNativeAbilityStyle = function()
       pcall(function()
         nb:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
       end)
-      if slotNum == 8 then
+      if slotNum == 8 and isGamepad then
         ultBtn = nb
         -- 唯一保留的显式锚：ult 基础模板的 Backdrop±12 覆盖不会被技能模板
         -- 清除(技能模板 Backdrop 无锚定义)，必须显式重锚到技能槽同款 FlipCard±4
@@ -1367,11 +1375,14 @@ l.applyNativeAbilityStyle = function()
       end
     end
   end
-  if ultBtn then
-    l.hideNativeUltDecorations(ultBtn)
+  if isGamepad then
+    if ultBtn then
+      l.hideNativeUltDecorations(ultBtn)
+    end
+    -- 模板重放会把键位标签锚重置回内嵌 -6——重设动态模式的边外偏移
+    -- (键盘不动：原生键盘模板锚即正确，+1 是猜测值已移除)
+    l.setNativeKeybindOffset(2)
   end
-  -- 模板重放会把键位标签锚重置回内嵌 -6——立即重设动态模式的边外偏移
-  l.setNativeKeybindOffset(IsInGamepadPreferredMode() and 2 or 1)
 end
 
 l.resizeNativeUlt = function()
