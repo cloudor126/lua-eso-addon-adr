@@ -314,6 +314,31 @@ l.layoutDynamic = function()
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   l.adjustKeybindOffsets()
   l.reassertQAnchor()
+  -- 手柄下也显示 D8 的肩键提示(固定绝对坐标，与原生底行位置一致)
+  if IsInGamepadPreferredMode() then
+    local abilityGap, ultGap = l.platformOffsets()
+    local swapW = weaponSwap and weaponSwap:GetWidth() or 56
+    local swapH = weaponSwap and weaponSwap:GetHeight() or 70
+    local dims = PLATFORM_DIMS.gamepad
+    local ultX = swapX + swapW + abilityGap
+      + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
+    local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
+    local dUlt = l.buttons[8]
+    if dUlt then
+      local lk = dUlt.slot:GetNamedChild("LeftKeybind")
+      local rk = dUlt.slot:GetNamedChild("RightKeybind")
+      if lk then
+        lk:ClearAnchors()
+        lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
+        lk:SetHidden(false)
+      end
+      if rk then
+        rk:ClearAnchors()
+        rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
+        rk:SetHidden(false)
+      end
+    end
+  end
   if weaponSwap then
     if l.swapGlideTimeline then
       l.swapGlideTimeline:Stop()
@@ -551,11 +576,11 @@ l.layoutStatic = function()
         local rk = ultButton.slot:GetNamedChild("RightKeybind")
         if lk then
           lk:ClearAnchors()
-          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 12)
+          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
         end
         if rk then
           rk:ClearAnchors()
-          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 12)
+          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
         end
       end
     end
