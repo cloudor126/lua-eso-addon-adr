@@ -187,11 +187,16 @@ l.showUltRoleDecorations = function(button)
   -- 手柄 UI 且键位提示设置为手柄样式时才显示肩键图标(原生同源逻辑：
   -- actionbutton.lua 用 IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind())
   local showGamepad = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
-  local keybinds = { "LeftKeybind", "RightKeybind" }
-  for i = 1, #keybinds do
-    local child = button.slot:GetNamedChild(keybinds[i])
-    if child then
-      child:SetHidden(not showGamepad)
+  -- D8 肩键已重父到 container(GetNamedChild 查不到)，用保存的引用
+  local children
+  if l.pinnedUltLk and button == l.buttons[8] then
+    children = { l.pinnedUltLk, l.pinnedUltRk }
+  else
+    children = { button.slot:GetNamedChild("LeftKeybind"), button.slot:GetNamedChild("RightKeybind") }
+  end
+  for i = 1, #children do
+    if children[i] then
+      children[i]:SetHidden(not showGamepad)
     end
   end
   -- ReadyBurst/ReadyLoop 由 updateUltGlow 管理
@@ -273,6 +278,8 @@ l.applyScale = function()
       button.slot:SetScale(s)
     end
   end
+  -- 肩键已重父不受缩放影响，但保险重断言一次(幂等)
+  l.reassertUltKeybinds()
 end
 
 ---布局：动态预设——每个克隆槽独立 BOTTOM 锚到对应原生槽 TOP(offset 0,0)。
@@ -1398,17 +1405,29 @@ l.reassertUltKeybinds = function()
   local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
   local showKb = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
   local dUlt = l.buttons[8]
-  local lk = dUlt.slot:GetNamedChild("LeftKeybind")
-  local rk = dUlt.slot:GetNamedChild("RightKeybind")
+  -- 取控件：重父后 GetNamedChild 查不到，优先用保存的引用
+  local lk = l.pinnedUltLk or dUlt.slot:GetNamedChild("LeftKeybind")
+  local rk = l.pinnedUltRk or dUlt.slot:GetNamedChild("RightKeybind")
   if lk then
+    -- 重父到无缩放的 container：作为 D8 子控件时，applyScale 的槽位缩放会扭曲
+    -- 外部绝对锚的偏移(shift bar scale 滑块设缩放后肩键飞位)；
+    -- 重父后无继承缩放，绝对坐标精确，纹理保持原尺寸(与静态行为一致)
+    if l.container and lk:GetParent() ~= l.container then
+      lk:SetParent(l.container)
+    end
     lk:ClearAnchors()
     lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
     lk:SetHidden(not showKb)
+    l.pinnedUltLk = lk
   end
   if rk then
+    if l.container and rk:GetParent() ~= l.container then
+      rk:SetParent(l.container)
+    end
     rk:ClearAnchors()
     rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
     rk:SetHidden(not showKb)
+    l.pinnedUltRk = rk
   end
 end
 
