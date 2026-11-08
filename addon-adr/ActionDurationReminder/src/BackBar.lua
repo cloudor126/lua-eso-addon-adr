@@ -1909,39 +1909,8 @@ end)
 -- 菜单项由 Bar 模块以二级子菜单(Double Bar)形式挂在 Bar 组内，紧随预设下拉框
 
 --诊断命令：/adrbackbar 输出第二行引擎的实时状态并强制重布局
----声音追踪诊断：包装全局 PlaySound，命中 ult-ready 音效时打印调用栈。
----用法 /adrbackbar sound 开关；用于定位动态双条里那声偏小的 ult-ready 到底谁播的
-l.soundTraceOn = false
-l.soundTraceOrig = nil
 
-l.toggleSoundTrace = function()
-  if l.soundTraceOn then
-    if l.soundTraceOrig then
-      PlaySound = l.soundTraceOrig
-      l.soundTraceOrig = nil
-    end
-    l.soundTraceOn = false
-    d("[ADR] sound trace OFF")
-    return
-  end
-  l.soundTraceOrig = PlaySound
-  local target = SOUNDS.ABILITY_ULTIMATE_READY
-  PlaySound = function(soundName)
-    if soundName == target then
-      d("[ADR] ULT_READY sound played, traceback:")
-      d(debug.traceback())
-    end
-    return l.soundTraceOrig(soundName)
-  end
-  l.soundTraceOn = true
-  d("[ADR] sound trace ON — 切一次手，看聊天框的调用栈")
-end
-
-SLASH_COMMANDS["/adrbackbar"] = function(arg)
-  if arg == "sound" then
-    l.toggleSoundTrace()
-    return
-  end
+SLASH_COMMANDS["/adrbackbar"] = function()
   local sv = l.getSavedVars()
   local buttonCount = 0
   for _ in pairs(l.buttons) do
