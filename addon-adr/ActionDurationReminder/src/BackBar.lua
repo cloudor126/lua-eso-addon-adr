@@ -682,6 +682,9 @@ l.exitStatic = function()
       end
     end
   end
+  -- 注意：不停原生按钮的 ready 时间线——loop 状态由实时事件驱动永远正确，
+  -- 停掉会杀死正确的持续光效且脱战无能量 tick 可恢复(纹理可见性已由
+  -- resizeNativeUlt 的部分隐藏清单修复，原生机制全权控制光效)
   local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
   if weaponSwap then
     local _, _, _, swapX, swapY = l.platformOffsets()
@@ -1200,9 +1203,20 @@ l.resizeNativeUlt = function()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
-    -- 缩尺寸 + 隐藏 ult 特有装饰(边框/发光/光效等，同克隆的 hideUltimateDecorations)
+    -- 缩尺寸 + 隐藏非光效装饰：不能用完整版 hideUltimateDecorations——
+    -- 它会把 ReadyBurst/ReadyLoop 纹理藏掉，原生 loop 仍在隐藏纹理上无限播放，
+    -- 后续 swap-to-ready 的 burst 条件(loop 未播)永不成 → 无光效无声音
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
-    l.hideUltimateDecorations(nb)
+    local hide = {
+      "UltimateBar", "LeadingEdge", "FillAnimationLeft", "FillAnimationRight",
+      "Decoration", "Frame", "LeftKeybind", "RightKeybind",
+    }
+    for i = 1, #hide do
+      local child = nb.slot:GetNamedChild(hide[i])
+      if child then
+        child:SetHidden(true)
+      end
+    end
     l.nativeUltResized = true
     -- PostHook 原生方法：原生翻转动画中会重设模板值(70px+装饰+肩键)，
     -- 钩在原生代码之后立刻覆盖；但保留 ReadyBurst/ReadyLoop(攒满光效是原生自然行为)
