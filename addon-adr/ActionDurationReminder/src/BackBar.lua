@@ -149,27 +149,51 @@ l.hasOakensoul = function()
     or GetItemLinkIcon(GetItemLink(BAG_WORN, EQUIP_SLOT_RING2)):find("oakensoul") ~= nil
 end
 
----隐藏克隆大招按钮上的原生装饰(充能条/就绪特效/肩键提示等属于激活条)
+---隐藏克隆大招按钮上的原生装饰：永远藏的(充能条/填充动画)与随角色显隐的
+---(光效/键提示)分开，后者由角色系统控制
 ---@type fun(button: table)
 l.hideUltimateDecorations = function(button)
-  local decorations = {
+  local alwaysHide = {
     "UltimateBar",
     "LeadingEdge",
     "FillAnimationLeft",
     "FillAnimationRight",
-    "ReadyBurst",
-    "ReadyLoop",
-    "LeftKeybind",
-    "RightKeybind",
     "Decoration",
     "Frame",
   }
-  for i = 1, #decorations do
-    local child = button.slot:GetNamedChild(decorations[i])
+  for i = 1, #alwaysHide do
+    local child = button.slot:GetNamedChild(alwaysHide[i])
     if child then
       child:SetHidden(true)
     end
   end
+  -- 非激活状态下也藏这些(激活时由角色系统重新显示)
+  l.hideUltRoleDecorations(button)
+end
+
+---隐藏随角色显隐的装饰(非激活 ult / 非激活行时调用)
+---@type fun(button: table)
+l.hideUltRoleDecorations = function(button)
+  local roleDecorations = { "ReadyBurst", "ReadyLoop", "LeftKeybind", "RightKeybind" }
+  for i = 1, #roleDecorations do
+    local child = button.slot:GetNamedChild(roleDecorations[i])
+    if child then
+      child:SetHidden(true)
+    end
+  end
+end
+
+---显示激活 ult 的装饰(手柄键提示)
+---@type fun(button: table)
+l.showUltRoleDecorations = function(button)
+  local keybinds = { "LeftKeybind", "RightKeybind" }
+  for i = 1, #keybinds do
+    local child = button.slot:GetNamedChild(keybinds[i])
+    if child then
+      child:SetHidden(IsInGamepadPreferredMode() == false)
+    end
+  end
+  -- ReadyBurst/ReadyLoop 由 updateUltGlow 管理
 end
 
 ---平台原生模板尺寸(与 actionbutton.xml 的 Keyboard/Gamepad 模板一致)；
@@ -939,6 +963,14 @@ l.animateStaticSwap = function()
     l.playSwapGlide(weaponSwap, swapX, fromY, toY)
   end
   l.animateStaticRoles()
+  -- 换手后如果新激活 ult 已攒满，播放音效+光效(原生同款行为)
+  zo_callLater(function()
+    if l.staticEngaged then
+      local active = GetActiveHotbarCategory()
+      local activeSet = active == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
+      l.updateUltGlow(activeSet[8], true, true)
+    end
+  end, 350)
 end
 
 ---同步整行(换武器/全量刷新)。relayout=false 时仅刷数据不重排锚点
@@ -1052,8 +1084,8 @@ end
 ---非激活行不显示。通过 EVENT_POWER_UPDATE 驱动
 l.ultGlowTimelines = {}
 
----@type fun(button: table, isActive: boolean)
-l.updateUltGlow = function(button, isActive)
+---@type fun(button: table, isActive: boolean, playSound?: boolean)
+l.updateUltGlow = function(button, isActive, playSound)
   if button.slot.slotNum ~= 8 then
     return
   end
@@ -1062,17 +1094,36 @@ l.updateUltGlow = function(button, isActive)
   if not glow or not loop then
     return
   end
+  -- 从游戏获取真实 max(原生用 UpdateCurrentUltimateMax，我们直接查)
   local ult = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
-  local max = button.currentUltimateMax or 0
+  local max = 0
+  local actionId = GetSlotBoundId(8, button.slot.hotbarCategory)
+  if actionId and actionId > 0 then
+    local _, _, _, _, _, _, _, _, _, cost = GetAbilityAbilityAndDescription(actionId)
+    -- GetAbilityAbilityAndDescription 不一定给 cost，用 GetAbilityCost
+    max = GetAbilityCost(actionId) or 0
+    if max == 0 then
+      -- 兼容：用原生方法
+      pcall(function()
+        button:UpdateCurrentUltimateMax()
+      end)
+      max = button.currentUltimateMax or 0
+    end
+  end
   local isReady = isActive and max > 0 and ult >= max
   if isReady then
     glow:SetHidden(false)
     loop:SetHidden(false)
-    -- 懒创建时间线(原生虚拟时间线 UltimateReadyBurst/Loop，同款帧动画)
-    if not l.ultGlowTimelines[button] then
+    -- 懒创建时间线(原生虚拟时间线 UltimateReadyBurst/Loop，同款帧动画+音效)
+    if l.ultGlowTimelines[button] == nil then
       local ok = pcall(function()
         local burstTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyBurst", glow)
         local loopTL = ANIMATION_MANAGER:CreateTimelineFromVirtual("UltimateReadyLoop", loop)
+        burstTL:SetHandler("OnPlay", function()
+          if playSound then
+            PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
+          end
+        end)
         burstTL:SetHandler("OnStop", function(tl)
           if tl:GetProgress() >= 1.0 then
             glow:SetHidden(true)
@@ -1099,6 +1150,12 @@ l.updateUltGlow = function(button, isActive)
       tls.burst:Stop()
       tls.loop:Stop()
     end
+  end
+  -- 手柄键提示(激活行显示，键盘藏)
+  if isActive then
+    l.showUltRoleDecorations(button)
+  else
+    l.hideUltRoleDecorations(button)
   end
 end
 
