@@ -1273,22 +1273,38 @@ l.hideNativeUltDecorations = function(button)
   end
 end
 
----原生 ult 缩放的统一实现：改用【技能槽模板】而非手写像素。
----动态模式想要原生 T 槽与技能槽一致 = 就是技能槽模板本身：
----键盘 50/47、手柄 64/61、Icon 填充锚、Backdrop±4 全由原生模板管理，
----零像素字面量，平台切换自动跟随(ZO_GetPlatformTemplate 按当前平台取变体)
+---原生条模板重放(动态模式)：把 3-8 全部重放【技能槽模板】。
+---动机：dump 证实平台切换链有时不完整(原生槽 3 手柄模式下残留键盘子控件
+--- 47/47/55)，且 ult 基础模板的 Backdrop±12 覆盖锚不会被技能模板清除(BD=85)。
+---这与原生 HandleSlotChanged 包装器每次槽更新做的事完全一致，幂等安全；
+---平台自适应(ZO_GetPlatformTemplate 按当前平台取变体)，零像素。
+---ApplyStyle 内部调 ApplySwapAnimationStyle，翻转动画尺寸同源正确
 ---@type fun()
 l.applyNativeAbilityStyle = function()
-  local nb = ZO_ActionBar_GetButton(8)
-  if not (nb and nb.slot) then
-    return
+  local ultBtn
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    if nb and nb.slot then
+      pcall(function()
+        nb:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
+      end)
+      if slotNum == 8 then
+        ultBtn = nb
+        -- 唯一保留的显式锚：ult 基础模板的 Backdrop±12 覆盖不会被技能模板
+        -- 清除(技能模板 Backdrop 无锚定义)，必须显式重锚到技能槽同款 FlipCard±4
+        local fc = nb.slot:GetNamedChild("FlipCard")
+        local bd = nb.slot:GetNamedChild("Backdrop")
+        if fc and bd then
+          bd:ClearAnchors()
+          bd:SetAnchor(TOPLEFT, fc, TOPLEFT, -4, -4)
+          bd:SetAnchor(BOTTOMRIGHT, fc, BOTTOMRIGHT, 4, 4)
+        end
+      end
+    end
   end
-  -- ApplyStyle 内部会调 ApplySwapAnimationStyle(读当前 FlipCard=61 设动画起止)，
-  -- 翻转动画尺寸问题同源解决；再藏非光效装饰
-  pcall(function()
-    nb:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
-  end)
-  l.hideNativeUltDecorations(nb)
+  if ultBtn then
+    l.hideNativeUltDecorations(ultBtn)
+  end
 end
 
 l.resizeNativeUlt = function()
