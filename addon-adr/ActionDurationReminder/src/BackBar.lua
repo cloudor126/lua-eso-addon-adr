@@ -1523,8 +1523,12 @@ l.registerEvents = function()
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
     if l.staticEngaged then
-      -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
-      l.animateStaticSwap()
+      -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动。
+      -- 只在真正换手(didActiveHotbarChange)时触发——声音追踪证实一次切手会连发
+      -- 多次本事件(首饮 T 其余 F)，不门控会导致音效叠加(7 连响)与重复动画调度
+      if didActiveHotbarChange then
+        l.animateStaticSwap()
+      end
       return
     end
     if didActiveHotbarChange then
