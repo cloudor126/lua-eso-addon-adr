@@ -1422,6 +1422,32 @@ end
 l.qsKeybindPinned = false
 l.pinnedQsLabel = nil -- 重父后 GetNamedChild 查不到，保存引用
 
+-- 临时诊断+同帧自愈：包装 ApplyTemplateToControl，调用前后对比 Q 标签锚。
+-- 若被改：立即重钉(零闪烁) + 打印是哪个控件的应用链干的 + 调用栈(定位后移除日志)
+l.atcWrapped = false
+l.wrapApplyTemplate = function()
+  if l.atcWrapped then
+    return
+  end
+  l.atcWrapped = true
+  local orig = ApplyTemplateToControl
+  ApplyTemplateToControl = function(ctrl, tmpl)
+    local label = l.pinnedQsLabel
+    local before = label and select(3, label:GetAnchor(0)) or nil
+    orig(ctrl, tmpl)
+    local label2 = l.pinnedQsLabel
+    if label2 and l.qsKeybindPinned then
+      local after = select(3, label2:GetAnchor(0))
+      if after ~= before or label2:GetParent() ~= ZO_ActionBar1 then
+        d(string.format("[ADR] ATC tamper via ctrl=%s tmpl=%s",
+          ctrl and ctrl.GetName and ctrl:GetName() or "?", tostring(tmpl)))
+        d(debug.traceback())
+        l.guardQuickslotKeybind()
+      end
+    end
+  end
+end
+
 ---心跳自愈校验：模板锚重放(按名字全局查找)会把重父后的标签锚改回
 ---parent-相对(ZO_ActionBar1)，使其飞到条中央；每次心跳验证锚引用是否仍指向
 ---药水槽，被篡改则立即重钉。与追事件时机相比，自愈是确定性的
@@ -1702,6 +1728,8 @@ end
 ---@type fun()
 l.registerEvents = function()
   local EM = GetEventManager()
+  -- 激活时安装 ApplyTemplateToControl 包装(同帧 Q 钉扎自愈+篡改溯源)
+  l.wrapApplyTemplate()
   EM:RegisterForEvent(EVENT_NAME, EVENT_HOTBAR_SLOT_UPDATED, function(_, slotNum, hotbarCategory)
     if l.staticEngaged then
       -- 静态：按恒定分类路由到对应克隆行
