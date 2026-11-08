@@ -1467,6 +1467,15 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
+    if didActiveHotbarChange then
+      -- 原生翻转动画是时间线插值(SIZE 动画逐帧改尺寸)，PostHook 只在方法调用时
+      -- 触发一次，动画后续帧会覆盖回去；动画结束(400ms)后补一次重缩
+      zo_callLater(function()
+        if l.nativeUltResized and l.reapplyNativeUlt then
+          l.reapplyNativeUlt()
+        end
+      end, 500)
+    end
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动
       l.animateStaticSwap()
