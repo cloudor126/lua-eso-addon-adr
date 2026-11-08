@@ -2012,6 +2012,33 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     oneLine("D8", l.buttons[8])
     oneLine("N3", ZO_ActionBar_GetButton(3))
     oneLine("N8", ZO_ActionBar_GetButton(8))
+    -- 激活光效诊断：对比三个数据源(激活条查询/各自条查询/玩家 buff 表)，
+    -- 验证非激活条查询是否陈旧、以及 buff 同名链接假设
+    local active = GetActiveHotbarCategory()
+    local other = active == HOTBAR_CATEGORY_PRIMARY and HOTBAR_CATEGORY_BACKUP or HOTBAR_CATEGORY_PRIMARY
+    -- 玩家 buff 名集合(名字匹配：GetUnitBuffInfo 只给名字不给 abilityId)
+    local buffNames = {}
+    for i = 1, GetNumBuffs("player") do
+      local name = GetUnitBuffInfo("player", i)
+      if name and name ~= "" then
+        buffNames[name] = true
+      end
+    end
+    for slotNum = 3, 8 do
+      local qA = ActionSlotHasActivationHighlight(slotNum, active)
+      local qO = ActionSlotHasActivationHighlight(slotNum, other)
+      if qA or qO then
+        local idA = GetSlotBoundId(slotNum, active)
+        local idO = GetSlotBoundId(slotNum, other)
+        local nameA = idA and idA > 0 and GetAbilityName(idA) or ""
+        local nameO = idO and idO > 0 and GetAbilityName(idO) or ""
+        d(string.format(
+          "[ADR] AH slot%d actQ=%s othQ=%s | actBar[%s buff=%s] othBar[%s buff=%s]",
+          slotNum, tostring(qA), tostring(qO),
+          nameA, tostring(buffNames[nameA] == true),
+          nameO, tostring(buffNames[nameO] == true)))
+      end
+    end
   else
     d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
   end
