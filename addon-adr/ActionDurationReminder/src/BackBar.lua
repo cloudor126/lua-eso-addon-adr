@@ -349,6 +349,21 @@ end
 l.keybindOffsetsAdjusted = false
 
 ---@type fun()
+---无守卫的原始助手：设置原生 3-8 键位标签锚(TOP, 槽.BOTTOM, off)。
+---applyNativeAbilityStyle 重放模板后必须调它——模板锚重放会把标签锚重置回
+---内嵌 -6(视觉“抬升几像素”)，而带守卫的 adjustKeybindOffsets 不会重跑
+---@param off number
+l.setNativeKeybindOffset = function(off)
+  for slotNum = 3, 8 do
+    local nb = ZO_ActionBar_GetButton(slotNum)
+    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
+    if text then
+      text:ClearAnchors()
+      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, off)
+    end
+  end
+end
+
 l.adjustKeybindOffsets = function()
   if l.staticEngaged or not IsInGamepadPreferredMode() then
     return
@@ -357,14 +372,7 @@ l.adjustKeybindOffsets = function()
     return
   end
   l.keybindOffsetsAdjusted = true
-  for slotNum = 3, 8 do
-    local nb = ZO_ActionBar_GetButton(slotNum)
-    local text = nb and nb.slot and nb.slot:GetNamedChild("ButtonText")
-    if text then
-      text:ClearAnchors()
-      text:SetAnchor(TOP, nb.slot, BOTTOM, 0, 2)
-    end
-  end
+  l.setNativeKeybindOffset(2)
 end
 
 ---@type fun()
@@ -1335,6 +1343,8 @@ l.applyNativeAbilityStyle = function()
   if ultBtn then
     l.hideNativeUltDecorations(ultBtn)
   end
+  -- 模板重放会把键位标签锚重置回内嵌 -6——立即重设动态模式的边外偏移
+  l.setNativeKeybindOffset(IsInGamepadPreferredMode() and 2 or 1)
 end
 
 l.resizeNativeUlt = function()
@@ -2278,13 +2288,14 @@ SLASH_COMMANDS["/adrbackbar"] = function()
           and l.pinnedKeybindTexts[slotNum].text
           or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("ActionButton" .. slotNum .. "ButtonText"))
         if text then
-          local _, pt, rel, relPt = text:GetAnchor(0)
-          d(string.format("[ADR] KB%d parent=%s pt=%s relTo=%s relPt=%s l=%.0f t=%.0f",
+          local _, pt, rel, relPt, ox, oy = text:GetAnchor(0)
+          d(string.format("[ADR] KB%d n=%d parent=%s pt=%s relTo=%s relPt=%s ox=%s oy=%s l=%.0f t=%.0f",
             slotNum,
+            text:GetNumAnchors(),
             text:GetParent() and text:GetParent():GetName() or "?",
             tostring(pt),
             rel and rel.GetName and rel:GetName() or "nil",
-            tostring(relPt),
+            tostring(relPt), tostring(ox), tostring(oy),
             text:GetLeft() or -1, text:GetTop() or -1))
         end
       end
