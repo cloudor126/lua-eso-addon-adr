@@ -868,14 +868,18 @@ l.applyDestaffMemory = function(button, slotNum, hotbar)
       l.destaffMemory[key] = { tex = tex, abilityId = abilityId }
     end
   else
-    -- 非激活条：图标可能已变成当前(另一把)武器形态——若记忆里存有同技能的旧图则覆盖
+    -- 非激活条：图标可能已变成当前(另一把)武器形态——若记忆里有旧图则覆盖。
+    -- 不比对 abilityId：非激活时连 GetSlotBoundId 返回的都是错误武器的变体 ID，
+    -- 等值比对永远不成立；key 已含 hotbar:slot，技能真实变更会在该条下次激活时
+    -- 由抓取刷新(换技能是低频操作，可接受)
     local mem = l.destaffMemory[key]
-    if mem
-      and mem.abilityId == abilityId
-      and tex:find("ability_destructionstaff_", 1, true)
-      and mem.tex ~= tex
-    then
-      button.icon:SetTexture(mem.tex)
+    if mem and tex:find("ability_destructionstaff_", 1, true) then
+      if mem.tex ~= tex then
+        button.icon:SetTexture(mem.tex)
+      end
+    elseif not tex:find("ability_destructionstaff_", 1, true) then
+      -- 槽位换成了非毁灭杖技能，清理记忆
+      l.destaffMemory[key] = nil
     end
   end
 end
@@ -1576,6 +1580,9 @@ l.registerEvents = function()
     end
   end)
   EM:RegisterForEvent(EVENT_NAME, EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function(_, didActiveHotbarChange)
+    -- 切手瞬间新激活条的毁灭杖图标是正确的(武器已匹配)，立即存档；
+    -- 旧条的记忆在它上次激活期间已抓取
+    l.captureActiveDestaff()
     if l.staticEngaged then
       -- 静态：位置/内容均不变，激活角色(明暗/尺寸)以时间线动画互换，切手按钮滑动。
       -- 只在真正换手(didActiveHotbarChange)时触发——声音追踪证实一次切手会连发
