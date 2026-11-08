@@ -1105,6 +1105,28 @@ l.resizeNativeUlt = function()
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
     l.hideUltimateDecorations(nb)
     l.nativeUltResized = true
+    -- PostHook 原生 ApplyStyle：原生翻转动画中 HandleSlotChanged→ApplyStyle 会重设
+    -- 模板值(70px+装饰+肩键)，钩在原生代码之后立刻覆盖，消除窗口期闪烁
+    if not l.nativeUltHooked then
+      local hooked = nb
+      local function reapply()
+        if l.nativeUltResized then
+          local d = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+          l.setCloneSize({ slot = hooked.slot, icon = hooked.icon }, d.ult)
+          l.hideUltimateDecorations(hooked)
+        end
+      end
+      if hooked.ApplyStyle then
+        ZO_PostHook(hooked, "ApplyStyle", reapply)
+      end
+      if hooked.HandleSlotChanged then
+        ZO_PostHook(hooked, "HandleSlotChanged", reapply)
+      end
+      if hooked.UpdateUltimateMeter then
+        ZO_PostHook(hooked, "UpdateUltimateMeter", reapply)
+      end
+      l.nativeUltHooked = true
+    end
   end
 end
 
