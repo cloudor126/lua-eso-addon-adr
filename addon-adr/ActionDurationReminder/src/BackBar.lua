@@ -2293,10 +2293,17 @@ SLASH_COMMANDS["/adrbackbar"] = function()
       local ic = s:GetNamedChild("Icon")
       local bd = s:GetNamedChild("Backdrop")
       local bt = s:GetNamedChild("Button")
-      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s BD=%s%s Btn=%s",
+      -- BD 锚引用(边框跟随翻转的关键：relTo 应为 FlipCard；slot=静止)
+      local bdRel = "?"
+      if bd and bd:GetNumAnchors() > 0 then
+        local _, _, relTo = bd:GetAnchor(0)
+        bdRel = relTo and relTo.GetName and relTo:GetName() or "nil"
+        bdRel = bdRel:gsub("ADRBackBarRowActionButton%d+", "CLONE"):gsub("ZO_ActionBar%dButton%d+", "NATIVE")
+      end
+      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s BD=%s→%s%s Btn=%s",
         label, s:GetWidth() or -1, s:GetScale() or -1,
         dim(fc), dim(ic),
-        dim(bd), bd and bd:IsControlHidden() and "[hid]" or "", dim(bt)))
+        dim(bd), bdRel, bd and bd:IsControlHidden() and "[hid]" or "", dim(bt)))
     end
     oneLine("D3", l.buttons[3])
     oneLine("D8", l.buttons[8])
