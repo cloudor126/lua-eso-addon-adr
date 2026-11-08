@@ -2016,27 +2016,19 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     -- 验证非激活条查询是否陈旧、以及 buff 同名链接假设
     local active = GetActiveHotbarCategory()
     local other = active == HOTBAR_CATEGORY_PRIMARY and HOTBAR_CATEGORY_BACKUP or HOTBAR_CATEGORY_PRIMARY
-    -- 玩家 buff 名集合(名字匹配：GetUnitBuffInfo 只给名字不给 abilityId)
-    local buffNames = {}
-    for i = 1, GetNumBuffs("player") do
-      local name = GetUnitBuffInfo("player", i)
-      if name and name ~= "" then
-        buffNames[name] = true
-      end
-    end
     for slotNum = 3, 8 do
       local qA = ActionSlotHasActivationHighlight(slotNum, active)
       local qO = ActionSlotHasActivationHighlight(slotNum, other)
       if qA or qO then
-        local idA = GetSlotBoundId(slotNum, active)
+        local _, _, texA = GetSlotTexture(slotNum, active)
+        local _, _, texO = GetSlotTexture(slotNum, other)
         local idO = GetSlotBoundId(slotNum, other)
-        local nameA = idA and idA > 0 and GetAbilityName(idA) or ""
         local nameO = idO and idO > 0 and GetAbilityName(idO) or ""
+        local crux = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_CRUX)
         d(string.format(
-          "[ADR] AH slot%d actQ=%s othQ=%s | actBar[%s buff=%s] othBar[%s buff=%s]",
+          "[ADR] AH slot%d actQ=%s othQ=%s | actTex=%s othTex=%s | othBar=%s crux=%d",
           slotNum, tostring(qA), tostring(qO),
-          nameA, tostring(buffNames[nameA] == true),
-          nameO, tostring(buffNames[nameO] == true)))
+          tostring(texA), tostring(texO), nameO, crux or -1))
       end
     end
   else
