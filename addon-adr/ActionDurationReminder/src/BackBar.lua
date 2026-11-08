@@ -2024,11 +2024,10 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         local _, _, texO = GetSlotTexture(slotNum, other)
         local idO = GetSlotBoundId(slotNum, other)
         local nameO = idO and idO > 0 and GetAbilityName(idO) or ""
-        local crux = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_CRUX)
         d(string.format(
-          "[ADR] AH slot%d actQ=%s othQ=%s | actTex=%s othTex=%s | othBar=%s crux=%d",
+          "[ADR] AH slot%d actQ=%s othQ=%s | actTex=%s othTex=%s | othBar=%s",
           slotNum, tostring(qA), tostring(qO),
-          tostring(texA), tostring(texO), nameO, crux or -1))
+          tostring(texA), tostring(texO), nameO))
       end
     end
   else
