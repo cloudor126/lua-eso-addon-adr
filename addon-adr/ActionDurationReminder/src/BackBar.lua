@@ -229,9 +229,11 @@ l.showUltRoleDecorations = function(button)
   -- 手柄 UI 且键位提示设置为手柄样式时才显示肩键图标(原生同源逻辑：
   -- actionbutton.lua 用 IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind())
   local showGamepad = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
-  -- D8 肩键已重父到 container(GetNamedChild 查不到)，用保存的引用
+  -- 重父后的肩键(D8/孪生)GetNamedChild 查不到，优先用保存的引用
   local children
-  if l.pinnedUltLk and button == l.buttons[8] then
+  if l.pinnedTwinUlt and l.pinnedTwinUlt[button] then
+    children = { l.pinnedTwinUlt[button].lk, l.pinnedTwinUlt[button].rk }
+  elseif l.pinnedUltLk and button == l.buttons[8] then
     children = { l.pinnedUltLk, l.pinnedUltRk }
   else
     children = { button.slot:GetNamedChild("LeftKeybind"), button.slot:GetNamedChild("RightKeybind") }
@@ -665,13 +667,26 @@ l.layoutStatic = function()
     for _, set in ipairs(l.staticPair()) do
       local ultButton = set[8]
       if ultButton then
-        local lk = ultButton.slot:GetNamedChild("LeftKeybind")
-        local rk = ultButton.slot:GetNamedChild("RightKeybind")
+        -- 重父到无缩放的 container(同动态 D8 的 5e6289e)：作为孪生槽子控件时，
+        -- 角色动画的 scale(80%↔100%)会绕槽原点缩放绝对锚偏移，切手时肩键
+        -- 从左侧滑入；重父后无继承缩放，位置恒定。重父后 GetNamedChild 失效，
+        -- 存引用供可见性助手/还原使用
+        local saved = l.pinnedTwinUlt and l.pinnedTwinUlt[ultButton]
+        local lk = saved and saved.lk or ultButton.slot:GetNamedChild("LeftKeybind")
+        local rk = saved and saved.rk or ultButton.slot:GetNamedChild("RightKeybind")
+        l.pinnedTwinUlt = l.pinnedTwinUlt or {}
+        l.pinnedTwinUlt[ultButton] = { lk = lk, rk = rk, slot = ultButton.slot }
         if lk then
+          if l.container and lk:GetParent() ~= l.container then
+            lk:SetParent(l.container)
+          end
           lk:ClearAnchors()
           lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, lkX, y)
         end
         if rk then
+          if l.container and rk:GetParent() ~= l.container then
+            rk:SetParent(l.container)
+          end
           rk:ClearAnchors()
           rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, rkX, y)
         end
@@ -752,6 +767,21 @@ l.exitStatic = function()
   l.restoreNativeFlip()
   if l.swapGlideTimeline then
     l.swapGlideTimeline:Stop()
+  end
+  -- 孪生肩键还原回各自槽(重父在 container 里，不还原的话切动态后会与
+  -- D8 的肩键在同一位置叠影)；还原后随孪生行一起隐藏
+  if l.pinnedTwinUlt then
+    for _, entry in pairs(l.pinnedTwinUlt) do
+      if entry.lk then
+        entry.lk:SetParent(entry.slot)
+        entry.lk:SetHidden(true)
+      end
+      if entry.rk then
+        entry.rk:SetParent(entry.slot)
+        entry.rk:SetHidden(true)
+      end
+    end
+    l.pinnedTwinUlt = nil
   end
   -- 停止终极攒满光效时间线(LOOP_INDEFINITELY 循环不主动停会永远播放)
   -- 并隐藏其纹理；角色渐变时间线同理(插值对已隐藏控件无意义且浪费调度)
