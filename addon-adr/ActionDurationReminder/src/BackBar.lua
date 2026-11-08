@@ -1564,11 +1564,10 @@ l.registerEvents = function()
     l.syncAll(false)
   end)
   EM:AddFilterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_WORN)
-  -- Keybind Display Mode 等设置变化时刷新肩键可见性(无需切预设)。
-  -- 不按 settingType 过滤：Keybind Display 在 Gameplay 分区(SETTING_TYPE_GAMEPLAY)，
-  -- 而刷新本身幂等廉价。延迟 200ms：原生 keybind 系统在同一事件的后续处理中
-  -- 会重放模板锚，立即断言会被覆盖，必须等原生全部跑完再钉
-  EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED, function()
+  -- Keybind Display Mode 设置变化时刷新肩键。原生源码(keybindingutils.lua)用
+  -- 专用事件 EVENT_KEYBIND_DISPLAY_MODE_CHANGED(非 EVENT_INTERFACE_SETTING_CHANGED)，
+  -- 设置存储在 SETTING_TYPE_GAMEPAD。延迟 200ms 等原生 label 更新链跑完
+  EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_KEYBIND_DISPLAY_MODE_CHANGED, function()
     zo_callLater(function()
       if l.active then
         l.refreshUltKeybinds()
@@ -1593,7 +1592,7 @@ l.unregisterEvents = function()
     EM:UnregisterForEvent(EVENT_NAME, events[i])
   end
   EM:UnregisterForEvent(EVENT_NAME .. "UltGlow", EVENT_POWER_UPDATE)
-  EM:UnregisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED)
+  EM:UnregisterForEvent(EVENT_NAME .. "KbMode", EVENT_KEYBIND_DISPLAY_MODE_CHANGED)
 end
 
 ---系统 back row(原生迷你副条)与克隆行会重复显示，激活时关闭该系统设置(不恢复，同FAB做法)
