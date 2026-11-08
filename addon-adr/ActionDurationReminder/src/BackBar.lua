@@ -150,6 +150,48 @@ end
 ---隐藏克隆大招按钮上的原生装饰：永远藏的(充能条/填充动画)与随角色显隐的
 ---(光效/键提示)分开，后者由角色系统控制
 ---@type fun(button: table)
+---共享工具：静态双行集合(单一实例，避免每处分配临时表；
+---createStaticRows 原地填充表，引用自初始化后恒定)
+---@return table
+l.staticPair = function()
+  if not l._staticPair then
+    l._staticPair = { l.staticPrimary, l.staticBackup }
+  end
+  return l._staticPair
+end
+
+---毁灭杖纹理判定(记忆机制用)
+---@type fun(tex: string): boolean
+l.isDestaffTex = function(tex)
+  return tex ~= nil and tex:find("ability_destructionstaff_", 1, true) ~= nil
+end
+
+---大招就绪状态(消耗用原生 UpdateCurrentUltimateMax 同款 API GetSlotAbilityCost)
+---@param hotbar number
+---@return number power, number cost, boolean ready
+l.ultPowerAndCost = function(hotbar)
+  local power = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
+  local cost = GetSlotAbilityCost(8, COMBAT_MECHANIC_FLAGS_ULTIMATE, hotbar) or 0
+  return power, cost, cost > 0 and power >= cost
+end
+
+---全量重布局(与切预设同路径)：平台/键位模式切换、诊断命令共用。
+---旧平台/模式的钉扎、静态接管状态全部作废，走正规链路重建
+---@type fun()
+l.fullRelayout = function()
+  if l.keybindsPinned then
+    l.unpinKeybinds()
+  end
+  l.exitStatic()
+  l.layoutRow()
+  l.syncAll()
+  l.reassertUltKeybinds()
+  l.refreshUltKeybinds()
+  if l.nativeUltResized and l.reapplyNativeUlt then
+    l.reapplyNativeUlt()
+  end
+end
+
 l.hideUltimateDecorations = function(button)
   local alwaysHide = {
     "UltimateBar",
@@ -226,6 +268,21 @@ local PLATFORM_DIMS = {
   keyboard = { ability = 50, ult = 50 },
   gamepad = { ability = 64, ult = 64 },
 }
+
+---ult 肩键绝对坐标(与 layoutStaticRow/pinKeybinds 同源的公式；
+---返回 lkX, rkX, y(已含基线偏移)，供 Left/RightKeybind 锚定)
+---@return number, number, number
+l.ultKeybindPos = function()
+  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  local abilityGap, ultGap, _, swapX, swapY = l.platformOffsets()
+  local swapW = weaponSwap and weaponSwap:GetWidth() or 56
+  local swapH = weaponSwap and weaponSwap:GetHeight() or 70
+  local dims = PLATFORM_DIMS.gamepad
+  local x = swapX + swapW + abilityGap
+    + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
+  local y = swapY + swapH / 2 + dims.ult / 2 + 2 + 11
+  return x - 22, x + 22, y
+end
 
 ---测量克隆技能段(3-7)原始尺寸(本地像素，平台常量)
 ---@type fun(): number, number
@@ -568,31 +625,21 @@ l.layoutStatic = function()
   -- 键位数字钉在原位(重父到 ZO_ActionBar1 以独立于被隐藏的原生槽)
   l.pinKeybinds()
   -- 手柄 ult 肩键提示(Left/RightKeybind)：重锚到绝对坐标(底行 slot8 位置)，
-  -- 两行的肩键提示都在同一位置，不随角色互换跳位。
-  -- X 用与 layoutStaticRow 完全相同的公式；Y 用与 pinKeybinds 相同的基线
+  -- 两行的肩键提示都在同一位置，不随角色互换跳位(坐标公式统一在 ultKeybindPos)
   if IsInGamepadPreferredMode() then
-    local abilityGap, ultGap = l.platformOffsets()
-    local _, _, _, swapX, swapY = l.platformOffsets()
-    local swapW = weaponSwap and weaponSwap:GetWidth() or 56
-    local swapH = weaponSwap and weaponSwap:GetHeight() or 70
-    local dims = PLATFORM_DIMS.gamepad
-    -- 与 layoutStaticRow 相同的 slot8 X 公式
-    local ultX = swapX + swapW + abilityGap
-      + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
-    -- 与 pinKeybinds 相同的 Y 基线(槽底边 + textOff)
-    local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
-    for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+    local lkX, rkX, y = l.ultKeybindPos()
+    for _, set in ipairs(l.staticPair()) do
       local ultButton = set[8]
       if ultButton then
         local lk = ultButton.slot:GetNamedChild("LeftKeybind")
         local rk = ultButton.slot:GetNamedChild("RightKeybind")
         if lk then
           lk:ClearAnchors()
-          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
+          lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, lkX, y)
         end
         if rk then
           rk:ClearAnchors()
-          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
+          rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, rkX, y)
         end
       end
     end
@@ -670,7 +717,7 @@ l.exitStatic = function()
   end
   -- 停止终极攒满光效时间线(LOOP_INDEFINITELY 循环不主动停会永远播放)
   -- 并隐藏其纹理；角色渐变时间线同理(插值对已隐藏控件无意义且浪费调度)
-  for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+  for _, set in ipairs(l.staticPair()) do
     for slotNum = 3, 8 do
       local button = set[slotNum]
       if button then
@@ -813,7 +860,7 @@ l.createStaticRows = function()
   if not ok then
     l.staticRowsFailed = true
     -- 隐藏已创建的孤儿控件(仅清表引用会让它们永久停在容器原点)
-    for _, set in ipairs({ l.staticPrimary, l.staticBackup }) do
+    for _, set in ipairs(l.staticPair()) do
       for _, button in pairs(set) do
         pcall(function()
           button.slot:SetHidden(true)
@@ -880,7 +927,7 @@ l.captureActiveDestaff = function()
   local active = GetActiveHotbarCategory()
   for slotNum = 3, 8 do
     local tex = GetSlotTexture(slotNum, active)
-    if tex and tex ~= "" and tex:find("ability_destructionstaff_", 1, true) then
+    if tex and tex ~= "" and l.isDestaffTex(tex) then
       l.destaffMemory[active .. ":" .. slotNum] =
         { tex = tex, abilityId = GetSlotBoundId(slotNum, active) }
     end
@@ -900,7 +947,7 @@ l.applyDestaffMemory = function(button, slotNum, hotbar)
   end
   if GetActiveHotbarCategory() == hotbar then
     -- 激活条：图标跟随当前武器，是正确的——存档(仅毁灭杖需要)
-    if tex:find("ability_destructionstaff_", 1, true) then
+    if l.isDestaffTex(tex) then
       l.destaffMemory[key] = { tex = tex, abilityId = abilityId }
     end
   else
@@ -909,11 +956,11 @@ l.applyDestaffMemory = function(button, slotNum, hotbar)
     -- 等值比对永远不成立；key 已含 hotbar:slot，技能真实变更会在该条下次激活时
     -- 由抓取刷新(换技能是低频操作，可接受)
     local mem = l.destaffMemory[key]
-    if mem and tex:find("ability_destructionstaff_", 1, true) then
+    if mem and l.isDestaffTex(tex) then
       if mem.tex ~= tex then
         button.icon:SetTexture(mem.tex)
       end
-    elseif not tex:find("ability_destructionstaff_", 1, true) then
+    elseif not l.isDestaffTex(tex) then
       -- 槽位换成了非毁灭杖技能，清理记忆
       l.destaffMemory[key] = nil
     end
@@ -1119,15 +1166,8 @@ l.animateStaticSwap = function()
   local activeCat = GetActiveHotbarCategory()
   local newActiveSet = activeCat == HOTBAR_CATEGORY_PRIMARY and l.staticPrimary or l.staticBackup
   local oldHotbar = activeCat == HOTBAR_CATEGORY_PRIMARY and HOTBAR_CATEGORY_BACKUP or HOTBAR_CATEGORY_PRIMARY
-  local ultPower = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
-  pcall(function()
-    newActiveSet[8]:UpdateCurrentUltimateMax()
-  end)
-  local ultMax = newActiveSet[8].currentUltimateMax or 0
-  -- 旧激活条的消耗(GetSlotAbilityCost 是原生 UpdateCurrentUltimateMax 同款 API)
-  local oldMax = GetSlotAbilityCost(8, COMBAT_MECHANIC_FLAGS_ULTIMATE, oldHotbar) or 0
-  local isNewlyReady = ultMax > 0 and ultPower >= ultMax
-  local wasReady = oldMax > 0 and ultPower >= oldMax
+  local _, _, isNewlyReady = l.ultPowerAndCost(activeCat)
+  local _, _, wasReady = l.ultPowerAndCost(oldHotbar)
   if isNewlyReady then
     if not wasReady then
       PlaySound(SOUNDS.ABILITY_ULTIMATE_READY)
@@ -1216,24 +1256,29 @@ end
 l.nativeUltResized = false
 
 ---@type fun()
+---隐藏原生 ult 的非光效装饰(保留 ReadyBurst/ReadyLoop 供原生攒满光效；
+---完整版 hideUltimateDecorations 会连光效纹理一起藏，原生 loop 在隐藏纹理上
+---无限播放会阻塞后续 burst——动态无光效无声音事故的根源，勿改回完整版)
+---@type fun(button: table)
+l.hideNativeUltDecorations = function(button)
+  local hide = {
+    "UltimateBar", "LeadingEdge", "FillAnimationLeft", "FillAnimationRight",
+    "Decoration", "Frame", "LeftKeybind", "RightKeybind",
+  }
+  for i = 1, #hide do
+    local child = button.slot:GetNamedChild(hide[i])
+    if child then
+      child:SetHidden(true)
+    end
+  end
+end
+
 l.resizeNativeUlt = function()
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
-    -- 缩尺寸 + 隐藏非光效装饰：不能用完整版 hideUltimateDecorations——
-    -- 它会把 ReadyBurst/ReadyLoop 纹理藏掉，原生 loop 仍在隐藏纹理上无限播放，
-    -- 后续 swap-to-ready 的 burst 条件(loop 未播)永不成 → 无光效无声音
     l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
-    local hide = {
-      "UltimateBar", "LeadingEdge", "FillAnimationLeft", "FillAnimationRight",
-      "Decoration", "Frame", "LeftKeybind", "RightKeybind",
-    }
-    for i = 1, #hide do
-      local child = nb.slot:GetNamedChild(hide[i])
-      if child then
-        child:SetHidden(true)
-      end
-    end
+    l.hideNativeUltDecorations(nb)
     l.nativeUltResized = true
     -- PostHook 原生方法：原生翻转动画中会重设模板值(70px+装饰+肩键)，
     -- 钩在原生代码之后立刻覆盖；但保留 ReadyBurst/ReadyLoop(攒满光效是原生自然行为)
@@ -1245,17 +1290,7 @@ l.resizeNativeUlt = function()
           inReapply = true
           local d = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
           l.setCloneSize({ slot = hooked.slot, icon = hooked.icon }, d.ult)
-          -- 只藏非光效装饰(保留 ReadyBurst/ReadyLoop 供原生攒满动画)
-          local hide = {
-            "UltimateBar", "LeadingEdge", "FillAnimationLeft", "FillAnimationRight",
-            "Decoration", "Frame", "LeftKeybind", "RightKeybind",
-          }
-          for i = 1, #hide do
-            local child = hooked.slot:GetNamedChild(hide[i])
-            if child then
-              child:SetHidden(true)
-            end
-          end
+          l.hideNativeUltDecorations(hooked)
           -- 关键：重设动画起止尺寸(FlipCard 已是我们的 61，原生链里它在
           -- ApplyStyle 内部读到的还是模板 67)。不 PostHook 本方法——
           -- 防重入闸已阻断递归，且其他三个钩子入口已覆盖所有重设时机
@@ -1332,14 +1367,9 @@ l.updateUltGlow = function(button, isActive, playSound)
   if not glow or not loop then
     return
   end
-  -- 用原生方法获取 ult 消耗(GetAbilityCost 不存在，UpdateCurrentUltimateMax 是正道)
-  local ult = GetUnitPower("player", COMBAT_MECHANIC_FLAGS_ULTIMATE)
-  local max = 0
-  pcall(function()
-    button:UpdateCurrentUltimateMax()
-  end)
-  max = button.currentUltimateMax or 0
-  local isReady = isActive and max > 0 and ult >= max
+  -- ult 就绪状态(消耗查询统一走 ultPowerAndCost，同原生 UpdateCurrentUltimateMax 的 API)
+  local _, max, isReady = l.ultPowerAndCost(button.slot.hotbarCategory)
+  isReady = isActive and isReady
   if isReady then
     glow:SetHidden(false)
     loop:SetHidden(false)
@@ -1394,29 +1424,21 @@ l.reassertUltKeybinds = function()
   if not (l.buttons[8] and l.buttons[8].slot) then
     return
   end
-  local weaponSwap = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  local _, _, _, swapX, swapY = l.platformOffsets()
-  local abilityGap, ultGap = l.platformOffsets()
-  local swapW = weaponSwap and weaponSwap:GetWidth() or 56
-  local swapH = weaponSwap and weaponSwap:GetHeight() or 70
-  local dims = PLATFORM_DIMS.gamepad
-  local ultX = swapX + swapW + abilityGap
-    + 4 * (dims.ability + abilityGap) + dims.ability + ultGap + dims.ult / 2
-  local ultY = swapY + swapH / 2 + dims.ult / 2 + 2
+  local lkX, rkX, y = l.ultKeybindPos()
   local showKb = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
   local dUlt = l.buttons[8]
   -- 取控件：重父后 GetNamedChild 查不到，优先用保存的引用
   local lk = l.pinnedUltLk or dUlt.slot:GetNamedChild("LeftKeybind")
   local rk = l.pinnedUltRk or dUlt.slot:GetNamedChild("RightKeybind")
+  -- 重父到无缩放的 container：作为 D8 子控件时，applyScale 的槽位缩放会扭曲
+  -- 外部绝对锚的偏移(shift bar scale 滑块设缩放后肩键飞位)；
+  -- 重父后无继承缩放，绝对坐标精确，纹理保持原尺寸(与静态行为一致)
   if lk then
-    -- 重父到无缩放的 container：作为 D8 子控件时，applyScale 的槽位缩放会扭曲
-    -- 外部绝对锚的偏移(shift bar scale 滑块设缩放后肩键飞位)；
-    -- 重父后无继承缩放，绝对坐标精确，纹理保持原尺寸(与静态行为一致)
     if l.container and lk:GetParent() ~= l.container then
       lk:SetParent(l.container)
     end
     lk:ClearAnchors()
-    lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX - 22, ultY + 11)
+    lk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, lkX, y)
     lk:SetHidden(not showKb)
     l.pinnedUltLk = lk
   end
@@ -1425,7 +1447,7 @@ l.reassertUltKeybinds = function()
       rk:SetParent(l.container)
     end
     rk:ClearAnchors()
-    rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, ultX + 22, ultY + 11)
+    rk:SetAnchor(CENTER, ZO_ActionBar1, TOPLEFT, rkX, y)
     rk:SetHidden(not showKb)
     l.pinnedUltRk = rk
   end
@@ -1699,21 +1721,12 @@ l.applyPlatformStyle = function()
   styleSet(l.buttons)
   styleSet(l.staticPrimary)
   styleSet(l.staticBackup)
-  -- 平台切换 = 全量重布局(与切预设同路径)：旧平台的钉扎/锚点全部作废。
-  -- 先 unpin(静态键位标签重父回原生槽，解除 keybindsPinned 早退守卫)，
-  -- 再 layoutRow 走 layoutStatic/layoutDynamic 正规链路用新平台坐标重建。
-  -- 延迟 200ms：ZO_PlatformStyle 多处理器按序执行，等原生处理器全部跑完
+  -- 平台切换 = 全量重布局(与切预设同路径，见 fullRelayout)：
+  -- 延迟 200ms 等原生平台处理器链全部跑完
   zo_callLater(function()
-    if not l.active then
-      return
+    if l.active then
+      l.fullRelayout()
     end
-    if l.keybindsPinned then
-      l.unpinKeybinds()
-    end
-    l.exitStatic()
-    l.layoutRow()
-    l.syncAll()
-    l.reassertUltKeybinds()
   end, 200)
   l.layoutRow()
   l.syncAll()
@@ -1835,21 +1848,9 @@ l.registerEvents = function()
       if not l.active then
         return
       end
-      -- 键位显示模式切换 = 全量重布局(与平台切换/切预设同路径)：
-      -- 游戏对键位控件的显示/隐藏/锚重置在这个事件链里零散发生，
-      -- 零敲碎打补不完(静态 3/7、动态键盘提示不全均为此因)，
-      -- 统一走 unpin→exitStatic→layoutRow 正规链路重建
-      if l.keybindsPinned then
-        l.unpinKeybinds()
-      end
-      l.exitStatic()
-      l.layoutRow()
-      l.syncAll()
-      l.reassertUltKeybinds()
-      l.refreshUltKeybinds()
-      if l.nativeUltResized and l.reapplyNativeUlt then
-        l.reapplyNativeUlt()
-      end
+      -- 键位显示模式切换 = 全量重布局(同平台切换/切预设路径，见 fullRelayout)：
+      -- 游戏对键位控件的显示/隐藏/锚重置在事件链里零散发生，零敲碎打补不完
+      l.fullRelayout()
     end, 200)
   end)
 end
@@ -1986,11 +1987,8 @@ l.onCoreUpdate = function()
     -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
     -- Q 键提示钉扎自愈(锚被模板重放篡改时立即重钉) + 激活光效轮询
     l.guardQuickslotKeybind()
-    -- 复用模块级集合表(避免每 100ms 分配临时表；表引用自初始化后恒定不变)
-    if not l.pollSets then
-      l.pollSets = { l.staticPrimary, l.staticBackup }
-    end
-    local sets = l.staticEngaged and l.pollSets or l.buttons
+    -- staticPair() 返回模块级单例集合表(避免每 100ms 分配临时表)
+    local sets = l.staticEngaged and l.staticPair() or l.buttons
     for si = 1, #sets do
       for slotNum = 3, 8 do
         local b = sets[si][slotNum]
