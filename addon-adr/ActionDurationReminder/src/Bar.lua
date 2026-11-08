@@ -659,7 +659,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             tooltip = text("Scale of the shift bar"),
             min = 40,
             max = 100,
-            step = 10,
+            step = 5,
             getFunc = function()
               return l.getSavedVars().barShowShiftScalePercent
             end,
