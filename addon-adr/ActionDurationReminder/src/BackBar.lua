@@ -1273,17 +1273,33 @@ l.hideNativeUltDecorations = function(button)
   end
 end
 
+---原生 ult 缩放的统一实现：改用【技能槽模板】而非手写像素。
+---动态模式想要原生 T 槽与技能槽一致 = 就是技能槽模板本身：
+---键盘 50/47、手柄 64/61、Icon 填充锚、Backdrop±4 全由原生模板管理，
+---零像素字面量，平台切换自动跟随(ZO_GetPlatformTemplate 按当前平台取变体)
+---@type fun()
+l.applyNativeAbilityStyle = function()
+  local nb = ZO_ActionBar_GetButton(8)
+  if not (nb and nb.slot) then
+    return
+  end
+  -- ApplyStyle 内部会调 ApplySwapAnimationStyle(读当前 FlipCard=61 设动画起止)，
+  -- 翻转动画尺寸问题同源解决；再藏非光效装饰
+  pcall(function()
+    nb:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
+  end)
+  l.hideNativeUltDecorations(nb)
+end
+
 l.resizeNativeUlt = function()
-  -- 仅手柄：键盘模式原生 ult 本就是 50/47(与技能槽一致)，无需缩放；
+  -- 仅手柄：键盘模式原生 ult 本就是 50/47(与技能槽一致)，无需接管；
   -- 更不能在此隐藏装饰(键盘的 UltimateBar 是原生充能条，藏了会丢功能)
   if not IsInGamepadPreferredMode() then
     return
   end
-  local dims = PLATFORM_DIMS.gamepad
+  l.applyNativeAbilityStyle()
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
-    l.setCloneSize({ slot = nb.slot, icon = nb.icon }, dims.ult)
-    l.hideNativeUltDecorations(nb)
     l.nativeUltResized = true
     -- PostHook 原生方法：原生翻转动画中会重设模板值(70px+装饰+肩键)，
     -- 钩在原生代码之后立刻覆盖；但保留 ReadyBurst/ReadyLoop(攒满光效是原生自然行为)
@@ -1293,17 +1309,10 @@ l.resizeNativeUlt = function()
       local function reapply()
         if l.nativeUltResized and not inReapply then
           inReapply = true
-          local d = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-          l.setCloneSize({ slot = hooked.slot, icon = hooked.icon }, d.ult)
-          l.hideNativeUltDecorations(hooked)
-          -- 关键：重设动画起止尺寸(FlipCard 已是我们的 61，原生链里它在
-          -- ApplyStyle 内部读到的还是模板 67)。不 PostHook 本方法——
-          -- 防重入闸已阻断递归，且其他三个钩子入口已覆盖所有重设时机
-          if hooked.ApplySwapAnimationStyle then
-            pcall(function()
-              hooked:ApplySwapAnimationStyle()
-            end)
-          end
+          -- 统一走技能槽模板：尺寸/Icon填充/Backdrop/动画起止全部模板自管
+          -- (ApplyStyle 内部调 ApplySwapAnimationStyle，动画尺寸同源正确)；
+          -- 防重入闸阻断 ApplyStyle→本钩子递归
+          l.applyNativeAbilityStyle()
           inReapply = false
         end
       end
@@ -1328,33 +1337,16 @@ l.restoreNativeUlt = function()
     return
   end
   l.nativeUltResized = false -- 同时解除 reapply PostHook 武装(空操作)
-  -- 手柄原生前值：slot 70, FlipCard 67。键盘模式不设——键盘模板(50/47)
-  -- 由原生平台 ApplyStyle 自行应用，手动设 70 反而会错
-  if not IsInGamepadPreferredMode() then
-    return
-  end
+  -- 还原 = 重放【ult 模板】(平台自适应：键盘 50/47 / 手柄 70/67)，
+  -- 尺寸/锚/装饰全部模板自管，零手写像素；装饰可见性由模板+SetUltimateMeter 恢复
   local nb = ZO_ActionBar_GetButton(8)
   if nb and nb.slot then
-    nb.slot:SetDimensions(70, 70)
-    local fc = nb.slot:GetNamedChild("FlipCard")
-    if fc then
-      fc:SetDimensions(ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE, ZO_GAMEPAD_ULTIMATE_BUTTON_SIZE)
-    end
-    local btn = nb.slot:GetNamedChild("Button")
-    if btn then
-      btn:SetDimensions(70, 70)
-    end
-    -- 还原装饰可见性：Frame 在手柄键盘模式均为装饰边框，原生动态下应恢复
-    local frame = nb.slot:GetNamedChild("Frame")
-    if frame then
-      frame:SetHidden(true) -- 原生手柄模板里 Frame 本身 hidden=true，不强制
-    end
-    -- Decoration 是 ult 专属装饰，恢复显示
-    local deco = nb.slot:GetNamedChild("Decoration")
-    if deco then
-      deco:SetHidden(false)
-    end
-    -- Backdrop/Frame 锚不显式恢复(原生 ApplyStyle 会在下次平台切换时重设)
+    pcall(function()
+      nb:ApplyStyle(ZO_GetPlatformTemplate("ZO_UltimateActionButton"))
+    end)
+    pcall(function()
+      nb:UpdateUltimateMeter()
+    end)
   end
 end
 
