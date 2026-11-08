@@ -1919,6 +1919,17 @@ l.deactivate = function()
   l.restoreKeybindOffsets()
   -- Q 提示还原原生(重父回药水槽+重放模板锚)
   l.unpinQuickslotKeybind()
+  -- D8 肩键还原回槽(清理重父状态；容器即将隐藏，下次激活时 reassert 会重新钉)
+  if (l.pinnedUltLk or l.pinnedUltRk) and l.buttons[8] and l.buttons[8].slot then
+    if l.pinnedUltLk then
+      l.pinnedUltLk:SetParent(l.buttons[8].slot)
+      l.pinnedUltLk = nil
+    end
+    if l.pinnedUltRk then
+      l.pinnedUltRk:SetParent(l.buttons[8].slot)
+      l.pinnedUltRk = nil
+    end
+  end
   -- 还原原生 slot8 尺寸(手柄 70/67)
   l.restoreNativeUlt()
   -- 手柄下恢复切手按钮的原生行为(永久隐藏)并回默认锚
@@ -1975,7 +1986,11 @@ l.onCoreUpdate = function()
     -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
     -- Q 键提示钉扎自愈(锚被模板重放篡改时立即重钉) + 激活光效轮询
     l.guardQuickslotKeybind()
-    local sets = l.staticEngaged and { l.staticPrimary, l.staticBackup } or { l.buttons }
+    -- 复用模块级集合表(避免每 100ms 分配临时表；表引用自初始化后恒定不变)
+    if not l.pollSets then
+      l.pollSets = { l.staticPrimary, l.staticBackup }
+    end
+    local sets = l.staticEngaged and l.pollSets or l.buttons
     for si = 1, #sets do
       for slotNum = 3, 8 do
         local b = sets[si][slotNum]
