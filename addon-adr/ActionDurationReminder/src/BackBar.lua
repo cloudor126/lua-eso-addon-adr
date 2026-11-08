@@ -1558,11 +1558,11 @@ l.registerEvents = function()
     l.syncAll(false)
   end)
   EM:AddFilterForEvent(EVENT_NAME, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_WORN)
-  -- Keybind Display Mode 等设置变化时刷新肩键可见性(无需切预设)
-  EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED, function(_, settingType)
-    if settingType == SETTING_TYPE_UI then
-      l.refreshUltKeybinds()
-    end
+  -- Keybind Display Mode 等设置变化时刷新肩键可见性(无需切预设)。
+  -- 不按 settingType 过滤：Keybind Display 在 Gameplay 分区(SETTING_TYPE_GAMEPLAY)，
+  -- 而刷新本身幂等廉价，任何设置变化都跑一遍也无妨
+  EM:RegisterForEvent(EVENT_NAME .. "KbMode", EVENT_INTERFACE_SETTING_CHANGED, function()
+    l.refreshUltKeybinds()
   end)
 end
 
