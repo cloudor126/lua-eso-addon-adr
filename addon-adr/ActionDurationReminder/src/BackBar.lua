@@ -1420,12 +1420,39 @@ end
 ---重父后不再是 qs.slot 子控件，原生模板刷新/切手链重置不了锚；相对锚仍引用
 ---qs.slot 故位置跟随药水槽。键盘模式不动(原生即正确)。
 l.qsKeybindPinned = false
+l.pinnedQsLabel = nil -- 重父后 GetNamedChild 查不到，保存引用
+
+---心跳自愈校验：模板锚重放(按名字全局查找)会把重父后的标签锚改回
+---parent-相对(ZO_ActionBar1)，使其飞到条中央；每次心跳验证锚引用是否仍指向
+---药水槽，被篡改则立即重钉。与追事件时机相比，自愈是确定性的
+---@type fun()
+l.guardQuickslotKeybind = function()
+  if not (l.qsKeybindPinned and l.pinnedQsLabel) then
+    return
+  end
+  if not (IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()) then
+    l.unpinQuickslotKeybind()
+    return
+  end
+  local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
+  if not (qs and qs.slot) then
+    return
+  end
+  local label = l.pinnedQsLabel
+  if label:GetParent() ~= ZO_ActionBar1
+    or label:GetNumAnchors() ~= 1
+    or select(3, label:GetAnchor(0)) ~= qs.slot
+  then
+    label:SetParent(ZO_ActionBar1)
+    label:ClearAnchors()
+    label:SetAnchor(TOP, qs.slot, BOTTOM, 0, 2)
+  end
+end
 
 ---@type fun()
 l.pinQuickslotKeybind = function()
   local want = IsInGamepadPreferredMode() and ZO_Keybindings_ShouldShowGamepadKeybind()
   if not want then
-    -- 条件不满足但已钉：还原(平台/键位模式切回键盘时由全量重布局路过这里)
     if l.qsKeybindPinned then
       l.unpinQuickslotKeybind()
     end
@@ -1444,6 +1471,7 @@ l.pinQuickslotKeybind = function()
       qsText:SetParent(ZO_ActionBar1)
       qsText:ClearAnchors()
       qsText:SetAnchor(TOP, qs.slot, BOTTOM, 0, 2)
+      l.pinnedQsLabel = qsText
       l.qsKeybindPinned = true
     end
   end
@@ -1455,17 +1483,16 @@ l.unpinQuickslotKeybind = function()
     return
   end
   l.qsKeybindPinned = false
+  local label = l.pinnedQsLabel
+  l.pinnedQsLabel = nil
   local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-  if qs and qs.slot then
-    local qsText = qs.slot:GetNamedChild("ButtonText")
-    if qsText then
-      qsText:SetParent(qs.slot)
-      qsText:ClearAnchors()
-      -- 重放平台模板恢复原生锚(内嵌 -6)
-      pcall(function()
-        qs:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
-      end)
-    end
+  if label and qs and qs.slot then
+    label:SetParent(qs.slot)
+    label:ClearAnchors()
+    -- 重放平台模板恢复原生锚(内嵌 -6)
+    pcall(function()
+      qs:ApplyStyle(ZO_GetPlatformTemplate("ZO_ActionButton"))
+    end)
   end
 end
 
@@ -1891,6 +1918,8 @@ l.onCoreUpdate = function()
     -- 状态不维护(dump 证实)，光效若在非激活期间自然到期，克隆会保留辉光
     -- 直到下次切手(引擎刷新)——而光效本就催玩家尽早使用，及时使用时切手
     -- 即自愈，卡死属罕见可接受(FAB 干脆不渲染副条光效，本插件选择保留体验)
+    -- Q 键提示钉扎自愈(锚被模板重放篡改时立即重钉) + 激活光效轮询
+    l.guardQuickslotKeybind()
     local sets = l.staticEngaged and { l.staticPrimary, l.staticBackup } or { l.buttons }
     for si = 1, #sets do
       for slotNum = 3, 8 do
