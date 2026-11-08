@@ -1772,125 +1772,32 @@ SLASH_COMMANDS["/adrbackbar"] = function()
   if l.active and l.container then
     l.syncAll()
     d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
-    -- 克隆控件转储：名称/父链/锚数/位置/尺寸/缩放/隐藏，定位游离控件
-    -- 子控件结构转储：定位槽位视觉尺寸不一致的层(边框/FlipCard/Backdrop等)
-    -- ESO 控件无 GetChildren，用固定名单枚举
-    local dumpChildren = function(label, button)
-      local names = {
-        "FlipCard", "Icon", "Button", "Backdrop", "Frame", "BG", "Status",
-        "Cooldown", "CooldownIcon", "CooldownEdge", "Glow", "Decoration",
-        "UltimateBar", "LeadingEdge", "TimerText", "StackCountText", "CountText",
-        "ButtonText", "TimerOverlay", "ActivationHighlight",
-      }
-      for i = 1, #names do
-        local c = button.slot:GetNamedChild(names[i])
-        if c then
-          pcall(function()
-            local cname = c:GetName()
-            if cname == "" or cname == nil then
-              cname = names[i]
-            end
-            d(string.format(
-              "[ADR] %s.child[%s] w=%.0f h=%.0f l=%.0f t=%.0f hidden=%s",
-              label,
-              cname,
-              c:GetWidth() or -1,
-              c:GetHeight() or -1,
-              c:GetLeft() or -1,
-              c:GetTop() or -1,
-              tostring(c:IsControlHidden())
-            ))
-          end)
-        end
+    -- 极简 dump：每槽一行内联尺寸(slot|FC|Icon|BD|Btn)，D3/D8/N3/N8 四行直接对比
+    local function oneLine(label, button)
+      if not (button and button.slot) then
+        d(string.format("[ADR] %s (nil)", label))
+        return
       end
-    end
-    local dump = function(label, set)
-      for slotNum = 3, 8 do
-        local b = set[slotNum]
-        if b and b.slot then
-          local s = b.slot
-          local icon = b.icon
-          -- getter 存在性逐个检查：GetTexture/GetDesaturation 并非所有纹理控件都有
-          local iconTex, iconAlpha, iconDesat, iconW = "nil", -1, -1, -1
-          local iconHidden = "?"
-          if icon then
-            iconHidden = tostring(icon:IsControlHidden())
-            iconAlpha = icon:GetAlpha() or -1
-            iconW = icon:GetWidth() or -1
-            if icon.GetTexture then
-              iconTex = icon:GetTexture() or ""
-            elseif icon.GetTextureFileName then
-              iconTex = icon:GetTextureFileName() or ""
-            else
-              iconTex = "no-getter"
-            end
-            if icon.GetDesaturation then
-              iconDesat = icon:GetDesaturation() or -1
-            end
-          end
-          d(string.format(
-            "[ADR] %s%d cat=%s parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f scale=%.2f hidden=%s | icon tex=%s a=%.2f desat=%.2f hidden=%s w=%.0f",
-            label,
-            slotNum,
-            tostring(b.slot.hotbarCategory),
-            s:GetParent() and s:GetParent():GetName() or "?",
-            s:GetNumAnchors(),
-            s:GetLeft() or -1,
-            s:GetTop() or -1,
-            s:GetWidth() or -1,
-            s:GetHeight() or -1,
-            s:GetScale() or -1,
-            tostring(s:IsControlHidden()),
-            iconTex,
-            iconAlpha,
-            iconDesat,
-            iconHidden,
-            iconW
-          ))
+      local s = button.slot
+      local function dim(c)
+        if not c then
+          return "--"
         end
+        return string.format("%.0f", c:GetWidth() or -1)
       end
+      local fc = s:GetNamedChild("FlipCard")
+      local ic = s:GetNamedChild("Icon")
+      local bd = s:GetNamedChild("Backdrop")
+      local bt = s:GetNamedChild("Button")
+      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s BD=%s%s Btn=%s",
+        label, s:GetWidth() or -1, s:GetScale() or -1,
+        dim(fc), dim(ic),
+        dim(bd), bd and bd:IsControlHidden() and "[hid]" or "", dim(bt)))
     end
-    dump("D", l.buttons)
-    dump("P", l.staticPrimary)
-    dump("B", l.staticBackup)
-    -- 结构对比：大招槽 vs 技能槽的完整子控件结构
-    if l.buttons[3] then
-      dumpChildren("D3", l.buttons[3])
-    end
-    if l.buttons[8] then
-      dumpChildren("D8", l.buttons[8])
-    end
-    -- 原生槽尺寸对照(定位克隆与原生大小差异)
-    local ns3 = ZO_ActionBar_GetButton(3).slot
-    local ns8 = ZO_ActionBar_GetButton(8).slot
-    d(string.format(
-      "[ADR] NATIVE slot3 w=%.0f h=%.0f scale=%.2f | slot8 w=%.0f h=%.0f scale=%.2f | platform=%s",
-      ns3:GetWidth() or -1,
-      ns3:GetHeight() or -1,
-      ns3:GetScale() or -1,
-      ns8:GetWidth() or -1,
-      ns8:GetHeight() or -1,
-      ns8:GetScale() or -1,
-      tostring(IsInGamepadPreferredMode())
-    ))
-    -- 药剂快捷栏与 Q 标签状态(定位切手后 Q 复位的凶手)
-    local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-    if qs and qs.slot then
-      local qsText = qs.slot:GetNamedChild("ButtonText")
-      d(string.format(
-        "[ADR] QS parent=%s anchors=%d l=%.0f t=%.0f w=%.0f h=%.0f | Q parent=%s anchors=%d l=%.0f t=%.0f",
-        qs.slot:GetParent() and qs.slot:GetParent():GetName() or "?",
-        qs.slot:GetNumAnchors(),
-        qs.slot:GetLeft() or -1,
-        qs.slot:GetTop() or -1,
-        qs.slot:GetWidth() or -1,
-        qs.slot:GetHeight() or -1,
-        qsText and (qsText:GetParent() and qsText:GetParent():GetName() or "?") or "nil",
-        qsText and qsText:GetNumAnchors() or -1,
-        qsText and (qsText:GetLeft() or -1) or -1,
-        qsText and (qsText:GetTop() or -1) or -1
-      ))
-    end
+    oneLine("D3", l.buttons[3])
+    oneLine("D8", l.buttons[8])
+    oneLine("N3", ZO_ActionBar_GetButton(3))
+    oneLine("N8", ZO_ActionBar_GetButton(8))
   else
     d("[ADR] BackBar inactive (need barEnabled=true and non-classic preset)")
   end
