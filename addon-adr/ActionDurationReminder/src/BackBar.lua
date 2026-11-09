@@ -1788,6 +1788,11 @@ l.createRow = function()
   end
   local parent = ZO_ActionBar_GetButton(3).slot:GetParent()
   l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", parent, CT_CONTROL)
+  -- 层级：与原生槽同层(DL_BACKGROUND)但 tier 更低——整个克隆子树先于原生条绘制，
+  -- 用户把浮动条拖到与原生条重叠时原生条遮挡克隆行(与旧贴图行行为一致)；
+  -- 子树内部只许相对排序(tier/level)，禁止绝对 layer 桶(见 Views.createPart)
+  l.container:SetDrawLayer(DL_BACKGROUND)
+  l.container:SetDrawTier(-1)
   local hotbar = l.inactiveHotbar() or HOTBAR_CATEGORY_BACKUP
   for slotNum = 3, 8 do
     local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"

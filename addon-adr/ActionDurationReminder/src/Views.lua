@@ -266,8 +266,10 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
 
   -- Progress bar (horizontal bar that shrinks from right to left)
   local progressBar = WINDOW_MANAGER:CreateControl(nil, backdrop or slot, CT_BACKDROP)
-  progressBar:SetDrawLayer(DL_CONTROLS)
-  progressBar:SetDrawLevel(1) -- Above icon (DL_BACKGROUND), below cooldown line
+  -- 同冷却线段：只用相对排序(不用 DL_CONTROLS 全局桶)，重叠时可被原生条遮挡
+  progressBar:SetDrawLayer(DL_BACKGROUND)
+  progressBar:SetDrawTier(DT_HIGH)
+  progressBar:SetDrawLevel(0) -- 图标(tier0/level1)之上、冷却线段(level1)之下
   local progressColor = savedVars.barProgressColor
   local progressAlpha = savedVars.barProgressOpacity / 100
   progressBar:SetCenterColor(progressColor[1], progressColor[2], progressColor[3], progressAlpha)
@@ -424,11 +426,14 @@ end
 ---@type fun(self: adr.views.Cooldown): TextureControl
 mCooldown.createPart = function(self)
   local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
+  -- 层级策略：只用相对排序(tier/level 兄弟间比较)，不用绝对 layer 桶——
+ -- 克隆行/贴图行需要在重叠时可被原生条遮挡，DL_TEXT/DL_CONTROLS 全局桶会逃逸到
+  -- 原生条之上；DL_BACKGROUND + tier/level 保持子树内相对次序(图标之上)且随子树下沉
+  part:SetDrawLayer(DL_BACKGROUND)
   if self.drawTier and self.drawTier > 0 then
     part:SetDrawTier(self.drawTier)
-    part:SetDrawLayer(DL_TEXT)
+    part:SetDrawLevel(1)
   else
-    part:SetDrawLayer(DL_CONTROLS)
     part:SetDrawLevel(2)
   end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
