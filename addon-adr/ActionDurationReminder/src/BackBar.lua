@@ -1787,12 +1787,12 @@ l.createRow = function()
     return
   end
   local parent = ZO_ActionBar_GetButton(3).slot:GetParent()
-  l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", parent, CT_CONTROL)
-  -- 层级：与原生槽同层(DL_BACKGROUND)但 tier 更低——整个克隆子树先于原生条绘制，
-  -- 用户把浮动条拖到与原生条重叠时原生条遮挡克隆行(与旧贴图行行为一致)；
-  -- 子树内部只许相对排序(tier/level)，禁止绝对 layer 桶(见 Views.createPart)
-  l.container:SetDrawLayer(DL_BACKGROUND)
-  l.container:SetDrawTier(-1)
+  -- 容器重父到 WeaponSwap(XML 顺序：KeybindBG→WeaponSwap→技能槽按钮)：
+  -- 深度优先绘制序使整个克隆子树先于技能槽子树——用户把浮动条拖到与原生条
+  -- 重叠时原生条遮挡克隆行(与旧贴图行行为一致)。tier/layer 方案已试无效
+  -- (负 tier 被钳)。KeybindBG 虽更早但手柄下隐藏(隐藏父级会藏整个子树)不可用
+  local weaponSwapHost = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+  l.container = WINDOW_MANAGER:CreateControl("ADRBackBarRow", weaponSwapHost or parent, CT_CONTROL)
   local hotbar = l.inactiveHotbar() or HOTBAR_CATEGORY_BACKUP
   for slotNum = 3, 8 do
     local template = slotNum == 8 and "ZO_UltimateActionButton" or "ZO_ActionButton"
