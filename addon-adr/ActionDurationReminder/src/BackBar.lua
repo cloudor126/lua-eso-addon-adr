@@ -2286,6 +2286,14 @@ m.refreshShiftRow = function()
   end
 end
 
+---拖拽定位期间隐藏/恢复克隆行：克隆按钮会遮盖定位框架(鼠标/视觉双重竞争)，
+---隐藏后框架清晰可见可拖，关闭框架时行在新位置出现
+m.setShiftRowHidden = function(hidden)
+  if l.container then
+    l.container:SetHidden(hidden)
+  end
+end
+
 addon.register("BackBar#M", m)
 
 addon.register("BackBar", m)

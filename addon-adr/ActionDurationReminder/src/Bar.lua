@@ -483,6 +483,10 @@ l.openShiftBarFrame = function()
       if button == 1 then
         self.parentFrame:SetHidden(true)
         self:SetHidden(true)
+        -- 恢复克隆行显示(在新位置)
+        if backBar.setShiftRowHidden then
+          backBar.setShiftRowHidden(false)
+        end
       end
     end)
     l.shiftBarCloseBtn = closeBtn
@@ -490,6 +494,10 @@ l.openShiftBarFrame = function()
     l.shiftBarSlot3 = slot3
   end
   l.shiftBarFrame:SetHidden(false)
+  -- 拖拽期间隐藏克隆行(会遮盖框架且拦截鼠标)；关闭框架时恢复
+  if backBar.setShiftRowHidden then
+    backBar.setShiftRowHidden(true)
+  end
   l.shiftBarFrame:ClearAnchors()
   -- U51 engine regression: dragging a movable control whose anchor targets a
   -- non-GuiRoot control (like slot3) computes new anchor offsets in absolute
