@@ -426,7 +426,11 @@ l.layoutDynamic = function()
     local nativeButton = ZO_ActionBar_GetButton(slotNum)
     local button = l.buttons[slotNum]
     button.slot:ClearAnchors()
-    button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP, 0, -gapY)
+    -- 用户拖拽偏移(Move Shift Bar)叠加在默认间距上：经典/动态两预设统一生效，
+    -- 静态双行不适用(孪生行位置固定，菜单已置灰)
+    local sv = l.getSavedVars()
+    button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP,
+      (sv.barShiftOffsetX or 0), (sv.barShiftOffsetY or 0) - gapY)
     -- 硬设尺寸(与静态双行同款)：ApplyStyle 模板注入在克隆上不可靠，
     -- 键盘下基模板50恰好撞对，手柄下原生变64而克隆仍50就会偏小
     l.setCloneSize(button, slotNum == 8 and dims.ult or dims.ability)
@@ -2274,6 +2278,14 @@ end
 --========================================
 --        register
 --========================================
+---供 Bar 模块调用：浮动条位置设置变化后重排克隆行(动态预设吃 X/Y 偏移；
+---经典走贴图路径不经过这里；静态/其他预设无操作)
+m.refreshShiftRow = function()
+  if l.active and l.effectivePreset() == "dynamic" then
+    l.layoutDynamic()
+  end
+end
+
 addon.register("BackBar#M", m)
 
 addon.register("BackBar", m)

@@ -208,7 +208,7 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
   end
   -- 标签父控件：贴图模式挂 backdrop/slotIcon，native模式挂克隆按钮槽位
   local labelParent = backdrop or nativeSlotControl or slotIcon
-  local textureShifted = shifted and not inst.nativeMode
+  local shiftRow = shifted -- 贴图行与原生克隆行统一用浮动条偏移(动态预设下 Label Offset (Shift Bar) 生效)
   local label = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL) --LabelControl#LabelControl
   inst.label = label
   label:SetFont(l.getLabelFont())
@@ -225,7 +225,7 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
       labelParent,
       BOTTOM,
       0,
-      textureShifted and (-savedVars.barLabelYOffsetInShift + 1) or (-savedVars.barLabelYOffset + 3)
+      shiftRow and (-savedVars.barLabelYOffsetInShift + 1) or (-savedVars.barLabelYOffset + 3)
     )
   end
   local stackLabel = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL)
@@ -240,7 +240,7 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
     labelParent,
     TOPRIGHT,
     -5,
-    textureShifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+    shiftRow and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
   )
   local stackLabel2 = WINDOW_MANAGER:CreateControl(nil, labelParent, CT_LABEL)
   inst.stackLabel2 = stackLabel2
@@ -254,7 +254,7 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
     labelParent,
     TOPLEFT,
     5,
-    textureShifted and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
+    shiftRow and (-savedVars.barStackLabelYOffsetInShift + 2) or (-savedVars.barStackLabelYOffset + 0)
   )
 
   ---@type adr.views.Cooldown
@@ -321,14 +321,14 @@ end
 ---@type fun(widget: adr.views.Widget)
 m.updateWidgetLabelYOffset = function(widget)
   if widget.label then
-    local textureShifted = widget.shifted and not widget.nativeMode
+    local shiftRow = widget.shifted -- 同 newWidget：克隆行也用浮动条偏移
     widget.label:ClearAnchors()
     widget.label:SetAnchor(
       BOTTOM,
       widget.label:GetParent(),
       BOTTOM,
       0,
-      textureShifted and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3)
+      shiftRow and (-l.getSavedVars().barLabelYOffsetInShift + 1) or (-l.getSavedVars().barLabelYOffset + 3)
     )
   end
 end
@@ -405,8 +405,8 @@ end
 m.updateWidgetStackLabelYOffset = function(widget)
   -- 与 newWidget 的初始定位严格一致(框内右上/左上角)，
   -- 否则滑条调整或回收站复用后标签会跳到顶边外(表现为“超过边框”)
-  local textureShifted = widget.shifted and not widget.nativeMode
-  local offsetY = textureShifted and (-l.getSavedVars().barStackLabelYOffsetInShift + 2)
+  local shiftRow = widget.shifted -- 同 newWidget：克隆行也用浮动条偏移
+  local offsetY = shiftRow and (-l.getSavedVars().barStackLabelYOffsetInShift + 2)
     or (-l.getSavedVars().barStackLabelYOffset + 0)
   if widget.stackLabel then
     widget.stackLabel:ClearAnchors()

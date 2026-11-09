@@ -164,6 +164,13 @@ l.isClassicPreset = function()
   return l.getSavedVars().barPreset == "classic"
 end
 
+---浮动条位置相关选项适用的预设：经典(贴图行)与动态(克隆行)吃 X/Y 偏移；
+---静态双行位置固定不适用(菜单置灰)。后续新增预设在此登记
+l.isShiftRowMovable = function()
+  local p = l.getSavedVars().barPreset
+  return p == "classic" or p == "dynamic"
+end
+
 ---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
 addon.hookStart(function()
   local sv = l.getSavedVars()
@@ -422,6 +429,10 @@ l.openShiftBarFrame = function()
         l.getSavedVars().barShiftOffsetX = left - slotLeft
         l.getSavedVars().barShiftOffsetY = bottom - slotTop
         l.updateWidgets(views.updateWidgetShiftOffset)
+        -- 动态预设下同步克隆行锚(经典走贴图路径不需要)
+        if backBar.refreshShiftRow then
+          backBar.refreshShiftRow()
+        end
       end
       zo_callLater(function()
         SetGameCameraUIMode(true)
@@ -680,7 +691,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             title = text("Shift Bar Position"),
             width = "full",
             disabled = function()
-              return not l.getSavedVars().barEnabled or not l.isClassicPreset()
+              return not l.getSavedVars().barEnabled or not l.isShiftRowMovable()
             end,
           },
           {
@@ -696,7 +707,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             end,
             width = "half",
             disabled = function()
-              return not l.getSavedVars().barEnabled or not l.isClassicPreset()
+              return not l.getSavedVars().barEnabled or not l.isShiftRowMovable()
             end,
           },
           {
@@ -707,6 +718,10 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
               l.getSavedVars().barShiftOffsetX = barSavedVarsDefaults.barShiftOffsetX
               l.getSavedVars().barShiftOffsetY = barSavedVarsDefaults.barShiftOffsetY
               l.updateWidgets(views.updateWidgetShiftOffset)
+              -- 动态预设下同步克隆行锚
+              if backBar.refreshShiftRow then
+                backBar.refreshShiftRow()
+              end
               -- re-anchor the positioning frame if it is currently open
               if l.shiftBarFrame and not l.shiftBarFrame:IsControlHidden() then
                 l.openShiftBarFrame()
@@ -714,7 +729,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             end,
             width = "half",
             disabled = function()
-              return not l.getSavedVars().barEnabled or not l.isClassicPreset()
+              return not l.getSavedVars().barEnabled or not l.isShiftRowMovable()
             end,
           },
           {
@@ -735,6 +750,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             disabled = function()
               return not l.getSavedVars().barEnabled
                 or not l.getSavedVars().barLabelEnabled
+                or l.getSavedVars().barPreset == "static"
             end,
             default = barSavedVarsDefaults.barLabelYOffsetInShift,
           },
@@ -755,6 +771,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
             disabled = function()
               return not l.getSavedVars().barEnabled
                 or not l.getSavedVars().barStackLabelEnabled
+                or l.getSavedVars().barPreset == "static"
             end,
             default = barSavedVarsDefaults.barStackLabelYOffsetInShift,
           },
