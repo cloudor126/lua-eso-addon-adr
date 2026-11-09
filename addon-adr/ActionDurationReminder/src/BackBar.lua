@@ -618,6 +618,12 @@ l.setCloneSize = function(button, w)
     backdrop:ClearAnchors()
     backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
     backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
+    -- 层级归零：模板继承链(ZO_DefaultBackdrop_Gamepad)给 Backdrop 设了 tier/level，
+    -- 与原生图标比较时跳出树序浮到原生条之上；归零后全平级由树序裁决(容器在
+    -- WeaponSwap 子树内，先于技能槽绘制→重叠时被原生条遮挡)。setCloneSize 在
+    -- ApplyStyle 各路径之后运行，模板重放后也会被重新归零
+    backdrop:SetDrawTier(0)
+    backdrop:SetDrawLevel(0)
   end
   -- Frame(ult 独有装饰框)：已隐藏但一并重锚保险
   local frame = button.slot:GetNamedChild("Frame")
