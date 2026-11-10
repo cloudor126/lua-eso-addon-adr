@@ -129,16 +129,22 @@ l.createRow = function()
     for slotNum = 3, 8 do
       local control = WINDOW_MANAGER:CreateControl("ADRMiniBarSlot" .. slotNum, l.container, CT_CONTROL)
       control:SetMouseEnabled(false)
-      -- 原生 back row 不显示技能图标(实物确认；XML 创建序 BG/Overlay 盖在
-      -- Icon 之上，“BLANK”艺术即盖板)，本行同样只有胶囊框/填充条/数字
-      -- 计时数字(字体/颜色复用 Time Labels 设置)：
-      -- 创建序在 pill 三层之前会被 overlay/帧盖住(原生无数字无此问题)，
-      -- 显式 DT_HIGH 抬层——层内全局比较器压过全 Background 桶的 pill 贴图
-      local label = WINDOW_MANAGER:CreateControl(nil, control, CT_LABEL)
-      label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-      label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
-      label:SetAnchor(BOTTOM, control, BOTTOM, 0, 2)
-      label:SetDrawTier(DT_HIGH)
+      -- Icon：图标纹理(action 的 ability 图标；用户实物确认原生 back row 有图标)
+      local icon = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
+      icon:SetAnchor(TOPLEFT, control, TOPLEFT, 1, 1)
+      icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
+      -- 填充条(原生 back row 特征：框顶 8px 状态条，remain/duration 填充，
+      -- 施法条渐变色同原生 ZO_CAST_BAR_COLORS[BEGIN_CHARGE_UP]；
+      -- 锚几何按原生 XML：Frame TL+4,+3 / TR-4,+3，Frame 为 w×h 居中贴图)
+      local nd = IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard
+      local fillBar = WINDOW_MANAGER:CreateControlFromVirtual(nil, control,
+        IsInGamepadPreferredMode() and "ZO_GamepadStatusBarMedium" or "ZO_StatusBar")
+      fillBar:SetAnchor(TOPLEFT, control, CENTER, -nd.w / 2 + 4, -nd.h / 2 + 3)
+      fillBar:SetAnchor(TOPRIGHT, control, CENTER, nd.w / 2 - 4, -nd.h / 2 + 3)
+      fillBar:SetHeight(8)
+      pcall(function()
+        ZO_StatusBar_SetGradientColor(fillBar, ZO_CAST_BAR_COLORS[ZO_CAST_STATE_BEGIN_CHARGE_UP])
+      end)
       -- 三层原生贴图(创建序即绘制序：BG<Icon<Overlay<Frame；三元组零覆盖
       -- →与图标平齐靠创建序，随子树沉入原生条之下)
       local art = IsInGamepadPreferredMode() and "EsoUI/Art/ActionBar/Gamepad/gp_backrow_abilityFrame"
@@ -154,7 +160,7 @@ l.createRow = function()
       local overlay = layerTex(art .. "_overlay.dds")
       local frame = layerTex(art .. ".dds")
       l.slots[slotNum] =
-        { control = control, label = label, bg = bg, overlay = overlay, frame = frame }
+        { control = control, icon = icon, fillBar = fillBar, bg = bg, overlay = overlay, frame = frame, iconPath = nil }
     end
   end)
   if not ok then
@@ -203,9 +209,6 @@ l.relayout = function()
       -- CENTER 锚：缩放围绕锚点仍居中对位(与原生 back row 同锚型)
       control:SetAnchor(CENTER, nativeButton.slot, CENTER, 0, slotNum == 8 and ultOffY or abilityOffY)
       control:SetScale(scale)
-      -- 数字字体(Time Labels 设置)
-      entry.label:SetFont(string.format("$(%s)|%d|%s",
-        sv.barLabelFontName or "BOLD_FONT", sv.barLabelFontSize or 18, sv.barLabelFontStyle or "thick-outline"))
     end
   end
   l.syncAll()
@@ -241,10 +244,18 @@ l.syncAll = function()
     if entry then
       local action, remain = getSlotAction(slotNum, hotbar, now)
       if action then
-        entry.label:SetText(l.formatRemain(remain))
-        entry.label:SetColor(unpack(sv.barLabelColor or { 1, 1, 1 }))
+        local iconPath = action.ability and action.ability.icon
+        if iconPath and iconPath ~= "" and iconPath ~= entry.iconPath then
+          entry.iconPath = iconPath
+          entry.icon:SetTexture(iconPath)
+        end
         entry.control:SetScale(scale)
         entry.control:SetHidden(false)
+        -- 填充条：remain/duration(同原生 SetFillBar 语义；无时长置 0)
+        local duration = action:getDuration()
+        if entry.fillBar.SetValue then
+          entry.fillBar:SetValue(duration > 0 and remain / duration or 0)
+        end
       else
         entry.control:SetHidden(true)
       end
@@ -312,8 +323,8 @@ m.debugDump = function()
             c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1,
             c:GetAlpha() or -1, c:IsControlHidden() and "[hid]" or "")
         end
-        geo = string.format("ctl[%s] lbl[%s] bg[%s] ov[%s] frm[%s] lblText=%q",
-          g(e.control), g(e.label), g(e.bg), g(e.overlay), g(e.frame), e.label:GetText() or "")
+        geo = string.format("ctl[%s] icon[%s] fill[%s] bg[%s] ov[%s] frm[%s]",
+          g(e.control), g(e.icon), g(e.fillBar), g(e.bg), g(e.overlay), g(e.frame))
       end
       lines[#lines + 1] = string.format("S%d act=%s remain=%s | %s",
         slotNum,
