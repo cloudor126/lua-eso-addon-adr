@@ -112,10 +112,10 @@ end
 --========================================
 --        建行/布局
 --========================================
----创建迷你行(懒创建)：容器重父 QuickslotButton(创建序在技能槽按钮之前)，
----深度优先绘制序使整个迷你子树先于技能槽子树——与原生条重叠时原生条遮挡。
----宿主选择：KeybindBG/WeaponSwap 手柄下被原生永久隐藏(隐藏父级藏整个子树，
----实测坑：手柄模式整行消失)，QuickslotButton 两平台常显且创建序够早。
+---创建迷你行(懒创建)：容器直挂 ZO_ActionBar1(后期子控件→渲染在原生槽之上，
+---与原生 back row 同语义：胶囊本就部分叠在原生条上、浮在条面呈现。
+---(实测纠错：早宿主沉底方案在键盘侥幸可见、手柄槽更高更密时整行被压在
+---原生条下不可见；沉底只适用于可自由拖拽重叠的动态行)
 ---槽位非交互(纯展示，同原生 back row)。子控件全部匿名：显式名字会进全局
 ---名字注册表，多槽重复创建必撞名(实测坑：CreateControl("Icon",...) 第二槽即撞)
 ---@type fun()
@@ -124,9 +124,7 @@ l.createRow = function()
     return
   end
   local ok, err = pcall(function()
-    local host = (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("QuickslotButton"))
-      or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap"))
-      or GuiRoot
+    local host = ZO_ActionBar1 or GuiRoot
     l.container = WINDOW_MANAGER:CreateControl("ADRMiniBarRow", host, CT_CONTROL)
     l.slots = {}
     for slotNum = 3, 8 do
@@ -212,6 +210,20 @@ l.relayout = function()
       -- CENTER 锚：缩放围绕锚点仍居中对位(与原生 back row 同锚型)
       control:SetAnchor(CENTER, nativeButton.slot, CENTER, 0, slotNum == 8 and ultOffY or abilityOffY)
       control:SetScale(scale)
+      -- 填充条重锚：创建时按当时平台尺寸写入的锚在切平台后会陈旧
+      -- (实测：手柄切键盘后填充条画到框外)，随平台尺寸全量重设
+      if entry.fillBar then
+        entry.fillBar:ClearAnchors()
+        entry.fillBar:SetAnchor(TOPLEFT, control, CENTER, -dims.w / 2 + 4, -dims.h / 2 + 3)
+        entry.fillBar:SetAnchor(TOPRIGHT, control, CENTER, dims.w / 2 - 4, -dims.h / 2 + 3)
+        entry.fillBar:SetHeight(8)
+      end
+      -- 图标锚重申(内缩防方角戳出)，自愈任何残留状态
+      if entry.icon then
+        entry.icon:ClearAnchors()
+        entry.icon:SetAnchor(TOPLEFT, control, TOPLEFT, 3, 3)
+        entry.icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -3, -3)
+      end
     end
   end
   l.syncAll()
