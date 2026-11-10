@@ -112,19 +112,22 @@ end
 --========================================
 --        建行/布局
 --========================================
----创建迷你行(懒创建)：容器重父 WeaponSwap(XML 顺序 KeybindBG→WeaponSwap→技能槽)，
----深度优先绘制序使整个迷你子树先于技能槽子树——与原生条重叠时原生条遮挡
----(与 BackBar 容器同款 z-order 沉底方案)。槽位非交互(纯展示，同原生 back row)。
----子控件全部匿名：显式名字会进全局名字注册表，多槽重复创建必撞名
----(实测坑：CreateControl("Icon",...) 第二个槽即 Duplicate name)
+---创建迷你行(懒创建)：容器重父 QuickslotButton(创建序在技能槽按钮之前)，
+---深度优先绘制序使整个迷你子树先于技能槽子树——与原生条重叠时原生条遮挡。
+---宿主选择：KeybindBG/WeaponSwap 手柄下被原生永久隐藏(隐藏父级藏整个子树，
+---实测坑：手柄模式整行消失)，QuickslotButton 两平台常显且创建序够早。
+---槽位非交互(纯展示，同原生 back row)。子控件全部匿名：显式名字会进全局
+---名字注册表，多槽重复创建必撞名(实测坑：CreateControl("Icon",...) 第二槽即撞)
 ---@type fun()
 l.createRow = function()
   if l.container or l.createFailed then
     return
   end
   local ok, err = pcall(function()
-    local weaponSwapHost = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-    l.container = WINDOW_MANAGER:CreateControl("ADRMiniBarRow", weaponSwapHost or GuiRoot, CT_CONTROL)
+    local host = (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("QuickslotButton"))
+      or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap"))
+      or GuiRoot
+    l.container = WINDOW_MANAGER:CreateControl("ADRMiniBarRow", host, CT_CONTROL)
     l.slots = {}
     for slotNum = 3, 8 do
       local control = WINDOW_MANAGER:CreateControl("ADRMiniBarSlot" .. slotNum, l.container, CT_CONTROL)
