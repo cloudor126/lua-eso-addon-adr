@@ -1,3 +1,18 @@
+3.172
+
+### New Features
+- Two new Bar Style Presets, from player feedback:
+  - Mini Row: a faithful replica of the game's own "Ability Bar Back Row" - small capsule-framed ability icons with a draining fill bar above the native bar, one per slot, shown only while a skill's effect is running. Timers come from the same source as the main-bar timers, and its position follows the native back row exactly on both keyboard and gamepad.
+  - Main Bar Only: no second row at all - just the main bar timers (and quickslot timer if enabled), with zero interference with the native bar.
+- "Move Shift Bar" frame upgrades: the row hides while you drag the frame (it used to fight the frame for your mouse), and the frame now shows same-style slot borders at the live native geometry so you can see exactly where the row will land.
+- Shift bar position options now work in the Dynamic preset too: Move/Reset Shift Bar and both label-offset sliders apply to the floating clone row (previously Dynamic-only users had no way to move it; the options grey out for Static/Mini Row/Main Bar Only where they don't apply).
+- The floating shift bar now renders BELOW the native bar when you drag it to overlap it (keyboard and gamepad) - matching the classic texture row's behavior.
+
+### Bug Fixes
+- Fixed the preset selection being lost on /reloadui when Mini Row or Main Bar Only was selected (a startup validation list didn't know the new values and silently reset them to Dynamic).
+- Mini Row: fixed a control-name collision crash on preset activation, the row being invisible in gamepad mode, art corruption after switching keyboard/gamepad (geometry was right but the texture sampling region was stale), and the fill bar drifting outside the capsule after platform switches.
+- Fixed the shift row reappearing over the drag frame mid-drag (a periodic sync kept re-showing it).
+
 3.171
 
 ### New Features

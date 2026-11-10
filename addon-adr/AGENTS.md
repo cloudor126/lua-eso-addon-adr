@@ -177,6 +177,15 @@ parent but changes the point).
 
 ### Proven-stable patterns (prefer these over fighting)
 
+0. **Zero-coupling module add-ons** (v3.172 MiniBar pattern): a new preset that is
+   architecturally "mainonly + self-contained add-on" must not entangle the
+   existing pipeline. MiniBar loads only Settings/Core/Models, self-observes
+   its inputs via the Core heartbeat (preset/enable/scale changes detected
+   within 100ms - no menu callbacks), and Bar/MiniBar hold zero references to
+   each other; the only shared thing is the `barPreset` value domain
+   (`PRESET_VALUES`). If you find yourself adding "notify the other module"
+   hooks, make the other module poll its inputs instead.
+
 1. **Re-parent** (`SetParent` out of the native subtree): the native template
    replay finds controls by GLOBAL NAME REGISTRY, so re-anchoring is never
    enough — it will find and re-anchor your control wherever it lives.
@@ -217,6 +226,13 @@ parent but changes the point).
 ### ESO API facts (verified against esoui source, not guessed)
 
 - **Draw order (empirically mapped, v3.171 z-order work)**: `layer → tier → level → tree order (depth-first + creation order)`. Layer/tier/level are GLOBAL comparators within the layer; tree order only breaks exact ties. Template chains inject triples (gamepad icon = 0/1/1, native border BD = 0/1/0; negative tiers clamp to 0). To sink a whole subtree below another sibling subtree: parent it under an EARLIER XML child (we use `ZO_ActionBar1WeaponSwap` — children order KeybindBG→WeaponSwap→slot buttons; KeybindBG is hidden in gamepad so unusable) and make every control inside tie-or-below the native counterparts' triples (`setCloneSize` zeroes border-ish children, sinks icons to 0/1/0). To stay above the sibling icon but below the foreign subtree: full triple PARITY with the icon (tie → creation order wins locally, tree order loses globally). Never absolute layer buckets (`DL_TEXT`/`DL_CONTROLS`) inside a subtree that must sink — they jump the tree order entirely.
+- **The sink trick is for draggable rows only.** The native back row (ActionBarTimer slots) renders ABOVE the native slots (late children of ZO_ActionBar1) - its capsule is designed to overlap the bar and float on it. Sinking a fixed native-replica row buries it (invisible on gamepad's taller/tighter slots). Match the interaction semantics, not the superficial "second row" similarity.
+- **Hidden parents hide the entire subtree.** `WeaponSwap` and `KeybindBG` are natively PERMANENTLY HIDDEN in gamepad - never parent a row container under them unless you also un-hide them (BackBar does, deliberately, in dynamic mode). `QuickslotButton`/`ZO_ActionBar1` itself are always-visible hosts.
+- **Control names go into the GLOBAL name registry.** `CreateControl("Icon", ...)` collides on the second slot ("Duplicate name"). Anonymous children (`nil` name) + stored references; `GetNamedChild` no longer finds them (that's fine, you have the refs).
+- **Virtual template names must be verified, never assumed.** `CreateControlFromVirtual(nil, parent, "ZO_StatusBar")` fails - no such virtual. The keyboard back-row fill bar is a BARE `CT_STATUSBAR` (no template inheritance in the XML; only the gamepad override inherits `ZO_GamepadStatusBarMedium`).
+- **DDS art-layer semantics are black boxes.** Back-row art trio: `Frame` = decorative capsule border; `BG(BLANK)` = a FULL-COVER panel that erases everything beneath it (including the Frame border) - NOT a corner mask; `Overlay` = the desaturation veil AND the source of the native resting "border" feel. Three rounds of wrong inference (mask theory → cover theory → border-origin theory) were settled only by the user's eyes on the live native feature. Art questions are settled empirically or not at all.
+- **Platform-switch hooks: use `ZO_PlatformStyle:New(callback)`** (the repo's proven mechanism - Bar/BackBar use it; fires once immediately at creation and again at the correct point in the native platform chain). A raw `EVENT_GAMEPAD_PREFERRED_MODE_CHANGED` + `zo_callLater` handler proved unreliable (garbled layout after switching back).
+- **Every platform-dependent creation value must be re-applied by relayout.** The full list for a row: control dims, anchors, art FILES, **TextureCoords** (keyboard and gamepad arts occupy different atlas regions - stale coords corrupt the art while all geometry checks green), child anchors (fill bar, icons), scale. A broken-vs-healthy dump diff with IDENTICAL geometry points straight at render state (texture sampling, layers) that geometry dumps can't see.
 - `ActionSlotHasActivationHighlight(slot, hotbar)` returns STALE values for
   the inactive hotbar (engine only maintains active-bar slot state; swap
   refreshes it). No public API gives live truth for inactive bars; FAB does
