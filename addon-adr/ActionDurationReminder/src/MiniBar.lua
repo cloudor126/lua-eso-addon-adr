@@ -206,6 +206,10 @@ l.relayout = function()
         end
       end
       entry.frame:SetTexture(art .. ".dds")
+      -- 贴图采样区随平台重设：键盘(0.625/0.875)与手柄(0.8125/1.0625)的艺术
+      -- 在图集里的区域不同，创建时写入的 coords 切平台后必须重写
+      -- (实测病灶：几何全对但艺术错乱，reloadui 才恢复)
+      entry.frame:SetTextureCoords(unpack(dims.coords))
       control:ClearAnchors()
       -- CENTER 锚：缩放围绕锚点仍居中对位(与原生 back row 同锚型)
       control:SetAnchor(CENTER, nativeButton.slot, CENTER, 0, slotNum == 8 and ultOffY or abilityOffY)
