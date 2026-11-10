@@ -308,12 +308,23 @@ m.debugDump = function()
     for slotNum = 3, 8 do
       local e = l.slots[slotNum]
       local action, remain = getSlotAction(slotNum, hotbar or HOTBAR_CATEGORY_BACKUP, now)
-      lines[#lines + 1] = string.format("S%d hid=%s act=%s remain=%s icon=%s",
+      local geo = "?"
+      if e then
+        local function g(c)
+          if not c then
+            return "--"
+          end
+          return string.format("%.0f,%.0f %.0fx%.0f%s", c:GetLeft() or -1, c:GetTop() or -1,
+            c:GetWidth() or -1, c:GetHeight() or -1, c:IsControlHidden() and "[hid]" or "")
+        end
+        geo = string.format("ctl[%s] icon[%s] lbl[%s] bg[%s] ov[%s] frm[%s] lblText=%q",
+          g(e.control), g(e.icon), g(e.label), g(e.bg), g(e.overlay), g(e.frame), e.label:GetText() or "")
+      end
+      lines[#lines + 1] = string.format("S%d act=%s remain=%s | %s",
         slotNum,
-        e and tostring(e.control:IsControlHidden()) or "?",
         action and (action.ability and action.ability.name or "?") or "nil",
         remain and string.format("%.1fs", remain / 1000) or "-",
-        action and action.ability and action.ability.icon or "-")
+        geo)
     end
   end
   return table.concat(lines, "\n")
