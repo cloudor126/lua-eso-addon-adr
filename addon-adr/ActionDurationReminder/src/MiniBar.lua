@@ -215,7 +215,8 @@ end
 --========================================
 ---全槽同步(Core action 数据源)：可见性(有计时 action) + 图标(action 的
 ---ability 图标，非槽位查询——天然免疫毁灭杖非激活条图标过期) + 数字。
----不可用(非武器热栏/Oakensoul/预设非 mini)时整行隐藏
+---scale 也在心跳幂等重放(滑条免通知)。不可用(非武器热栏/Oakensoul/
+---预设非 mini)时整行隐藏
 ---@type fun()
 l.syncAll = function()
   if not l.container then
@@ -235,6 +236,7 @@ l.syncAll = function()
   local now = GetGameTimeMilliseconds()
   local alpha = (sv.backBarDimAlpha or 100) / 100
   local desat = (sv.backBarDesaturation or 0) / 100
+  local scale = sv.barShowShiftScalePercent / 100
   for slotNum = 3, 8 do
     local entry = l.slots[slotNum]
     if entry then
@@ -249,6 +251,7 @@ l.syncAll = function()
         entry.icon:SetDesaturation(desat)
         entry.label:SetText(l.formatRemain(remain))
         entry.label:SetColor(unpack(sv.barLabelColor or { 1, 1, 1 }))
+        entry.control:SetScale(scale)
         entry.control:SetHidden(false)
       else
         entry.control:SetHidden(true)
@@ -279,29 +282,53 @@ end
 --========================================
 --        生命周期
 --========================================
----预设启用/停用(mini ↔ 其他预设切换)
----@param enabled boolean
-m.setEnabled = function(enabled)
-  if enabled then
-    if l.getSavedVars().barPreset == "mini" and l.getSavedVars().barEnabled then
-      l.createRow()
-      l.relayout()
-    end
-  elseif l.container then
-    l.container:SetHidden(true)
-  end
-end
-
----位置/缩放/字体设置变化后重排(Bar 模块菜单调用)
+---位置/缩放/字体设置变化后重排(诊断/事件路径用；滑条免通知——
+---scale 已在心跳幂等重放)
 ---@type fun()
 m.relayout = function()
   l.relayout()
+end
+
+---诊断 dump(/adrbackbar 调用)：逐槽 action 匹配/剩余/图标/可见性 +
+---原生 back row 设置状态(区分“多出的图标”来源)
+---@type fun(): string
+m.debugDump = function()
+  local lines = {}
+  local nativeBackRow = "?"
+  if GetSetting_Bool then
+    local ok, v = pcall(GetSetting_Bool, SETTING_TYPE_UI, UI_SETTING_SHOW_ACTION_BAR_BACK_ROW)
+    nativeBackRow = (ok and v) and "ON" or "off"
+  end
+  lines[#lines + 1] = string.format("row=%s failed=%s hotbar=%s oakensoul=%s nativeBackRow=%s",
+    tostring(l.container ~= nil), tostring(l.createFailed == true),
+    tostring(l.inactiveHotbar()), tostring(l.hasOakensoul()), nativeBackRow)
+  if l.slots then
+    local now = GetGameTimeMilliseconds()
+    local hotbar = l.inactiveHotbar()
+    for slotNum = 3, 8 do
+      local e = l.slots[slotNum]
+      local action, remain = getSlotAction(slotNum, hotbar or HOTBAR_CATEGORY_BACKUP, now)
+      lines[#lines + 1] = string.format("S%d hid=%s act=%s remain=%s icon=%s",
+        slotNum,
+        e and tostring(e.control:IsControlHidden()) or "?",
+        action and (action.ability and action.ability.name or "?") or "nil",
+        remain and string.format("%.1fs", remain / 1000) or "-",
+        action and action.ability and action.ability.icon or "-")
+    end
+  end
+  return table.concat(lines, "\n")
 end
 
 --========================================
 --        register
 --========================================
 addon.register("MiniBar#M", m)
+
+---诊断命令：/adrmini 逐槽 action 匹配/剩余/图标/可见性 +
+---原生 back row 设置状态(区分“多出的图标”来源)
+SLASH_COMMANDS["/adrmini"] = function()
+  d("[ADR Mini] " .. m.debugDump())
+end
 
 ---心跳(Core 100ms)：倒数刷新/可见性/图标同步
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)

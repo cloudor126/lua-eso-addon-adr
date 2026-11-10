@@ -13,8 +13,6 @@ local views = addon.load("Views#M")
 local models = addon.load("Models#M")
 ---@type adr.backbar.M
 local backBar = addon.load("BackBar#M")
----@type adr.minibar.M
-local miniBar = addon.load("MiniBar#M")
 local l = {}
 ---@type adr.bar.M
 local m = { l = l }
@@ -306,8 +304,8 @@ l.onCoreUpdate = function()
     end
   end
   -- Main Bar Only / Mini Row 预设：不走 ADR 计时器的第二行渲染。
-  -- mainonly 无第二行；mini 由 MiniBar 模块自驱(引擎槽位效果计时，
-  -- 原生 back row 同源数据，与 action 匹配系统无关)。
+  -- mainonly 无第二行；mini 由 MiniBar 模块自驱(Core action 数据源，
+  -- 与 Bar/BackBar 零相互引用)。
   -- 第 2 步已隐藏全部 shift 控件，此处直接返回不再重建
   local preset = l.getSavedVars().barPreset
   if preset == "mainonly" or preset == "mini" then
@@ -519,6 +517,25 @@ l.openShiftBarFrame = function()
     l.shiftBarSlot3 = slot3
   end
   l.shiftBarFrame:SetHidden(false)
+  -- 槽位边框预览：按原生槽位实际几何画同款框(abilityframe64_up.dds，
+  -- 与贴图行同款艺术)，拖拽时所见即所得
+  l.shiftBarSlotBorders = l.shiftBarSlotBorders or {}
+  for slotNum = 3, 8 do
+    local border = l.shiftBarSlotBorders[slotNum]
+    if not border then
+      border = WINDOW_MANAGER:CreateControl(nil, l.shiftBarFrame, CT_TEXTURE)
+      border:SetTexture("esoui/art/actionbar/abilityframe64_up.dds")
+      l.shiftBarSlotBorders[slotNum] = border
+    end
+    local s = ZO_ActionBar_GetButton(slotNum).slot
+    local x = s:GetLeft() - slot3:GetLeft()
+    local y = s:GetTop() - slot3:GetTop()
+    local w = s:GetWidth()
+    border:ClearAnchors()
+    border:SetAnchor(TOPLEFT, l.shiftBarFrame, TOPLEFT, x, y)
+    border:SetDimensions(w, w)
+    border:SetHidden(false)
+  end
   -- 拖拽期间隐藏克隆行(会遮盖框架且拦截鼠标)；关闭框架时恢复
   if backBar.setShiftRowHidden then
     backBar.setShiftRowHidden(true)
@@ -638,7 +655,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         setFunc = function(value)
           l.getSavedVars().barPreset = value
           backBar.updateLayout()
-          miniBar.setEnabled(value == "mini")
         end,
         width = "full",
         default = barSavedVarsDefaults.barPreset,
@@ -718,9 +734,6 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
               l.getSavedVars().barShowShiftScalePercent = value
               l.updateWidgets(views.updateWidgetShiftScalePercent)
               backBar.updateScale()
-              if miniBar.relayout then
-                miniBar.relayout()
-              end
             end,
             width = "full",
             default = barSavedVarsDefaults.barShowShiftScalePercent,

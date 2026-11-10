@@ -198,6 +198,21 @@ parent but changes the point).
    template re-application) must early-return on the platform where it does
    not apply, and disarm when leaving that platform. An armed hook in the
    wrong preset/platform is a time bomb.
+4. **Single truth for value domains, fail-open for behavior branches**: if
+   two independent literal lists/derivations describe the same domain
+   (legal preset values, current slot size, anchor constants), they WILL
+   drift — v3.172 had the preset validator silently resetting the new
+   `mini`/`mainonly` values back to `dynamic` on every load because the
+   dropdown list and the validation whitelist were separate literals
+   (`PRESET_VALUES` is the fix; the swap-animation size bug was the same
+   disease: four paths re-deriving platform dims until `currentSlotSize`
+   became the one truth). Rule: value domains get ONE code-level table that
+   every consumer references — a "register new presets here" COMMENT is
+   not a source of truth. Behavioral per-value branches may stay
+   distributed, but every one must fail OPEN (unknown value falls through
+   to a safe default branch), never fail closed (validate-then-reset user
+   data). When a "truth" is invisible (template-injected draw triples),
+   don't guess it — dump it (`GetDrawLayer/Tier/Level`) and observe.
 
 ### ESO API facts (verified against esoui source, not guessed)
 
