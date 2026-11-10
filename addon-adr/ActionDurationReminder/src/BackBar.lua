@@ -2344,7 +2344,6 @@ SLASH_COMMANDS["/adrbackbar"] = function()
   ))
   if l.active and l.container then
     l.syncAll()
-    d("[ADR] relayout forced: " .. tostring(l.effectivePreset()))
     -- 极简 dump：每槽一行内联尺寸(slot|FC|Icon|BD|Btn)，D3/D8/N3/N8 四行直接对比
     local function oneLine(label, button)
       if not (button and button.slot) then
@@ -2385,44 +2384,38 @@ SLASH_COMMANDS["/adrbackbar"] = function()
     oneLine("D8", l.buttons[8])
     oneLine("N3", ZO_ActionBar_GetButton(3))
     oneLine("N8", ZO_ActionBar_GetButton(8))
-    -- 1-5/T 键位提示状态(定位叠堆篡改)：重父后从 ZO_ActionBar1 递归查找
+    -- 键位钉扎健康检查(旧案已结：叠堆篡改/Q飞位)：健康时一行汇总，异常才展开明细
     do
-      for slotNum = 3, 8 do
-        local text = l.pinnedKeybindTexts and l.pinnedKeybindTexts[slotNum]
-          and l.pinnedKeybindTexts[slotNum].text
-          or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("ActionButton" .. slotNum .. "ButtonText"))
-        if text then
-          local _, pt, rel, relPt, ox, oy = text:GetAnchor(0)
-          d(string.format("[ADR] KB%d n=%d parent=%s pt=%s relTo=%s relPt=%s ox=%s oy=%s l=%.0f t=%.0f",
-            slotNum,
-            text:GetNumAnchors(),
-            text:GetParent() and text:GetParent():GetName() or "?",
-            tostring(pt),
-            rel and rel.GetName and rel:GetName() or "nil",
-            tostring(relPt), tostring(ox), tostring(oy),
-            text:GetLeft() or -1, text:GetTop() or -1))
+      local issues = {}
+      if l.keybindsPinned and l.pinnedKeybindTexts then
+        for slotNum, entry in pairs(l.pinnedKeybindTexts) do
+          local text = entry.text
+          if text and text:GetParent() == ZO_ActionBar1 then
+            local ok = false
+            if text:GetNumAnchors() == 1 then
+              local _, _, relTo, relPt = text:GetAnchor(0)
+              ok = relTo == ZO_ActionBar1 and relPt == TOPLEFT
+            end
+            if not ok then
+              issues[#issues + 1] = string.format("KB%d anchor tampered", slotNum)
+            end
+          end
         end
       end
-    end
-    -- Q 键提示状态：父级/锚/坐标(定位重父后位置异常)
-    do
-      local qs = ZO_ActionBar_GetButton(1, HOTBAR_CATEGORY_QUICKSLOT_WHEEL)
-      if qs and qs.slot then
-        local qsText = qs.slot:GetNamedChild("ButtonText")
-          or (ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("QuickslotButtonButtonText"))
-        if qsText then
-          local _, pt, rel, relPt, ox = qsText:GetAnchor(0)
-          d(string.format(
-            "[ADR] Q label parent=%s pt=%s relTo=%s relPt=%s l=%.0f t=%.0f w=%.0f off=%s",
-            qsText:GetParent() and qsText:GetParent():GetName() or "?",
-            tostring(pt),
-            rel and rel.GetName and rel:GetName() or "nil",
-            tostring(relPt),
-            qsText:GetLeft() or -1, qsText:GetTop() or -1,
-            qsText:GetWidth() or -1, tostring(ox)))
-        else
-          d("[ADR] Q label not found")
+      if l.qsKeybindPinned and l.pinnedQsLabel then
+        if l.pinnedQsLabel:GetParent() ~= ZO_ActionBar1 then
+          issues[#issues + 1] = "Q parent wrong"
         end
+      end
+      if l.pinnedUltLk and l.container and l.pinnedUltLk:GetParent() ~= l.container then
+        issues[#issues + 1] = "D8 ult keybind parent wrong"
+      end
+      if next(issues) then
+        for i = 1, #issues do
+          d("[ADR] keybind issue: " .. issues[i])
+        end
+      else
+        d("[ADR] keybinds OK")
       end
     end
     -- 激活光效诊断：对比三个数据源(激活条查询/各自条查询/玩家 buff 表)，
