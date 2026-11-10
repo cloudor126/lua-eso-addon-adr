@@ -135,13 +135,15 @@ l.createRow = function()
       icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
       -- 填充条(原生 back row 特征：框顶 8px 状态条，remain/duration 填充，
       -- 施法条渐变色同原生 ZO_CAST_BAR_COLORS[BEGIN_CHARGE_UP]；
-      -- 锚几何按原生 XML：Frame TL+4,+3 / TR-4,+3，Frame 为 w×h 居中贴图)
+      -- 锚几何按原生 XML：Frame TL+4,+3 / TR-4,+3。
+      -- 键盘原生即裸 StatusBar(无模板继承，dump 证实)——直接 CT_STATUSBAR；
+      -- ZO_StatusBar 虚拟模板不存在(实测 Duplicate 报错)，手柄亮泽层舍弃)
       local nd = IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard
-      local fillBar = WINDOW_MANAGER:CreateControlFromVirtual(nil, control,
-        IsInGamepadPreferredMode() and "ZO_GamepadStatusBarMedium" or "ZO_StatusBar")
+      local fillBar = WINDOW_MANAGER:CreateControl(nil, control, CT_STATUSBAR)
       fillBar:SetAnchor(TOPLEFT, control, CENTER, -nd.w / 2 + 4, -nd.h / 2 + 3)
       fillBar:SetAnchor(TOPRIGHT, control, CENTER, nd.w / 2 - 4, -nd.h / 2 + 3)
       fillBar:SetHeight(8)
+      fillBar:SetMinMax(0, 1)
       pcall(function()
         ZO_StatusBar_SetGradientColor(fillBar, ZO_CAST_BAR_COLORS[ZO_CAST_STATE_BEGIN_CHARGE_UP])
       end)
