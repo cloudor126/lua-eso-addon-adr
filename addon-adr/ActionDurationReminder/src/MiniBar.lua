@@ -133,11 +133,14 @@ l.createRow = function()
       local icon = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
       icon:SetAnchor(TOPLEFT, control, TOPLEFT, 1, 1)
       icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
-      -- 计时数字(字体/颜色复用 Time Labels 设置)
+      -- 计时数字(字体/颜色复用 Time Labels 设置)：
+      -- 创建序在 pill 三层之前会被 overlay/帧盖住(原生无数字无此问题)，
+      -- 显式 DT_HIGH 抬层——层内全局比较器压过全 Background 桶的 pill 贴图
       local label = WINDOW_MANAGER:CreateControl(nil, control, CT_LABEL)
       label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
       label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
       label:SetAnchor(BOTTOM, control, BOTTOM, 0, 2)
+      label:SetDrawTier(DT_HIGH)
       -- 三层原生贴图(创建序即绘制序：BG<Icon<Overlay<Frame；三元组零覆盖
       -- →与图标平齐靠创建序，随子树沉入原生条之下)
       local art = IsInGamepadPreferredMode() and "EsoUI/Art/ActionBar/Gamepad/gp_backrow_abilityFrame"
@@ -314,8 +317,11 @@ m.debugDump = function()
           if not c then
             return "--"
           end
-          return string.format("%.0f,%.0f %.0fx%.0f%s", c:GetLeft() or -1, c:GetTop() or -1,
-            c:GetWidth() or -1, c:GetHeight() or -1, c:IsControlHidden() and "[hid]" or "")
+          return string.format("%.0f,%.0f %.0fx%.0f %d/%d/%d a%.2f%s",
+            c:GetLeft() or -1, c:GetTop() or -1,
+            c:GetWidth() or -1, c:GetHeight() or -1,
+            c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1,
+            c:GetAlpha() or -1, c:IsControlHidden() and "[hid]" or "")
         end
         geo = string.format("ctl[%s] icon[%s] lbl[%s] bg[%s] ov[%s] frm[%s] lblText=%q",
           g(e.control), g(e.icon), g(e.label), g(e.bg), g(e.overlay), g(e.frame), e.label:GetText() or "")
