@@ -443,6 +443,19 @@ end
 ---迷你行槽位固定尺寸(平台无关；用户可用 Shift Bar Scale 滑条再调比例)
 l.MINI_SLOT = 32
 
+---当前预设下克隆槽应显示的本地尺寸：迷你行固定 32(ult 不再放大)；
+---其余预设取平台模板尺寸。切手动画起止值/半程回缩都必须用它，
+---硬编码平台尺寸会把迷你行动画成全尺寸(实测坑)
+---@param slotNum number
+---@return number
+l.currentSlotSize = function(slotNum)
+  if l.effectivePreset() == "mini" then
+    return l.MINI_SLOT
+  end
+  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
+  return slotNum == 8 and dims.ult or dims.ability
+end
+
 ---布局：迷你行预设——克隆槽缩为固定小尺寸，逐槽锚在对应原生槽正上方
 ---(与动态同锚型，行距减半)，携带图标/计时/冷却线等全部计时表现；
 ---原生条零干预(不重锚切手/不钉键位/不缩 ult/不藏键位)。
@@ -1380,10 +1393,11 @@ local function onSwapAnimationHalfDone(_, button)
   -- HandleSlotChanged→ApplyStyle 会把 FlipCard 重置到模板值(ult=67)且
   -- ApplySwapAnimationStyle 读到 67 设入动画后半程起止值——克隆 ult 在
   -- 翻转展开阶段会偏大。同原生 reapply 的修法：缩回目标值后重设动画参数
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
+  -- (预设感知：迷你行回缩到 32，否则动画把迷你行变成全尺寸双条)
+  local size = l.currentSlotSize(button.slot.slotNum)
+  l.setCloneSize(button, size)
   -- 动画后半程起止值用本地尺寸直写(原生读 GetDimensions 含 scale，会双重缩小)
-  l.applySwapAnimStyleLocal(button, (button.slot.slotNum == 8 and dims.ult or dims.ability) - 3)
+  l.applySwapAnimStyleLocal(button, size - 3)
   l.applyInactiveStyle(button)
   -- Q 键提示锚的重断言已改为 PostHook 原生药剂栏按钮(见 registerEvents)，
   -- 不再在此处追赶原生刷新时机
@@ -1979,12 +1993,12 @@ l.playSwapAnimation = function()
   if l.getSavedVars().barPreset ~= "static" then
     -- 动画期间抑制其他事件源的内容更新(否则半程前就被 syncAll/syncSlot 换掉)
     l.swapInProgress = true
-    local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
     for slotNum = 3, 8 do
       local button = l.buttons[slotNum]
       if button and button.hotbarSwapAnimation then
         -- 先写本地起止值再播：上次 ApplyStyle 链读的是含 scale 的屏幕值
-        l.applySwapAnimStyleLocal(button, (slotNum == 8 and dims.ult or dims.ability) - 3)
+        -- (预设感知尺寸：迷你行 32，否则动画把迷你行播成全尺寸)
+        l.applySwapAnimStyleLocal(button, l.currentSlotSize(slotNum) - 3)
         button.hotbarSwapAnimation:PlayFromStart()
       end
     end
