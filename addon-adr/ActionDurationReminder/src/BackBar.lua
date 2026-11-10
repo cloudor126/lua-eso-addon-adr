@@ -618,10 +618,12 @@ l.setCloneSize = function(button, w)
     backdrop:ClearAnchors()
     backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
     backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
-    -- 层级归零：模板继承链(ZO_DefaultBackdrop_Gamepad)给 Backdrop 设了 tier/level，
-    -- 与原生图标比较时跳出树序浮到原生条之上；归零后全平级由树序裁决(容器在
-    -- WeaponSwap 子树内，先于技能槽绘制→重叠时被原生条遮挡)。setCloneSize 在
-    -- ApplyStyle 各路径之后运行，模板重放后也会被重新归零
+    -- 层级归零：模板继承链(ZO_DefaultBackdrop_Gamepad)给 Backdrop 设了
+    -- layer/tier/level——三者都是全局比较器，任何残留都会跳出树序浮到原生条
+    -- 之上；全归零后与原生图标平级由树序裁决(容器在 WeaponSwap 子树内→
+    -- 先于技能槽绘制→重叠时被原生条遮挡)。setCloneSize 在 ApplyStyle 各路径
+    -- 之后运行，模板重放后也会被重新归零
+    backdrop:SetDrawLayer(DL_BACKGROUND)
     backdrop:SetDrawTier(0)
     backdrop:SetDrawLevel(0)
   end

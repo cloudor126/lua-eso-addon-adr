@@ -266,7 +266,13 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
 
   -- Progress bar (horizontal bar that shrinks from right to left)
   local progressBar = WINDOW_MANAGER:CreateControl(nil, backdrop or slot, CT_BACKDROP)
-  -- 零覆盖策略同冷却线段：任何 tier/level 赋值都是层内全局比较，会跳出树序
+  -- 同冷却线段：浮动行平级匹配 level=1(树序裁决双胜)，主条恢复高位
+  if shifted then
+    progressBar:SetDrawLevel(1)
+  else
+    progressBar:SetDrawLayer(DL_CONTROLS)
+    progressBar:SetDrawLevel(1)
+  end
   local progressColor = savedVars.barProgressColor
   local progressAlpha = savedVars.barProgressOpacity / 100
   progressBar:SetCenterColor(progressColor[1], progressColor[2], progressColor[3], progressAlpha)
@@ -423,9 +429,16 @@ end
 ---@type fun(self: adr.views.Cooldown): TextureControl
 mCooldown.createPart = function(self)
   local part = self.background:CreateControl(nil, CT_TEXTURE) --TextureControl#TextureControl
-  -- 层级策略：零覆盖(不设 layer/tier/level)——tier/level 是层内全局比较器，
- -- 任何赋值都可能跳出容器子树的树序优势(WeaponSwap 宿主先于技能槽绘制)。
-  -- 与克隆图标全平级时树序裁决：段创建更晚→图标之上；容器子树→原生条之下
+  -- 层级策略(实测绘得)：layer桶→tier(层内全局)→level(层内全局)→树序。
+  -- 模板给图标设了 level=1：浮动行线段【平级匹配 level=1】→与克隆图标打平由
+  -- 树序裁决(创建更晚→图标之上)，与原生图标打平由子树序裁决(容器在 WeaponSwap
+  -- 宿主下→原生条之下)。主条(非浮动行)不下沉，恢复高位
+  if self.shifted then
+    part:SetDrawLevel(1)
+  else
+    part:SetDrawLayer(DL_CONTROLS)
+    part:SetDrawLevel(2)
+  end
   part:SetColor(unpack(l.getSavedVars().barCooldownColor))
   local opacity = l.getSavedVars().barCooldownOpacity
   if opacity < 100 then
