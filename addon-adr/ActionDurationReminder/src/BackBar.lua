@@ -1802,8 +1802,8 @@ local function onSwapAnimationDone(_, button)
   -- 解锁内容更新抑制(所有按钮动画完毕；最后一个回调时 swapInProgress 已被600ms兜底清)
   l.swapInProgress = false
   -- 翻转动画后原生 ApplyStyle 可能重置了 Backdrop/Frame 锚和尺寸，补上
-  local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
-  l.setCloneSize(button, button.slot.slotNum == 8 and dims.ult or dims.ability)
+  -- (预设感知：迷你行回缩到 32)
+  l.setCloneSize(button, l.currentSlotSize(button.slot.slotNum))
   -- 确保内容与 hotbar 同步(动画期间被抑制的更新在此补齐)
   if button.slot.hotbarCategory ~= l.currentHotbar then
     l.currentHotbar = button.slot.hotbarCategory
