@@ -13,6 +13,8 @@ local views = addon.load("Views#M")
 local models = addon.load("Models#M")
 ---@type adr.backbar.M
 local backBar = addon.load("BackBar#M")
+---@type adr.minibar.M
+local miniBar = addon.load("MiniBar#M")
 local l = {}
 ---@type adr.bar.M
 local m = { l = l }
@@ -164,11 +166,11 @@ l.isClassicPreset = function()
   return l.getSavedVars().barPreset == "classic"
 end
 
----浮动条位置相关选项适用的预设：经典(贴图行)/动态(克隆行)/迷你行吃 X/Y 偏移；
----静态双行/仅主条不适用(菜单置灰)。后续新增预设在此登记
+---浮动条位置相关选项适用的预设：经典(贴图行)/动态(克隆行)吃 X/Y 偏移；
+---静态双行/仅主条/迷你行(位置纯原生)不适用(菜单置灰)。后续新增预设在此登记
 l.isShiftRowMovable = function()
   local p = l.getSavedVars().barPreset
-  return p == "classic" or p == "dynamic" or p == "mini"
+  return p == "classic" or p == "dynamic"
 end
 
 ---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
@@ -288,9 +290,12 @@ l.onCoreUpdate = function()
       l.quickslotWidget:hide()
     end
   end
-  -- Main Bar Only 预设：无第二行(克隆/贴图均无)，仅主条与快槽位计时。
+  -- Main Bar Only / Mini Row 预设：不走 ADR 计时器的第二行渲染。
+  -- mainonly 无第二行；mini 由 MiniBar 模块自驱(引擎槽位效果计时，
+  -- 原生 back row 同源数据，与 action 匹配系统无关)。
   -- 第 2 步已隐藏全部 shift 控件，此处直接返回不再重建
-  if l.getSavedVars().barPreset == "mainonly" then
+  local preset = l.getSavedVars().barPreset
+  if preset == "mainonly" or preset == "mini" then
     return
   end
   -- 4. prepare to show shift and extend
@@ -618,6 +623,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
         setFunc = function(value)
           l.getSavedVars().barPreset = value
           backBar.updateLayout()
+          miniBar.setEnabled(value == "mini")
         end,
         width = "full",
         default = barSavedVarsDefaults.barPreset,
@@ -697,6 +703,9 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
               l.getSavedVars().barShowShiftScalePercent = value
               l.updateWidgets(views.updateWidgetShiftScalePercent)
               backBar.updateScale()
+              if miniBar.relayout then
+                miniBar.relayout()
+              end
             end,
             width = "full",
             default = barSavedVarsDefaults.barShowShiftScalePercent,

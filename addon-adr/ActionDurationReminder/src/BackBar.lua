@@ -440,55 +440,13 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
----迷你行槽位固定尺寸(平台无关；用户可用 Shift Bar Scale 滑条再调比例)
-l.MINI_SLOT = 32
-
----当前预设下克隆槽应显示的本地尺寸：迷你行固定 32(ult 不再放大)；
----其余预设取平台模板尺寸。切手动画起止值/半程回缩都必须用它，
----硬编码平台尺寸会把迷你行动画成全尺寸(实测坑)
+---当前预设下克隆槽应显示的本地尺寸(平台模板尺寸；ult 略大)。切手动画
+---起止值/半程回缩都必须用它，硬编码会把动画播成错误尺寸(实测坑)
 ---@param slotNum number
 ---@return number
 l.currentSlotSize = function(slotNum)
-  if l.effectivePreset() == "mini" then
-    return l.MINI_SLOT
-  end
   local dims = IsInGamepadPreferredMode() and PLATFORM_DIMS.gamepad or PLATFORM_DIMS.keyboard
   return slotNum == 8 and dims.ult or dims.ability
-end
-
----布局：迷你行预设——克隆槽缩为固定小尺寸，逐槽锚在对应原生槽正上方
----(与动态同锚型，行距减半)，携带图标/计时/冷却线等全部计时表现；
----原生条零干预(不重锚切手/不钉键位/不缩 ult/不藏键位)。
----切自动态预设时先解除动态的原生干预(disarmDynamicInterventions)
----@type fun()
-l.layoutMini = function()
-  if not l.container or not l.buttons[3] then
-    return
-  end
-  local sv = l.getSavedVars()
-  local _, _, gapY = l.platformOffsets()
-  for slotNum = 3, 8 do
-    local nativeButton = ZO_ActionBar_GetButton(slotNum)
-    local button = l.buttons[slotNum]
-    button.slot:ClearAnchors()
-    -- BOTTOM→原生 TOP 同动态：锚点居中，乘 scale 后仍逐槽对位
-    button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP,
-      (sv.barShiftOffsetX or 0), (sv.barShiftOffsetY or 0) - gapY / 2)
-    l.setCloneSize(button, l.MINI_SLOT)
-    button.slot:SetScale(sv.barShowShiftScalePercent / 100)
-    -- 迷你行终极槽不显示肩键提示(信息行非操作行)；肩键可能被 disarm
-    -- 重父回槽，在此显式隐藏(模板重放后 layoutRow 也会重跑本函数)
-    if slotNum == 8 then
-      local lk = button.slot:GetNamedChild("LeftKeybind")
-      local rk = button.slot:GetNamedChild("RightKeybind")
-      if lk then
-        lk:SetHidden(true)
-      end
-      if rk then
-        rk:SetHidden(true)
-      end
-    end
-  end
 end
 
 ---按键提示(ButtonText)固定/还原：静态下原生槽被隐藏，键提示重父到 ZO_ActionBar1
@@ -1037,11 +995,6 @@ l.layoutRow = function()
   local preset = l.effectivePreset()
   if l.getSavedVars().barPreset == "static" and preset == "static" then
     l.layoutStatic()
-  elseif preset == "mini" then
-    -- 退出静态残留 + 解除动态遗留的原生干预(键位/Q 钉扎/ult 缩放/切手)
-    l.exitStatic()
-    l.disarmDynamicInterventions()
-    l.layoutMini()
   else
     l.exitStatic()
     l.layoutDynamic()
@@ -2208,8 +2161,9 @@ l.onCoreUpdate = function()
   local sv = l.getSavedVars()
   -- FAB 存在时任何预设都不激活克隆行(回退贴图经典)；否则所有预设激活，
   -- classic 仅作为可见性模式(每槽有计时才显示，由 Bar 模块每帧传入可见集)；
-  -- mainonly 完全不激活(无第二行，克隆/贴图均无，原生条零干预)
-  local want = sv.barEnabled and FancyActionBar == nil and sv.barPreset ~= "mainonly"
+  -- mainonly/mini 完全不激活(无克隆行，原生条零干预；mini 由 MiniBar 模块自管)
+  local want = sv.barEnabled and FancyActionBar == nil
+    and sv.barPreset ~= "mainonly" and sv.barPreset ~= "mini"
   if want and not l.active then
     l.activate()
   elseif not want and l.active then
@@ -2385,16 +2339,11 @@ end
 --========================================
 --        register
 --========================================
----供 Bar 模块调用：浮动条位置设置变化后重排克隆行(动态/迷你吃 X/Y 偏移；
----经典走贴图路径不经过这里；静态/其他预设无操作)
+---供 Bar 模块调用：浮动条位置设置变化后重排克隆行(动态预设吃 X/Y 偏移；
+---经典走贴图路径不经过这里；迷你行由 MiniBar 模块自管；静态无操作)
 m.refreshShiftRow = function()
-  local preset = l.effectivePreset()
-  if l.active and (preset == "dynamic" or preset == "mini") then
-    if preset == "dynamic" then
-      l.layoutDynamic()
-    else
-      l.layoutMini()
-    end
+  if l.active and l.effectivePreset() == "dynamic" then
+    l.layoutDynamic()
   end
 end
 
