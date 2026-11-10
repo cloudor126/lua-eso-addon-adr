@@ -1297,7 +1297,10 @@ l.syncAll = function(relayout)
     l.container:SetHidden(true)
     return
   end
-  l.container:SetHidden(false)
+  -- 拖拽定位期间(update 各路径会试图重新显示，此处必须尊重闩锁)
+  if not l.shiftRowForceHidden then
+    l.container:SetHidden(false)
+  end
   if relayout ~= false then
     l.layoutRow()
   end
@@ -2321,6 +2324,9 @@ end
 ---拖拽定位期间隐藏/恢复克隆行：克隆按钮会遮盖定位框架(鼠标/视觉双重竞争)，
 ---隐藏后框架清晰可见可拖，关闭框架时行在新位置出现
 m.setShiftRowHidden = function(hidden)
+  -- 闩锁必需：update() 每次同步都会无条件重显容器(心跳/事件驱动)，
+  -- 不加锁拖拽中行会立刻回来盖住框架
+  l.shiftRowForceHidden = hidden or nil
   if l.container then
     l.container:SetHidden(hidden)
   end
