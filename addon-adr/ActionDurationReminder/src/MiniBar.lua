@@ -365,17 +365,26 @@ end
 ---心跳(Core 100ms)：倒数刷新/可见性/图标同步
 addon.extend(core.EXTKEY_UPDATE, l.onCoreUpdate)
 
----事件：切手→立即同步；平台切换/玩家激活→重排(延迟等原生链)
+---事件：切手→立即同步；平台切换/玩家激活→重排。
+---平台切换用 ZO_PlatformStyle(与 Bar/BackBar 同款，实测可靠：创建时立即执行
+---+平台链正确时机回调；裸 EVENT_GAMEPAD_PREFERRED_MODE_CHANGED+延迟实测
+---会漏/乱序，切回键盘后尺寸坐标错乱)
 local function registerEvents()
   local em = EVENT_MANAGER
   em:RegisterForEvent("ADRMiniBar", EVENT_ACTION_SLOTS_ACTIVE_HOTBAR_UPDATED, function()
     l.syncAll()
   end)
-  em:RegisterForEvent("ADRMiniBar", EVENT_GAMEPAD_PREFERRED_MODE_CHANGED, function()
-    zo_callLater(function()
+  if ZO_PlatformStyle then
+    ZO_PlatformStyle:New(function()
       l.relayout()
-    end, 200)
-  end)
+    end)
+  else
+    em:RegisterForEvent("ADRMiniBar", EVENT_GAMEPAD_PREFERRED_MODE_CHANGED, function()
+      zo_callLater(function()
+        l.relayout()
+      end, 200)
+    end)
+  end
   em:RegisterForEvent("ADRMiniBar", EVENT_PLAYER_ACTIVATED, function()
     zo_callLater(function()
       if l.getSavedVars().barPreset == "mini" and l.getSavedVars().barEnabled then
