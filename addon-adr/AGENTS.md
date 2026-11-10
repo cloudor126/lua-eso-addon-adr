@@ -201,6 +201,7 @@ parent but changes the point).
 
 ### ESO API facts (verified against esoui source, not guessed)
 
+- **Draw order (empirically mapped, v3.171 z-order work)**: `layer → tier → level → tree order (depth-first + creation order)`. Layer/tier/level are GLOBAL comparators within the layer; tree order only breaks exact ties. Template chains inject triples (gamepad icon = 0/1/1, native border BD = 0/1/0; negative tiers clamp to 0). To sink a whole subtree below another sibling subtree: parent it under an EARLIER XML child (we use `ZO_ActionBar1WeaponSwap` — children order KeybindBG→WeaponSwap→slot buttons; KeybindBG is hidden in gamepad so unusable) and make every control inside tie-or-below the native counterparts' triples (`setCloneSize` zeroes border-ish children, sinks icons to 0/1/0). To stay above the sibling icon but below the foreign subtree: full triple PARITY with the icon (tie → creation order wins locally, tree order loses globally). Never absolute layer buckets (`DL_TEXT`/`DL_CONTROLS`) inside a subtree that must sink — they jump the tree order entirely.
 - `ActionSlotHasActivationHighlight(slot, hotbar)` returns STALE values for
   the inactive hotbar (engine only maintains active-bar slot state; swap
   refreshes it). No public API gives live truth for inactive bars; FAB does

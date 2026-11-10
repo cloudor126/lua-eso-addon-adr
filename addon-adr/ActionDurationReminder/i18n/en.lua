@@ -11,6 +11,7 @@ put("Choose the overall look of your bars", "Classic: compact icon row with time
 put("Classic - Timer Icons", "Classic - Timer Icons")
 put("Dynamic Double Bar", "Dynamic Double Bar")
 put("Static Double Bar", "Static Double Bar")
+put("Main Bar Only", "Main Bar Only")
 put("ADR double bar disabled: FancyActionBar+ detected", "ADR double bar disabled: FancyActionBar+ detected. Disable FAB if you want ADR's double bar look.")
 put("ADR static bar warning: a bar-mover addon was detected", "ADR static bar warning: a bar-mover addon (Bandits/Azurah) was detected; the bars may be misaligned. Switch back to the dynamic double bar if anything looks off.")
 put("Shift Bar", "Shift Bar")

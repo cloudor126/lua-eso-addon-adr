@@ -288,6 +288,11 @@ l.onCoreUpdate = function()
       l.quickslotWidget:hide()
     end
   end
+  -- Main Bar Only 预设：无第二行(克隆/贴图均无)，仅主条与快槽位计时。
+  -- 第 2 步已隐藏全部 shift 控件，此处直接返回不再重建
+  if l.getSavedVars().barPreset == "mainonly" then
+    return
+  end
   -- 4. prepare to show shift and extend
   -- 克隆行可用性(存在、已同步非激活条、非 Oakensoul)；不可用时退回贴图行。
   -- 克隆行可用时贴图 shift 控件一律淘汰(含 classic：所有槽位动作已上克隆槽，
@@ -603,8 +608,9 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           text("Classic - Timer Icons"),
           text("Dynamic Double Bar"),
           text("Static Double Bar"),
+          text("Main Bar Only"),
         },
-        choicesValues = { "classic", "dynamic", "static" },
+        choicesValues = { "classic", "dynamic", "static", "mainonly" },
         getFunc = function()
           return l.getSavedVars().barPreset
         end,
@@ -637,6 +643,10 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
       {
         type = "submenu",
         name = text("Shift Bar"),
+        disabled = function()
+          -- Main Bar Only 无第二行，整个子菜单置灰
+          return not l.getSavedVars().barEnabled or l.getSavedVars().barPreset == "mainonly"
+        end,
         controls = {
           {
             type = "slider",

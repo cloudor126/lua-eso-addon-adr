@@ -11,6 +11,7 @@ put("Choose the overall look of your bars", "Классика: компактн�
 put("Classic - Timer Icons", "Классика – значки таймеров")
 put("Dynamic Double Bar", "Динамическая двойная панель")
 put("Static Double Bar", "Статическая двойная панель")
+put("Main Bar Only", "Только основная панель")
 put("ADR double bar disabled: FancyActionBar+ detected", "Двойная панель ADR отключена: обнаружен FancyActionBar+. Отключите FAB, если хотите двойную панель ADR.")
 put("ADR static bar warning: a bar-mover addon was detected", "Предупреждение статической панели ADR: обнаружен аддон-перемещатель панели (Bandits/Azurah); панели могут сместиться. Если что-то выглядит неправильно, вернитесь к динамической двойной панели.")
 put("Shift Bar", "Сдвигающаяся Панель")

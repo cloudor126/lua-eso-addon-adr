@@ -11,6 +11,7 @@ put("Choose the overall look of your bars", "Classique : rangée d'icônes compa
 put("Classic - Timer Icons", "Classique – Icônes de minuteur")
 put("Dynamic Double Bar", "Double barre dynamique")
 put("Static Double Bar", "Double barre statique")
+put("Main Bar Only", "Barre principale uniquement")
 put("ADR double bar disabled: FancyActionBar+ detected", "Double barre ADR désactivée : FancyActionBar+ détecté. Désactivez FAB si vous voulez le style double barre d'ADR.")
 put("ADR static bar warning: a bar-mover addon was detected", "Avertissement barre statique ADR : un addon de déplacement de barre (Bandits/Azurah) a été détecté ; les barres peuvent être mal alignées. Revenez à la double barre dynamique en cas de problème.")
 put("Shift Bar", "Barre de décalage")

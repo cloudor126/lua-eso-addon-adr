@@ -2136,8 +2136,9 @@ end
 l.onCoreUpdate = function()
   local sv = l.getSavedVars()
   -- FAB 存在时任何预设都不激活克隆行(回退贴图经典)；否则所有预设激活，
-  -- classic 仅作为可见性模式(每槽有计时才显示，由 Bar 模块每帧传入可见集)
-  local want = sv.barEnabled and FancyActionBar == nil
+  -- classic 仅作为可见性模式(每槽有计时才显示，由 Bar 模块每帧传入可见集)；
+  -- mainonly 完全不激活(无第二行，克隆/贴图均无，原生条零干预)
+  local want = sv.barEnabled and FancyActionBar == nil and sv.barPreset ~= "mainonly"
   if want and not l.active then
     l.activate()
   elseif not want and l.active then

@@ -11,6 +11,7 @@ put("Choose the overall look of your bars", "クラシック：タイマー付�
 put("Classic - Timer Icons", "クラシック – タイマーアイコン")
 put("Dynamic Double Bar", "ダイナミック・ダブルバー")
 put("Static Double Bar", "スタティック・ダブルバー")
+put("Main Bar Only", "メインバーのみ")
 put("ADR double bar disabled: FancyActionBar+ detected", "FancyActionBar+ を検出したため、ADRのダブルバーを無効化しました。ADRのダブルバーを使う場合はFABを無効化してください。")
 put("ADR static bar warning: a bar-mover addon was detected", "静的ダブルバー警告：バー移動系アドオン（Bandits/Azurah）を検出しました。バーの位置がずれる可能性があります。異常がある場合はダイナミック・ダブルバーに戻してください。")
 put("Shift Bar", "シフトバー")
