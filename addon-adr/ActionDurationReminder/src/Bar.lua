@@ -164,11 +164,11 @@ l.isClassicPreset = function()
   return l.getSavedVars().barPreset == "classic"
 end
 
----浮动条位置相关选项适用的预设：经典(贴图行)与动态(克隆行)吃 X/Y 偏移；
----静态双行位置固定不适用(菜单置灰)。后续新增预设在此登记
+---浮动条位置相关选项适用的预设：经典(贴图行)/动态(克隆行)/迷你行吃 X/Y 偏移；
+---静态双行/仅主条不适用(菜单置灰)。后续新增预设在此登记
 l.isShiftRowMovable = function()
   local p = l.getSavedVars().barPreset
-  return p == "classic" or p == "dynamic"
+  return p == "classic" or p == "dynamic" or p == "mini"
 end
 
 ---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
@@ -608,9 +608,10 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           text("Classic - Timer Icons"),
           text("Dynamic Double Bar"),
           text("Static Double Bar"),
+          text("Mini Row"),
           text("Main Bar Only"),
         },
-        choicesValues = { "classic", "dynamic", "static", "mainonly" },
+        choicesValues = { "classic", "dynamic", "static", "mini", "mainonly" },
         getFunc = function()
           return l.getSavedVars().barPreset
         end,

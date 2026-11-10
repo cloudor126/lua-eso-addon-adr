@@ -440,6 +440,44 @@ l.layoutDynamic = function()
   l.applyScale()
 end
 
+---迷你行槽位固定尺寸(平台无关；用户可用 Shift Bar Scale 滑条再调比例)
+l.MINI_SLOT = 32
+
+---布局：迷你行预设——克隆槽缩为固定小尺寸，逐槽锚在对应原生槽正上方
+---(与动态同锚型，行距减半)，携带图标/计时/冷却线等全部计时表现；
+---原生条零干预(不重锚切手/不钉键位/不缩 ult/不藏键位)。
+---切自动态预设时先解除动态的原生干预(disarmDynamicInterventions)
+---@type fun()
+l.layoutMini = function()
+  if not l.container or not l.buttons[3] then
+    return
+  end
+  local sv = l.getSavedVars()
+  local _, _, gapY = l.platformOffsets()
+  for slotNum = 3, 8 do
+    local nativeButton = ZO_ActionBar_GetButton(slotNum)
+    local button = l.buttons[slotNum]
+    button.slot:ClearAnchors()
+    -- BOTTOM→原生 TOP 同动态：锚点居中，乘 scale 后仍逐槽对位
+    button.slot:SetAnchor(BOTTOM, nativeButton.slot, TOP,
+      (sv.barShiftOffsetX or 0), (sv.barShiftOffsetY or 0) - gapY / 2)
+    l.setCloneSize(button, l.MINI_SLOT)
+    button.slot:SetScale(sv.barShowShiftScalePercent / 100)
+    -- 迷你行终极槽不显示肩键提示(信息行非操作行)；肩键可能被 disarm
+    -- 重父回槽，在此显式隐藏(模板重放后 layoutRow 也会重跑本函数)
+    if slotNum == 8 then
+      local lk = button.slot:GetNamedChild("LeftKeybind")
+      local rk = button.slot:GetNamedChild("RightKeybind")
+      if lk then
+        lk:SetHidden(true)
+      end
+      if rk then
+        rk:SetHidden(true)
+      end
+    end
+  end
+end
+
 ---按键提示(ButtonText)固定/还原：静态下原生槽被隐藏，键提示重父到 ZO_ActionBar1
 ---并钉在原始屏幕位置；退出静态时还原父级与原生锚形(TOP→slot.BOTTOM)
 l.keybindsPinned = false
@@ -983,8 +1021,14 @@ l.layoutRow = function()
   if not l.buttons[3] or not l.container then
     return
   end
-  if l.getSavedVars().barPreset == "static" and l.effectivePreset() == "static" then
+  local preset = l.effectivePreset()
+  if l.getSavedVars().barPreset == "static" and preset == "static" then
     l.layoutStatic()
+  elseif preset == "mini" then
+    -- 退出静态残留 + 解除动态遗留的原生干预(键位/Q 钉扎/ult 缩放/切手)
+    l.exitStatic()
+    l.disarmDynamicInterventions()
+    l.layoutMini()
   else
     l.exitStatic()
     l.layoutDynamic()
@@ -1550,6 +1594,11 @@ end
 ---调用点：layoutDynamic / applyPlatformStyle / onSwapAnimationDone
 ---@type fun()
 l.reassertUltKeybinds = function()
+  -- 迷你行不显示肩键提示(信息行非操作行)，且其 D8 已缩到 32px，
+  -- 绝对锚的肩键会飘在行外——切手动画回调会调本函数，必须在此拦下
+  if l.effectivePreset() == "mini" then
+    return
+  end
   if not (l.buttons[8] and l.buttons[8].slot) then
     return
   end
@@ -2096,11 +2145,10 @@ end
 
 ---停用克隆行(切回经典预设/关闭计时条)
 ---@type fun()
-l.deactivate = function()
-  l.unregisterEvents()
-  l.active = false
-  l.lastAppliedPreset = nil
-  l.exitStatic()
+---动态预设的原生干预解除(切到迷你/停用时共用)：键位偏移还原、Q 钉扎还原、
+---D8 肩键重父回槽、原生 ult 尺寸还原、切手按钮回原生语义(手柄下永久隐藏)
+---@type fun()
+l.disarmDynamicInterventions = function()
   l.restoreKeybindOffsets()
   -- Q 提示还原原生(重父回药水槽+重放模板锚)
   l.unpinQuickslotKeybind()
@@ -2127,6 +2175,15 @@ l.deactivate = function()
       ZO_WeaponSwap_SetPermanentlyHidden(weaponSwap, true)
     end
   end
+end
+
+---@type fun()
+l.deactivate = function()
+  l.unregisterEvents()
+  l.active = false
+  l.lastAppliedPreset = nil
+  l.exitStatic()
+  l.disarmDynamicInterventions()
   if l.container then
     l.container:SetHidden(true)
   end
@@ -2314,11 +2371,16 @@ end
 --========================================
 --        register
 --========================================
----供 Bar 模块调用：浮动条位置设置变化后重排克隆行(动态预设吃 X/Y 偏移；
+---供 Bar 模块调用：浮动条位置设置变化后重排克隆行(动态/迷你吃 X/Y 偏移；
 ---经典走贴图路径不经过这里；静态/其他预设无操作)
 m.refreshShiftRow = function()
-  if l.active and l.effectivePreset() == "dynamic" then
-    l.layoutDynamic()
+  local preset = l.effectivePreset()
+  if l.active and (preset == "dynamic" or preset == "mini") then
+    if preset == "dynamic" then
+      l.layoutDynamic()
+    else
+      l.layoutMini()
+    end
   end
 end
 
