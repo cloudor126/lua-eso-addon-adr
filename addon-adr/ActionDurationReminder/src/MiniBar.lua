@@ -129,10 +129,8 @@ l.createRow = function()
     for slotNum = 3, 8 do
       local control = WINDOW_MANAGER:CreateControl("ADRMiniBarSlot" .. slotNum, l.container, CT_CONTROL)
       control:SetMouseEnabled(false)
-      -- Icon：图标纹理(action 的 ability 图标)
-      local icon = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
-      icon:SetAnchor(TOPLEFT, control, TOPLEFT, 1, 1)
-      icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
+      -- 原生 back row 不显示技能图标(实物确认；XML 创建序 BG/Overlay 盖在
+      -- Icon 之上，“BLANK”艺术即盖板)，本行同样只有胶囊框/填充条/数字
       -- 计时数字(字体/颜色复用 Time Labels 设置)：
       -- 创建序在 pill 三层之前会被 overlay/帧盖住(原生无数字无此问题)，
       -- 显式 DT_HIGH 抬层——层内全局比较器压过全 Background 桶的 pill 贴图
@@ -156,7 +154,7 @@ l.createRow = function()
       local overlay = layerTex(art .. "_overlay.dds")
       local frame = layerTex(art .. ".dds")
       l.slots[slotNum] =
-        { control = control, icon = icon, label = label, bg = bg, overlay = overlay, frame = frame, iconPath = nil }
+        { control = control, label = label, bg = bg, overlay = overlay, frame = frame }
     end
   end)
   if not ok then
@@ -237,21 +235,12 @@ l.syncAll = function()
   end
   l.container:SetHidden(false)
   local now = GetGameTimeMilliseconds()
-  local alpha = (sv.backBarDimAlpha or 100) / 100
-  local desat = (sv.backBarDesaturation or 0) / 100
   local scale = sv.barShowShiftScalePercent / 100
   for slotNum = 3, 8 do
     local entry = l.slots[slotNum]
     if entry then
       local action, remain = getSlotAction(slotNum, hotbar, now)
       if action then
-        local iconPath = action.ability and action.ability.icon
-        if iconPath and iconPath ~= "" and iconPath ~= entry.iconPath then
-          entry.iconPath = iconPath
-          entry.icon:SetTexture(iconPath)
-        end
-        entry.icon:SetAlpha(alpha)
-        entry.icon:SetDesaturation(desat)
         entry.label:SetText(l.formatRemain(remain))
         entry.label:SetColor(unpack(sv.barLabelColor or { 1, 1, 1 }))
         entry.control:SetScale(scale)
@@ -323,8 +312,8 @@ m.debugDump = function()
             c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1,
             c:GetAlpha() or -1, c:IsControlHidden() and "[hid]" or "")
         end
-        geo = string.format("ctl[%s] icon[%s] lbl[%s] bg[%s] ov[%s] frm[%s] lblText=%q",
-          g(e.control), g(e.icon), g(e.label), g(e.bg), g(e.overlay), g(e.frame), e.label:GetText() or "")
+        geo = string.format("ctl[%s] lbl[%s] bg[%s] ov[%s] frm[%s] lblText=%q",
+          g(e.control), g(e.label), g(e.bg), g(e.overlay), g(e.frame), e.label:GetText() or "")
       end
       lines[#lines + 1] = string.format("S%d act=%s remain=%s | %s",
         slotNum,
