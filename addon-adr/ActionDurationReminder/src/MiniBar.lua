@@ -147,22 +147,22 @@ l.createRow = function()
       pcall(function()
         ZO_StatusBar_SetGradientColor(fillBar, ZO_CAST_BAR_COLORS[ZO_CAST_STATE_BEGIN_CHARGE_UP])
       end)
-      -- 胶囊框：Frame 边框层 + BG(BLANK) 遮罩层。BG 创建序在图标之上，
-      -- 是把方形图标修成胶囊形的遮罩(个别方形艺术图标四角会戳出圆角外，
-      -- 原生靠此层修角)；Overlay(去饱和纱)按用户偏好保持移除，图标原图
+      -- 胶囊框：仅 Frame 边框层(图标之上，原生创建序)。BG(BLANK) 实测是
+      -- 全幅盖板——盖上后连 Frame 边框都被盖没(用户实辨：所有边框消失)，
+      -- 原生可见边框感来自已移除的 Overlay 暗纱边缘；故不使用 BG/Overlay。
+      -- 方角艺术图标用内缩缓解(±3，微不可察)：个别图标四角戳出胶囊圆角
       local art = IsInGamepadPreferredMode() and "EsoUI/Art/ActionBar/Gamepad/gp_backrow_abilityFrame"
         or "EsoUI/Art/ActionBar/backrow_abilityFrame"
-      local function layerTex(file)
-        local t = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
-        t:SetTexture(file)
-        t:SetAnchor(CENTER, control, CENTER)
-        t:SetTextureCoords(unpack((IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard).coords))
-        return t
-      end
-      local frame = layerTex(art .. ".dds")
-      local bg = layerTex(art .. "_BLANK.dds") -- 图标之上(同原生创建序)，修角遮罩
+      local frame = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
+      frame:SetTexture(art .. ".dds")
+      frame:SetAnchor(CENTER, control, CENTER)
+      frame:SetTextureCoords(unpack((IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard).coords))
+      -- 图标内缩：角部收进，减少方角戳出胶囊圆角
+      icon:ClearAnchors()
+      icon:SetAnchor(TOPLEFT, control, TOPLEFT, 3, 3)
+      icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -3, -3)
       l.slots[slotNum] =
-        { control = control, icon = icon, fillBar = fillBar, frame = frame, bg = bg, iconPath = nil }
+        { control = control, icon = icon, fillBar = fillBar, frame = frame, iconPath = nil }
     end
   end)
   if not ok then
@@ -199,13 +199,12 @@ l.relayout = function()
       local control = entry.control
       control:SetDimensions(dims.w, dims.w)
       -- 贴图层随平台重设(键盘/手柄切换；引用直取，子控件匿名)
-      for _, layer in ipairs({ entry.frame, entry.bg }) do
+      for _, layer in ipairs({ entry.frame }) do
         if layer then
           layer:SetDimensions(dims.w, dims.h)
         end
       end
       entry.frame:SetTexture(art .. ".dds")
-      entry.bg:SetTexture(art .. "_BLANK.dds")
       control:ClearAnchors()
       -- CENTER 锚：缩放围绕锚点仍居中对位(与原生 back row 同锚型)
       control:SetAnchor(CENTER, nativeButton.slot, CENTER, 0, slotNum == 8 and ultOffY or abilityOffY)
@@ -324,8 +323,8 @@ m.debugDump = function()
             c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1,
             c:GetAlpha() or -1, c:IsControlHidden() and "[hid]" or "")
         end
-        geo = string.format("ctl[%s] icon[%s] fill[%s] frm[%s] bg[%s]",
-          g(e.control), g(e.icon), g(e.fillBar), g(e.frame), g(e.bg))
+        geo = string.format("ctl[%s] icon[%s] fill[%s] frm[%s]",
+          g(e.control), g(e.icon), g(e.fillBar), g(e.frame))
       end
       lines[#lines + 1] = string.format("S%d act=%s remain=%s | %s",
         slotNum,
