@@ -618,14 +618,25 @@ l.setCloneSize = function(button, w)
     backdrop:ClearAnchors()
     backdrop:SetAnchor(TOPLEFT, flipCard, TOPLEFT, -4, -4)
     backdrop:SetAnchor(BOTTOMRIGHT, flipCard, BOTTOMRIGHT, 4, 4)
-    -- 层级归零：模板继承链(ZO_DefaultBackdrop_Gamepad)给 Backdrop 设了
-    -- layer/tier/level——三者都是全局比较器，任何残留都会跳出树序浮到原生条
-    -- 之上；全归零后与原生图标平级由树序裁决(容器在 WeaponSwap 子树内→
-    -- 先于技能槽绘制→重叠时被原生条遮挡)。setCloneSize 在 ApplyStyle 各路径
-    -- 之后运行，模板重放后也会被重新归零
-    backdrop:SetDrawLayer(DL_BACKGROUND)
-    backdrop:SetDrawTier(0)
-    backdrop:SetDrawLevel(0)
+    -- 层级归零：模板继承链给边框类子控件设了 layer/tier/level——三者都是
+    -- 全局比较器，任何残留都会跳出树序浮到原生条之上(用户可见的残留边框
+    -- 来源不止 Backdrop，dump 证实克隆 BD 已隐藏仍见框→Button 状态贴图/
+    -- Frame 等一并归零)。全归零后低于图标(0/1/1)且随子树沉入原生条之下；
+    -- setCloneSize 在 ApplyStyle 各路径之后运行，模板重放后会被重新归零
+    local zeroTriple = function(c)
+      if c then
+        c:SetDrawLayer(DL_BACKGROUND)
+        c:SetDrawTier(0)
+        c:SetDrawLevel(0)
+      end
+    end
+    zeroTriple(backdrop)
+    zeroTriple(button.slot:GetNamedChild("Button"))
+    zeroTriple(button.slot:GetNamedChild("Frame"))
+    zeroTriple(button.slot:GetNamedChild("Glow"))
+    zeroTriple(button.slot:GetNamedChild("BG"))
+    zeroTriple(button.slot:GetNamedChild("DropCallout"))
+    zeroTriple(button.slot:GetNamedChild("Status"))
   end
   -- Frame(ult 独有装饰框)：已隐藏但一并重锚保险
   local frame = button.slot:GetNamedChild("Frame")
@@ -2375,10 +2386,11 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         end
         return string.format("%d/%d/%d", c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1)
       end
-      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s[%s] BD=%s→%s%s[%s] slotTri=[%s]",
+      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s[%s] BD=%s→%s%s[%s] Btn=[%s] slotTri=[%s]",
         label, s:GetWidth() or -1, s:GetScale() or -1,
         dim(fc), dim(ic), triple(ic),
-        dim(bd), bdRel, bd and bd:IsControlHidden() and "[hid]" or "", triple(bd), triple(s)))
+        dim(bd), bdRel, bd and bd:IsControlHidden() and "[hid]" or "", triple(bd),
+        triple(bt), triple(s)))
     end
     oneLine("D3", l.buttons[3])
     oneLine("D8", l.buttons[8])
