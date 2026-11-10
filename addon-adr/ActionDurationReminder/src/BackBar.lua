@@ -637,6 +637,14 @@ l.setCloneSize = function(button, w)
     zeroTriple(button.slot:GetNamedChild("BG"))
     zeroTriple(button.slot:GetNamedChild("DropCallout"))
     zeroTriple(button.slot:GetNamedChild("Status"))
+    -- 图标下沉一档：模板给 (0/1/1) 会盖过原生条边框(BD=0/1/0，手柄框粗更明显)；
+    -- 归一到 (0/1/0) 与原生边框平齐→树序→原生边框之下；冷却线段/进度条同
+    -- (0/1/0) 与图标平局→创建序(更晚)→图标之上，链路两端都成立
+    local icon = button.slot:GetNamedChild("Icon")
+    if icon then
+      icon:SetDrawTier(1)
+      icon:SetDrawLevel(0)
+    end
   end
   -- Frame(ult 独有装饰框)：已隐藏但一并重锚保险
   local frame = button.slot:GetNamedChild("Frame")

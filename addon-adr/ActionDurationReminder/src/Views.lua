@@ -268,8 +268,8 @@ m.newWidget = function(slotNum, shifted, appendIndex, nativeSlotControl)
   local progressBar = WINDOW_MANAGER:CreateControl(nil, backdrop or slot, CT_BACKDROP)
   -- 同冷却线段：浮动行平级匹配 level=1(树序裁决双胜)，主条恢复高位
   if shifted then
-    progressBar:SetDrawTier(1) -- 同冷却线段：与图标(0/1/1)完全平齐
-    progressBar:SetDrawLevel(1)
+    progressBar:SetDrawTier(1) -- (0/1/0)：同冷却线段——与图标平齐靠创建序压上，随子树沉
+    progressBar:SetDrawLevel(0)
   else
     progressBar:SetDrawLayer(DL_CONTROLS)
     progressBar:SetDrawLevel(1)
@@ -435,8 +435,8 @@ mCooldown.createPart = function(self)
   -- 树序裁决(创建更晚→图标之上)，与原生图标打平由子树序裁决(容器在 WeaponSwap
   -- 宿主下→原生条之下)。主条(非浮动行)不下沉，恢复高位
   if self.shifted then
-    part:SetDrawTier(1) -- 与图标三元组(0/1/1)完全平齐：tier+level 都要平
-    part:SetDrawLevel(1)
+    part:SetDrawTier(1) -- (0/1/0)：与克隆图标及原生边框(BD=0/1/0)平齐——
+    part:SetDrawLevel(0) -- 平局均落树序：晚于克隆图标→其上；WeaponSwap 子树→原生条之下
   else
     part:SetDrawLayer(DL_CONTROLS)
     part:SetDrawLevel(2)
