@@ -2369,10 +2369,17 @@ SLASH_COMMANDS["/adrbackbar"] = function()
         bdRel = relTo and relTo.GetName and relTo:GetName() or "nil"
         bdRel = bdRel:gsub("ADRBackBarRowActionButton%d+", "CLONE"):gsub("ZO_ActionBar%dButton%d+", "NATIVE")
       end
-      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s BD=%s→%s%s Btn=%s",
+      -- 绘制三元组(layer/tier/level，均为层内全局比较器)：定位层级放置问题
+      local function triple(c)
+        if not c then
+          return "--"
+        end
+        return string.format("%d/%d/%d", c:GetDrawLayer() or -1, c:GetDrawTier() or -1, c:GetDrawLevel() or -1)
+      end
+      d(string.format("[ADR] %s slot=%.0f sc=%.2f | FC=%s Icon=%s[%s] BD=%s→%s%s[%s] slotTri=[%s]",
         label, s:GetWidth() or -1, s:GetScale() or -1,
-        dim(fc), dim(ic),
-        dim(bd), bdRel, bd and bd:IsControlHidden() and "[hid]" or "", dim(bt)))
+        dim(fc), dim(ic), triple(ic),
+        dim(bd), bdRel, bd and bd:IsControlHidden() and "[hid]" or "", triple(bd), triple(s)))
     end
     oneLine("D3", l.buttons[3])
     oneLine("D8", l.buttons[8])
