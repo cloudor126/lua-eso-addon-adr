@@ -317,9 +317,10 @@ m.debugDump = function()
     local ok, v = pcall(GetSetting_Bool, SETTING_TYPE_UI, UI_SETTING_SHOW_ACTION_BAR_BACK_ROW)
     nativeBackRow = (ok and v) and "ON" or "off"
   end
-  lines[#lines + 1] = string.format("row=%s failed=%s hotbar=%s oakensoul=%s nativeBackRow=%s",
+  lines[#lines + 1] = string.format("row=%s failed=%s hotbar=%s oakensoul=%s nativeBackRow=%s gamepad=%s",
     tostring(l.container ~= nil), tostring(l.createFailed == true),
-    tostring(l.inactiveHotbar()), tostring(l.hasOakensoul()), nativeBackRow)
+    tostring(l.inactiveHotbar()), tostring(l.hasOakensoul()), nativeBackRow,
+    tostring(IsInGamepadPreferredMode()))
   if l.slots then
     local now = GetGameTimeMilliseconds()
     local hotbar = l.inactiveHotbar()
