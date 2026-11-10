@@ -114,42 +114,59 @@ end
 --========================================
 ---创建迷你行(懒创建)：容器重父 WeaponSwap(XML 顺序 KeybindBG→WeaponSwap→技能槽)，
 ---深度优先绘制序使整个迷你子树先于技能槽子树——与原生条重叠时原生条遮挡
----(与 BackBar 容器同款 z-order 沉底方案)。槽位非交互(纯展示，同原生 back row)
+---(与 BackBar 容器同款 z-order 沉底方案)。槽位非交互(纯展示，同原生 back row)。
+---子控件全部匿名：显式名字会进全局名字注册表，多槽重复创建必撞名
+---(实测坑：CreateControl("Icon",...) 第二个槽即 Duplicate name)
 ---@type fun()
 l.createRow = function()
-  if l.container then
+  if l.container or l.createFailed then
     return
   end
-  local weaponSwapHost = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
-  l.container = WINDOW_MANAGER:CreateControl("ADRMiniBarRow", weaponSwapHost or GuiRoot, CT_CONTROL)
-  l.slots = {}
-  for slotNum = 3, 8 do
-    local control = WINDOW_MANAGER:CreateControl("ADRMiniBarSlot" .. slotNum, l.container, CT_CONTROL)
-    control:SetMouseEnabled(false)
-    -- Icon：图标纹理(引擎槽位贴图)
-    local icon = WINDOW_MANAGER:CreateControl("Icon", control, CT_TEXTURE)
-    icon:SetAnchor(TOPLEFT, control, TOPLEFT, 1, 1)
-    icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
-    -- 计时数字(字体/颜色复用 Time Labels 设置)
-    local label = WINDOW_MANAGER:CreateControl("Timer", control, CT_LABEL)
-    label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-    label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
-    label:SetAnchor(BOTTOM, control, BOTTOM, 0, 2)
-    -- 三层原生贴图(创建序即绘制序：BG<Icon<Overlay<Frame；三元组零覆盖
-    -- →与图标平齐靠创建序，随子树沉入原生条之下)
-    local art = IsInGamepadPreferredMode() and "EsoUI/Art/ActionBar/Gamepad/gp_backrow_abilityFrame"
-      or "EsoUI/Art/ActionBar/backrow_abilityFrame"
-    local function layerTex(name, file)
-      local t = WINDOW_MANAGER:CreateControl(name, control, CT_TEXTURE)
-      t:SetTexture(file)
-      t:SetAnchor(CENTER, control, CENTER)
-      t:SetTextureCoords(unpack((IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard).coords))
-      return t
+  local ok, err = pcall(function()
+    local weaponSwapHost = ZO_ActionBar1 and ZO_ActionBar1:GetNamedChild("WeaponSwap")
+    l.container = WINDOW_MANAGER:CreateControl("ADRMiniBarRow", weaponSwapHost or GuiRoot, CT_CONTROL)
+    l.slots = {}
+    for slotNum = 3, 8 do
+      local control = WINDOW_MANAGER:CreateControl("ADRMiniBarSlot" .. slotNum, l.container, CT_CONTROL)
+      control:SetMouseEnabled(false)
+      -- Icon：图标纹理(action 的 ability 图标)
+      local icon = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
+      icon:SetAnchor(TOPLEFT, control, TOPLEFT, 1, 1)
+      icon:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -1, -1)
+      -- 计时数字(字体/颜色复用 Time Labels 设置)
+      local label = WINDOW_MANAGER:CreateControl(nil, control, CT_LABEL)
+      label:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+      label:SetVerticalAlignment(TEXT_ALIGN_BOTTOM)
+      label:SetAnchor(BOTTOM, control, BOTTOM, 0, 2)
+      -- 三层原生贴图(创建序即绘制序：BG<Icon<Overlay<Frame；三元组零覆盖
+      -- →与图标平齐靠创建序，随子树沉入原生条之下)
+      local art = IsInGamepadPreferredMode() and "EsoUI/Art/ActionBar/Gamepad/gp_backrow_abilityFrame"
+        or "EsoUI/Art/ActionBar/backrow_abilityFrame"
+      local function layerTex(file)
+        local t = WINDOW_MANAGER:CreateControl(nil, control, CT_TEXTURE)
+        t:SetTexture(file)
+        t:SetAnchor(CENTER, control, CENTER)
+        t:SetTextureCoords(unpack((IsInGamepadPreferredMode() and MINI_DIMS.gamepad or MINI_DIMS.keyboard).coords))
+        return t
+      end
+      local bg = layerTex(art .. "_BLANK.dds")
+      local overlay = layerTex(art .. "_overlay.dds")
+      local frame = layerTex(art .. ".dds")
+      l.slots[slotNum] =
+        { control = control, icon = icon, label = label, bg = bg, overlay = overlay, frame = frame, iconPath = nil }
     end
-    layerTex("BG", art .. "_BLANK.dds")
-    layerTex("Overlay", art .. "_overlay.dds")
-    layerTex("Frame", art .. ".dds")
-    l.slots[slotNum] = { control = control, icon = icon, label = label, iconPath = nil }
+  end)
+  if not ok then
+    d(string.format("[ADR] MiniBar row creation failed: %s", tostring(err)))
+    l.createFailed = true
+    l.slots = nil
+    if l.container then
+      pcall(function()
+        l.container:SetHidden(true)
+      end)
+      l.container = nil
+    end
+    return
   end
   l.relayout()
 end
@@ -172,13 +189,15 @@ l.relayout = function()
     if entry and nativeButton then
       local control = entry.control
       control:SetDimensions(dims.w, dims.w)
-      for _, name in ipairs({ "BG", "Overlay", "Frame" }) do
-        local t = control:GetNamedChild(name)
-        if t then
-          t:SetTexture(art .. (name == "Frame" and ".dds" or (name == "BG" and "_BLANK.dds" or "_overlay.dds")))
-          t:SetDimensions(dims.w, dims.h)
+      -- 贴图层随平台重设(键盘/手柄切换；引用直取，子控件匿名)
+      for _, layer in ipairs({ entry.bg, entry.overlay, entry.frame }) do
+        if layer then
+          layer:SetDimensions(dims.w, dims.h)
         end
       end
+      entry.bg:SetTexture(art .. "_BLANK.dds")
+      entry.overlay:SetTexture(art .. "_overlay.dds")
+      entry.frame:SetTexture(art .. ".dds")
       control:ClearAnchors()
       -- CENTER 锚：缩放围绕锚点仍居中对位(与原生 back row 同锚型)
       control:SetAnchor(CENTER, nativeButton.slot, CENTER, 0, slotNum == 8 and ultOffY or abilityOffY)
@@ -241,6 +260,9 @@ end
 ---心跳(Core 100ms)：数字倒数刷新 + 可见性/图标准时同步
 ---@type fun()
 l.onCoreUpdate = function()
+  if l.createFailed then
+    return
+  end
   local sv = l.getSavedVars()
   if sv.barPreset ~= "mini" or not sv.barEnabled then
     if l.container then

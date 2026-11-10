@@ -173,6 +173,21 @@ l.isShiftRowMovable = function()
   return p == "classic" or p == "dynamic"
 end
 
+---预设值单一真源：下拉菜单 choicesValues 与启动校验共用，
+---新增预设只改这一处(否则校验会把新值当非法值重置回默认——v3.172 实现过
+---mini/mainonly 被 startup 校验吞回 dynamic 的 bug)
+local PRESET_VALUES = { "classic", "dynamic", "static", "mini", "mainonly" }
+
+---@type fun(): boolean
+local function isValidPreset(v)
+  for i = 1, #PRESET_VALUES do
+    if PRESET_VALUES[i] == v then
+      return true
+    end
+  end
+  return false
+end
+
 ---启动迁移：旧版 barShowShift/barShowShiftFully → barPreset（只跑一次，迁移后删除旧键）
 addon.hookStart(function()
   local sv = l.getSavedVars()
@@ -189,7 +204,7 @@ addon.hookStart(function()
   end
   ---@diagnostic enable: undefined-field, inject-field
   -- 非法值重置为默认(如下拉框写入过本地化文本)
-  if sv.barPreset ~= "classic" and sv.barPreset ~= "dynamic" and sv.barPreset ~= "static" then
+  if not isValidPreset(sv.barPreset) then
     sv.barPreset = barSavedVarsDefaults.barPreset
   end
 end)
@@ -616,7 +631,7 @@ addon.extend(settings.EXTKEY_ADD_MENUS, function()
           text("Mini Row"),
           text("Main Bar Only"),
         },
-        choicesValues = { "classic", "dynamic", "static", "mini", "mainonly" },
+        choicesValues = PRESET_VALUES,
         getFunc = function()
           return l.getSavedVars().barPreset
         end,
